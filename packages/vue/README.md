@@ -39,6 +39,8 @@ const form = useForm({ name: '', email: '' })
 </template>
 ```
 
+Live validation: `form.validate('post', '/customers', 'email')` on blur (route with the `precognitive` middleware). Load more: `router.get(url, { page }, { only: ['items'], merge: true, preserveState: true })` for props marked with `Bridge::merge()`.
+
 Exports: `createBridgeApp`, `createBridgePlugin`, `useBridge`, `usePage`, `useProp`, `useDeferred`, `useForm`, `useRemember`, `BridgeLink`, `Deferred`, `BridgeHead`, plus `router` from the core.
 
 ```ts

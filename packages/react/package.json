@@ -1,0 +1,49 @@
+{
+  "name": "@swarakaka/bridge-react",
+  "version": "0.1.0",
+  "description": "React adapter for Bridge (experimental skeleton): createBridgeApp, usePage, useProp, useForm, BridgeLink",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/swarakaka/Bridge",
+    "directory": "packages/react"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@swarakaka/bridge-core": "workspace:*",
+    "@swarakaka/bridge-protocol": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^18.2.0 || ^19.0.0",
+    "react-dom": "^18.2.0 || ^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "jsdom": "^26.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "typescript": "^5.8.0",
+    "vitest": "^3.2.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

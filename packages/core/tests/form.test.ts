@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { bridgeWith, mockFetch, page, pageResponse, tick } from './helpers'
-import type { Bridge } from '../src/createBridge'
+import { bridgeWith, mockFetch, page, pageResponse, tick } from './helpers.js'
+import type { Bridge } from '../src/createBridge.js'
 
 let bridge: Bridge | null = null
 beforeEach(() => window.history.replaceState(null, '', '/customers/create'))

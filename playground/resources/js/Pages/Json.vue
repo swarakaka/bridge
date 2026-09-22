@@ -27,7 +27,9 @@ const curl = computed(() => {
             `-H 'Content-Type: application/json'`,
             `-d '${body.value}'`,
         )
-    parts.push(`${window.location.origin}${endpoint.value.path}`)
+    parts.push(
+        `${typeof window === 'undefined' ? '' : window.location.origin}${endpoint.value.path}`,
+    )
     return parts.join(' \\\n  ')
 })
 

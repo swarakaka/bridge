@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { RequestManager } from '../src/http/RequestManager'
-import { hasFiles, objectToFormData } from '../src/http/formData'
-import { readXsrfToken } from '../src/http/csrf'
+import { RequestManager } from '../src/http/RequestManager.js'
+import { hasFiles, objectToFormData } from '../src/http/formData.js'
+import { readXsrfToken } from '../src/http/csrf.js'
 
 describe('formData', () => {
   it('detects files at any depth', () => {

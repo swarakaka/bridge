@@ -1,7 +1,7 @@
 import type { Bridge, BridgePage } from '@swarakaka/bridge-core'
 import type { App, Plugin } from 'vue'
-import { BridgeKey } from './injection'
-import { pageStateRef } from './state'
+import { BridgeKey } from './injection.js'
+import { pageStateRef } from './state.js'
 
 export function createBridgePlugin(bridge: Bridge): Plugin {
   return {

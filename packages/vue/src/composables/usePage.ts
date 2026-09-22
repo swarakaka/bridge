@@ -1,7 +1,7 @@
 import type { BridgePage } from '@swarakaka/bridge-core'
 import { computed, type ComputedRef } from 'vue'
-import { useBridge } from '../injection'
-import { pageStateRef } from '../state'
+import { useBridge } from '../injection.js'
+import { pageStateRef } from '../state.js'
 
 export interface PageRef<P extends Record<string, unknown> = Record<string, unknown>> {
   component: ComputedRef<string>

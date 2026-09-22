@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current state of the repository
 
-**Phases 0 to 3 are complete** (2026-09-22). Phase 0: pnpm monorepo, tooling, CI, protocol package (spec, schemas, fixtures, generated TS types). Phase 1: the Laravel package serves HTML, page and JSON from one controller with negotiation, props, errors, redirects, caching, CSRF variant, testing helpers and a conformance suite. Phase 2: `@swarakaka/bridge-core` (request manager, router, history, page store, forms, cache), `@swarakaka/bridge-vue` (`createBridgeApp`, composables, `BridgeLink`, `Deferred`, `BridgeHead`), the playground's Vue UI (Dashboard, Customers CRUD with uploads, JSON demo, login, Sanctum tokens, error pages). Phase 3: SSE end to end: event bus (`sync`, `database`, `redis`), `Bridge::stream()`/`Bridge::to()`, `ShouldStream`, tickets, `bridge:doctor`; the core `StreamClient` (fetch and EventSource transports, backoff, `Last-Event-ID`, watchdog, control dispatch); `useStream`; the playground Realtime page with one shared stream per user; 30 Playwright specs including a two-browser realtime test and raw-protocol checks over Node fetch. Next: Phase 4 (hardening, benchmarks, docs site).
+**Phases 0 to 5 are complete** (2026-09-22). Phase 0: pnpm monorepo, tooling, CI, protocol package (spec, schemas, fixtures, generated TS types). Phase 1: the Laravel package serves HTML, page and JSON from one controller with negotiation, props, errors, redirects, caching, CSRF variant, testing helpers and a conformance suite. Phase 2: `@swarakaka/bridge-core` (request manager, router, history, page store, forms, cache), `@swarakaka/bridge-vue` (`createBridgeApp`, composables, `BridgeLink`, `Deferred`, `BridgeHead`), the playground's Vue UI (Dashboard, Customers CRUD with uploads, JSON demo, login, Sanctum tokens, error pages). Phase 3: SSE end to end: event bus (`sync`, `database`, `redis`), `Bridge::stream()`/`Bridge::to()`, `ShouldStream`, tickets, `bridge:doctor`; the core `StreamClient` (fetch and EventSource transports, backoff, `Last-Event-ID`, watchdog, control dispatch); `useStream`; the playground Realtime page with one shared stream per user; 30 Playwright specs including a two-browser realtime test and raw-protocol checks over Node fetch. Phase 4: merge props ("load more"), `jsonRoot`, Precognition live validation, the `throttle:bridge-stream` limiter and channel caps, a real-Redis bus test, the security review, the benchmark harness with recorded results, the VitePress docs site, and playground accessibility. Phase 5: SSR gateway and `@swarakaka/bridge-vue/server` renderer with hydration (E2E runs the whole suite under SSR), the experimental `@swarakaka/bridge-react` skeleton, the mobile SDK guide, the relay design and `docs/release-readiness.md`. Cutting 1.0 (changeset version, tag) is the maintainer's call.
 
 Two documents govern all work:
 
@@ -24,6 +24,9 @@ pnpm build                   # tsc for protocol → core → vue
 pnpm typecheck               # tsc --noEmit per package
 pnpm test                    # Vitest per package (protocol has the TS conformance suite)
 pnpm lint                    # eslint + prettier --check   (pnpm lint:fix to write)
+pnpm docs:dev                # VitePress site from docs/ (docs:build to verify)
+cd playground && pnpm build && php artisan bridge:ssr   # SSR server for local use (BRIDGE_SSR_ENABLED=true in .env)
+pnpm --filter bridge-benchmarks bench   # benchmarks; appends to benchmarks/RESULTS.md (needs playground/.env.e2e from one E2E run; Redis optional via BRIDGE_STREAM_DRIVER=redis)
 
 cd packages/laravel
 composer install
@@ -72,6 +75,21 @@ Git: the repository is initialized but has no commits yet. Do not commit unless 
 - The ticket middleware must run before `auth:*`; the provider inserts it with `Kernel::addToMiddlewarePriorityBefore(AuthenticatesRequests::class, …)`.
 - `php artisan serve` serves one request at a time unless `PHP_CLI_SERVER_WORKERS` is set **and** `--no-reload` is used; in no-reload mode the parent's whole environment is forwarded to workers, so E2E passes its env explicitly.
 - Client: `StreamClient` reconnects immediately after an orderly `end` (no resync), uses backoff otherwise, and refuses a tight loop after short-lived connections (throttled streams).
+
+## Phase 5 notes
+
+- Package ESM output uses explicit `.js` import specifiers with `moduleResolution: NodeNext`, so Node can load `dist/` (the SSR bundle imports `@swarakaka/bridge-vue/server`). Keep `.js` on relative imports in `packages/*/src`; the protocol generator emits them.
+- Blade directive changes are not picked up by compiled views: run `php artisan view:clear` (and clear Testbench's `vendor/orchestra/testbench-core/laravel/storage/framework/views` when package tests behave as if a directive did not change).
+- `v-html` on a Vue component is dropped by SSR; use it on a native element inside the slot. Pages must not touch `window`/timers during setup; `useStream` skips connecting on the server.
+- E2E runs with SSR on: `playwright.config.ts` starts `node bootstrap/ssr/ssr.js` on :13715 and the `page.goto` wrapper waits for `#app[data-bridge-hydrated]`.
+- Playground `pnpm build` builds the client and the SSR bundle (`bootstrap/ssr`, gitignored).
+
+## Phase 4 notes
+
+- Merge props are opt-in per visit (`merge: true`); invalidations and searches replace. Server lists keys in `meta.merge`.
+- `form.validate(method, url, field)` uses Laravel Precognition; routes need the `precognitive` middleware. A 204 is parsed as `empty` and reported as success without touching the page.
+- The benchmark harness starts PHP's built-in server directly from `playground/public` (not `artisan serve`: its output pipe stalls streams when stdio is ignored), as a detached process group it kills on exit, and refuses to start if the port is busy. Idle keep-alive sockets pin dev-server workers, so load requests send `Connection: close`. SQLite runs in WAL mode for the database bus (`DB_JOURNAL_MODE`, `DB_BUSY_TIMEOUT` in the playground config).
+- A stream subscription is live only after `ready`; tests and load generators must wait for it before publishing.
 
 ## What Bridge is
 

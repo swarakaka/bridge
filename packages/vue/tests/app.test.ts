@@ -8,9 +8,9 @@ import {
   BridgeLink,
   Deferred,
   useDeferred,
-} from '../src'
-import type { BridgeApp } from '../src'
-import { embed, flush, mockFetch, page, pageResponse } from './helpers'
+} from '../src/index.js'
+import type { BridgeApp } from '../src/index.js'
+import { embed, flush, mockFetch, page, pageResponse } from './helpers.js'
 
 const Index = defineComponent({
   props: { customers: { type: Array, default: () => [] }, title: String },
@@ -152,7 +152,7 @@ describe('createBridgeApp', () => {
     const linkApp = (await import('vue')).createApp({
       render: () => h(BridgeLink, { href: '/customers/2', prefetch: 'mount' }, () => 'go'),
     })
-    linkApp.provide((await import('../src')).BridgeKey, app!.bridge)
+    linkApp.provide((await import('../src/index.js')).BridgeKey, app!.bridge)
     linkApp.mount(holder)
     await flush()
     expect(fetch).toHaveBeenCalledTimes(1)

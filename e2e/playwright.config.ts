@@ -24,10 +24,16 @@ export const e2eEnv: Record<string, string> = {
   LOG_CHANNEL: 'single',
   BRIDGE_BUILD_VERSION: 'e2e',
   BRIDGE_STREAM_DRIVER: 'database',
+  DB_JOURNAL_MODE: 'wal',
+  DB_BUSY_TIMEOUT: '5000',
   BRIDGE_STREAM_POLL_MS: '200',
   BRIDGE_STREAM_HEARTBEAT_MS: '2000',
   BRIDGE_STREAM_MAX_DURATION: '8',
   BRIDGE_STREAM_MAX_CONNECTIONS: '20',
+  BRIDGE_STREAM_CONNECTS_PER_MINUTE: '1000',
+  // SSR is on for the whole suite: every page load hydrates server-rendered markup.
+  BRIDGE_SSR_ENABLED: 'true',
+  BRIDGE_SSR_URL: 'http://127.0.0.1:13715',
 }
 
 export default defineConfig({
@@ -44,13 +50,23 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
-  webServer: {
-    command: `php artisan serve --host=127.0.0.1 --port=${port} --no-reload`,
-    cwd: playground,
-    url: `${baseURL}/up`,
-    reuseExistingServer: !process.env.CI,
-    // PHP's built-in server is single-threaded; SSE holds a connection open, so give it workers.
-    env: { ...e2eEnv, PHP_CLI_SERVER_WORKERS: '12' },
-    timeout: 60_000,
-  },
+  webServer: [
+    {
+      command: 'node bootstrap/ssr/ssr.js',
+      cwd: playground,
+      url: 'http://127.0.0.1:13715/health',
+      reuseExistingServer: !process.env.CI,
+      env: { BRIDGE_SSR_URL: 'http://127.0.0.1:13715' },
+      timeout: 30_000,
+    },
+    {
+      command: `php artisan serve --host=127.0.0.1 --port=${port} --no-reload`,
+      cwd: playground,
+      url: `${baseURL}/up`,
+      reuseExistingServer: !process.env.CI,
+      // PHP's built-in server is single-threaded; SSE holds a connection open, so give it workers.
+      env: { ...e2eEnv, PHP_CLI_SERVER_WORKERS: '12' },
+      timeout: 60_000,
+    },
+  ],
 })

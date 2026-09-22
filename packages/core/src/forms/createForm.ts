@@ -1,8 +1,8 @@
 import type { BridgeError } from '@swarakaka/bridge-protocol'
-import type { UploadProgress } from '../http/RequestManager'
-import type { Router } from '../router/Router'
-import type { Method } from '../router/url'
-import type { ValidationErrors, VisitOptions, VisitOutcome } from '../router/Visit'
+import type { UploadProgress } from '../http/RequestManager.js'
+import type { Router } from '../router/Router.js'
+import type { Method } from '../router/url.js'
+import type { ValidationErrors, VisitOptions, VisitOutcome } from '../router/Visit.js'
 
 export type FormData_ = Record<string, unknown>
 
@@ -206,6 +206,55 @@ export class Form<T extends FormData_> {
 
   cancel(): void {
     this.cancelFn?.()
+  }
+
+  validating = false
+
+  /**
+   * Validate through Laravel Precognition without running the controller.
+   * With fields, only those rules run and only their errors change; a 204
+   * clears them. The route needs the `precognitive` middleware.
+   */
+  async validate(
+    method: Method,
+    url: string | URL,
+    fields: string | string[] = [],
+    options: SubmitOptions = {},
+  ): Promise<VisitOutcome> {
+    const only = Array.isArray(fields) ? fields : [fields]
+    const headers: Record<string, string> = { ...(options.headers ?? {}), Precognition: 'true' }
+    if (only.length > 0) headers['Precognition-Validate-Only'] = only.join(',')
+
+    this.validating = true
+    return this.router.visit(url, {
+      ...options,
+      method,
+      data: this.transformer(this.data),
+      headers,
+      preserveState: true,
+      preserveScroll: true,
+      useCache: false,
+      onInvalid: (errors, error) => {
+        const scoped =
+          only.length > 0
+            ? Object.fromEntries(Object.entries(errors).filter(([k]) => only.includes(k)))
+            : errors
+        if (only.length > 0) this.clearErrors(...only)
+        else this.clearErrors()
+        this.setError(scoped)
+        this.lastError = error
+        options.onInvalid?.(errors, error)
+      },
+      onSuccess: (page) => {
+        if (only.length > 0) this.clearErrors(...only)
+        else this.clearErrors()
+        options.onSuccess?.(page)
+      },
+      onFinish: (visit) => {
+        this.validating = false
+        options.onFinish?.(visit)
+      },
+    })
   }
 
   private setErrorsFromServer(errors: ValidationErrors): void {

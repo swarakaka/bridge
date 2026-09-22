@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { PageCache } from '../src/cache/PageCache'
-import { page } from './helpers'
+import { PageCache } from '../src/cache/PageCache.js'
+import { page } from './helpers.js'
 
 describe('PageCache', () => {
   it('serves fresh, then stale, then misses', () => {

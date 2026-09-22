@@ -56,7 +56,7 @@ Rules:
 
 - The server MUST evaluate `X-Bridge-Component`; on mismatch it MUST ignore the selection and return a full page.
 - The client MUST merge a partial response into the current page only when `component` equals the current component; otherwise it MUST treat the response as a full page swap.
-- Merging replaces each returned key wholesale (no deep merge), except keys listed in `meta.merge` (reserved for a later version; clients MUST treat unknown `meta` members as absent).
+- Merging replaces each returned key wholesale (no deep merge). Keys listed in `meta.merge` MAY instead be appended (arrays concatenate; objects with array members such as paginators concatenate those members and take the other members from the response) when the client opted in for that request, e.g. "load more". Requests that did not opt in, including invalidation reloads, replace the key.
 - Lazy props (§4) are included only when named in `X-Bridge-Only`.
 
 ## 4. Lazy, deferred, always

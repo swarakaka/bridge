@@ -4,12 +4,12 @@
  * Types generated from the JSON Schemas in ../schemas plus hand-written
  * constants and type guards. The Markdown in ../spec is normative.
  */
-export * from './generated'
+export * from './generated/index.js'
 
-import type { BridgePage } from './generated/page'
-import type { BridgeError } from './generated/error'
-import type { BridgeJsonDocument } from './generated/json'
-import type { BridgeStreamControl } from './generated/stream-control'
+import type { BridgePage } from './generated/page.js'
+import type { BridgeError } from './generated/error.js'
+import type { BridgeJsonDocument } from './generated/json.js'
+import type { BridgeStreamControl } from './generated/stream-control.js'
 
 /** Highest protocol version this package describes. */
 export const PROTOCOL_VERSION = 1 as const

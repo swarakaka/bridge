@@ -1257,6 +1257,26 @@ plus green Pest, PHPStan, and conformance suites. This milestone proves the prot
 
 Recorded as phases ship. Each entry names the section it refines.
 
+### Phase 5 (2026-09-22)
+
+- **§26 SSR.** `HttpSsrGateway` POSTs the page object to `@swarakaka/bridge-vue/server` (`createSsrRenderer` + `createSsrServer`, node:http only). The shell's `@bridge` marks the root `data-server-rendered` and `@bridgeHead` appends head fragments (`BridgeHead` records title/meta into a head context on the server). The client hydrates with `createSSRApp` and marks `data-bridge-hydrated`. Failures fall back to client rendering. The E2E suite runs entirely under SSR.
+- **Packaging.** ESM output now uses explicit `.js` specifiers (`NodeNext`); previously Node could not import `dist/`, which no bundler-based consumer had noticed.
+- **§33 React.** `packages/react` is an experimental skeleton proving adapter independence; not part of the 1.0 surface.
+- **§34 mobile.** Guide written (`docs/guide/mobile-sdks.md`); fixtures are the offline test data.
+- **§20.4 relay.** Design recorded in `docs/relay-design.md`; not implemented.
+- **§38 DoD.** `docs/release-readiness.md` tracks each criterion; FrankenPHP in CI and the Inertia baseline remain open and are excluded from 1.0.
+
+### Phase 4 (2026-09-22)
+
+- **§12 / §17 merge props.** `Bridge::merge()` lists keys in `meta.merge`; the client appends them only for visits that opt in (`merge: true`, e.g. "load more"). Invalidation reloads and searches replace, otherwise a stream invalidation of a merge prop would duplicate rows. Spec `page.md` §3 updated.
+- **§7.1 `jsonRoot`** implemented as planned (root prop becomes `data`, the rest moves to `meta`; `meta.merge` is stripped from JSON mode).
+- **§15 Precognition.** `Form.validate()` sends `Precognition`/`Precognition-Validate-Only`; a `204` is an `empty` response that the router reports as success without applying anything.
+- **§23 security.** Review recorded in `docs/security-review.md`; added the `throttle:bridge-stream` limiter (`bridge.stream.connects_per_minute`) and caps on `?channels=` (count and length).
+- **§25 benchmarks.** Harness in `benchmarks/` with a fetch-based load generator (autocannon could not parse the dev server's responses), an SSE delivery scenario and an in-process serialization micro-benchmark. First results recorded for the database and Redis buses. Lessons: PHP's built-in server must be started directly from `public/` and killed as a process group (workers survive the parent and keep the port); idle keep-alive sockets pin its workers; SQLite needs WAL under polling; publish only after `ready`. The Inertia baseline app is still not built, so no comparative claim is made.
+- **§32 docs.** VitePress site under `docs/` (`pnpm docs:dev`), with the deployment guide mirrored into the guide.
+- **§20.2 Redis driver** now has a real-Redis test (`BRIDGE_TEST_REDIS=1`), run in CI against the Redis service.
+- **§27 accessibility.** Skip link, labelled navigation with `aria-current`, `main` landmark, live regions for toasts and notifications, progress bar role.
+
 ### Phase 3 (2026-09-22)
 
 - **§8.3 / §20.3 replay and `end`.** An `end` control message replayed from the bus after `Last-Event-ID` is ignored; only `end` signals published while the connection is live close it. Otherwise a fresh connection replaying history would close on an old shutdown signal.

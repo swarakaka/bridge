@@ -32,12 +32,14 @@ Route::middleware('guest')->group(function (): void {
 });
 
 // The stream accepts the session, a bearer token, or a signed ticket (Bridge::streamTicket).
-Route::middleware(['auth:sanctum'])->get('/events', [RealtimeController::class, 'events'])->name('events');
-Route::middleware(['bridge.ticket:web', 'auth:sanctum'])->get('/events/ticket', [RealtimeController::class, 'events'])->name('events.ticket');
+// `throttle:bridge-stream` limits connection attempts per minute (config bridge.stream.connects_per_minute).
+Route::middleware(['auth:sanctum', 'throttle:bridge-stream'])->get('/events', [RealtimeController::class, 'events'])->name('events');
+Route::middleware(['bridge.ticket:web', 'auth:sanctum', 'throttle:bridge-stream'])->get('/events/ticket', [RealtimeController::class, 'events'])->name('events.ticket');
 
 Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('/logout', [AuthController::class, 'destroy'])->name('logout');
-    Route::resource('customers', CustomerController::class);
+    // `precognitive` lets forms validate single fields live through Laravel Precognition.
+    Route::resource('customers', CustomerController::class)->middleware('precognitive');
     Route::get('/realtime', [RealtimeController::class, 'page'])->name('realtime');
     Route::get('/realtime/export', [RealtimeController::class, 'export'])->name('realtime.export');
     Route::post('/realtime/ticket', [RealtimeController::class, 'ticket'])->name('realtime.ticket');

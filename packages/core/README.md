@@ -22,7 +22,8 @@ What it does:
 - **Response parser:** page, error, `409` build conflict (`X-Bridge-Location`), `406`, non-Bridge responses.
 - **Router:** visit lifecycle (`before`, `start`, `progress`, `success`, `invalid`, `error`, `exception`, `finish`, `navigate`), in-flight cancellation, partial merges guarded by component, deferred prop groups, history with scroll and remembered state, `prepare` hook so adapters load components before a swap.
 - **Page store:** current page, keying for state preservation, `prop` control events (`replace`/`merge`/`append`/`prepend`).
-- **Forms:** data, defaults, dirty tracking, first-message errors, processing/progress, `transform`, `resetOnSuccess`.
+- **Forms:** data, defaults, dirty tracking, first-message errors, processing/progress, `transform`, `resetOnSuccess`, `validate()` through Laravel Precognition.
+- **Merge props:** keys the server lists in `meta.merge` are appended on partial reloads that pass `merge: true`.
 - **Page cache:** LRU with TTL and stale-while-revalidate, cleared after mutations and auth errors.
 
 Errors: validation is delivered to the visit and never touches the page; `unauthenticated` follows its `redirect`; `csrf` reloads the document; other errors go to the store's `error` state (adapters render an error page) unless an `error` listener returns `false`.

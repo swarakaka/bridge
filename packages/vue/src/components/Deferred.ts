@@ -1,6 +1,6 @@
 import { computed, defineComponent, type PropType } from 'vue'
-import { useBridge } from '../injection'
-import { pageStateRef } from '../state'
+import { useBridge } from '../injection.js'
+import { pageStateRef } from '../state.js'
 
 /** Renders the fallback slot until every listed prop is present on the page. */
 export const Deferred = defineComponent({

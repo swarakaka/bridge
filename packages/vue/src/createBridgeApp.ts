@@ -4,14 +4,20 @@ import {
   type BridgeConfig,
   type BridgePage,
 } from '@swarakaka/bridge-core'
-import { createApp, defineComponent, h, type App as VueApp, type Component, type Plugin } from 'vue'
-import { createBridgePlugin } from './plugin'
-import { pageStateRef } from './state'
+import {
+  createApp,
+  createSSRApp,
+  defineComponent,
+  h,
+  type App as VueApp,
+  type Component,
+  type Plugin,
+} from 'vue'
+import { createComponentLoader, renderPage, withLayouts, type ComponentResolver } from './app.js'
+import { createBridgePlugin } from './plugin.js'
+import { pageStateRef } from './state.js'
 
-export type ComponentResolver = (
-  name: string,
-) => Component | Promise<Component | { default: Component }>
-
+export type { ComponentResolver }
 export interface ErrorPageProps {
   status: number
   kind: string
@@ -56,15 +62,7 @@ export async function createBridgeApp(options: CreateBridgeAppOptions): Promise<
 
   const { resolve, resolveError, setup, id: _id, page, ...config } = options
 
-  const cache = new Map<string, Component>()
-  const load = async (name: string): Promise<Component> => {
-    const cached = cache.get(name)
-    if (cached) return cached
-    const resolved = await resolve(name)
-    const component = (resolved as { default?: Component }).default ?? (resolved as Component)
-    cache.set(name, component)
-    return component
-  }
+  const { cache, load } = createComponentLoader(resolve)
 
   const bridge = createBridge({
     ...config,
@@ -150,20 +148,6 @@ export async function createBridgeApp(options: CreateBridgeAppOptions): Promise<
     },
   })
 
-  function renderPage(component: Component, current: BridgePage, key: number) {
-    return withLayouts(
-      component,
-      h(component, { ...current.props, key: `${current.component}-${key}` }),
-    )
-  }
-
-  function withLayouts(component: Component, node: ReturnType<typeof h>) {
-    const layout = (component as { layout?: Component | Component[] }).layout
-    if (!layout) return node
-    const layouts = Array.isArray(layout) ? layout : [layout]
-    return layouts.reduceRight((child, Layout) => h(Layout, null, () => child), node)
-  }
-
   const plugin = createBridgePlugin(bridge)
   const props = { initialPage: initial }
   let app: VueApp | null = null
@@ -171,9 +155,15 @@ export async function createBridgeApp(options: CreateBridgeAppOptions): Promise<
   if (setup) {
     app = setup({ el, App, props, plugin, bridge }) ?? null
   } else {
-    app = createApp({ render: () => h(App) })
+    // Hydrate server-rendered markup (data-server-rendered) or mount fresh.
+    const serverRendered = el.hasAttribute('data-server-rendered')
+    app = serverRendered
+      ? createSSRApp({ render: () => h(App) })
+      : createApp({ render: () => h(App) })
     app.use(plugin)
     app.mount(el)
+    // Signals interactivity to tests and progressive UI (server-rendered markup is visible earlier).
+    el.setAttribute('data-bridge-hydrated', 'true')
   }
 
   bridge.init()

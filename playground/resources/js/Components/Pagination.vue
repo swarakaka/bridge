@@ -25,8 +25,9 @@ defineProps<{ meta: Paginated<unknown>['meta']; only?: string[] }>()
                         ? 'border-indigo-600 bg-indigo-600 text-white'
                         : 'border-slate-200 hover:bg-slate-100'
                 "
-                v-html="link.label"
-            />
+            >
+                <span v-html="link.label" />
+            </BridgeLink>
             <span v-else class="px-2 py-1 text-slate-400" v-html="link.label" />
         </template>
         <span class="ml-2 text-slate-500">{{ meta.from }}–{{ meta.to }} of {{ meta.total }}</span>

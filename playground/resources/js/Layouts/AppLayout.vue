@@ -45,6 +45,12 @@ const isActive = (href: string): boolean =>
 
 <template>
     <div class="min-h-screen bg-slate-50 text-slate-900">
+        <a
+            href="#main"
+            class="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded focus:bg-white focus:px-3 focus:py-2"
+        >
+            Skip to content
+        </a>
         <div
             v-if="navigating"
             data-testid="progress"
@@ -52,7 +58,7 @@ const isActive = (href: string): boolean =>
         />
         <header class="border-b border-slate-200 bg-white">
             <div class="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-                <nav class="flex items-center gap-4">
+                <nav class="flex items-center gap-4" aria-label="Primary">
                     <BridgeLink
                         href="/"
                         class="text-lg font-semibold tracking-tight text-indigo-600"
@@ -64,6 +70,7 @@ const isActive = (href: string): boolean =>
                         :href="link.href"
                         class="rounded px-2 py-1 text-sm hover:bg-slate-100"
                         :class="{ 'bg-slate-100 font-medium': isActive(link.href) }"
+                        :aria-current="isActive(link.href) ? 'page' : undefined"
                     >
                         {{ link.label }}
                     </BridgeLink>
@@ -93,7 +100,7 @@ const isActive = (href: string): boolean =>
             </div>
         </header>
 
-        <main class="mx-auto max-w-5xl px-4 py-8">
+        <main id="main" class="mx-auto max-w-5xl px-4 py-8" tabindex="-1">
             <!-- One SSE connection per signed-in user, shared by every page. -->
             <StreamProvider v-if="user" :key="user.id" @notification="pushNotification">
                 <slot />
@@ -101,7 +108,12 @@ const isActive = (href: string): boolean =>
             <slot v-else />
         </main>
 
-        <div class="fixed right-4 top-16 z-50 space-y-2" data-testid="notifications">
+        <div
+            class="fixed right-4 top-16 z-50 space-y-2"
+            data-testid="notifications"
+            role="status"
+            aria-live="polite"
+        >
             <div
                 v-for="n in notifications"
                 :key="n.id"

@@ -20,19 +20,20 @@ public function index()
 
 Bridge is inspired by Inertia's developer experience but is designed as `Laravel → Bridge Protocol → Client`, so the Laravel package has no Vue-specific assumptions and React, mobile, and CLI clients can consume the same backend.
 
-> **Status: pre-alpha.** Phases 0–2 are in place: protocol spec and fixtures, the Laravel package (HTML, page and JSON modes), the client runtime and Vue adapter, and a playground with Playwright coverage. Phase 3 added streams (SSE) end to end. Next is Phase 4: hardening, benchmarks and the docs site. See [`docs/PLAN.md`](docs/PLAN.md) for the plan and phase breakdown.
+> **Status: pre-alpha.** Phases 0–2 are in place: protocol spec and fixtures, the Laravel package (HTML, page and JSON modes), the client runtime and Vue adapter, and a playground with Playwright coverage. Phase 3 added streams (SSE) end to end; Phase 4 added merge props, Precognition, rate limiting, the security review, benchmarks and the docs site. Phase 5 added server-side rendering with hydration, the React adapter skeleton, the mobile SDK guide, the relay design and the release-readiness checklist. See `docs/release-readiness.md` for what 1.0 includes. See [`docs/PLAN.md`](docs/PLAN.md) for the plan and phase breakdown.
 
 ## Packages
 
-| Package                      | Path                | Purpose                                                                             |
-| ---------------------------- | ------------------- | ----------------------------------------------------------------------------------- |
-| `swarakaka/bridge-laravel`   | `packages/laravel`  | Content negotiation, page/JSON/HTML representations, SSE streams, event bus         |
-| `@swarakaka/bridge-protocol` | `packages/protocol` | Normative spec, JSON Schemas, golden fixtures, TypeScript types                     |
-| `@swarakaka/bridge-core`     | `packages/core`     | Framework-agnostic client runtime (router, page store, forms, SSE client)           |
-| `@swarakaka/bridge-vue`      | `packages/vue`      | Vue 3 bindings (`createBridgeApp`, `usePage`, `useForm`, `useStream`, `BridgeLink`) |
-| playground                   | `playground`        | Laravel + Vue app exercising every mode; integration test environment               |
-| e2e                          | `e2e`               | Playwright suite against the playground                                             |
-| benchmarks                   | `benchmarks`        | Reproducible benchmarks (k6, Lighthouse CI, phpbench)                               |
+| Package                      | Path                | Purpose                                                                                                              |
+| ---------------------------- | ------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `swarakaka/bridge-laravel`   | `packages/laravel`  | Content negotiation, page/JSON/HTML representations, SSE streams, event bus                                          |
+| `@swarakaka/bridge-protocol` | `packages/protocol` | Normative spec, JSON Schemas, golden fixtures, TypeScript types                                                      |
+| `@swarakaka/bridge-core`     | `packages/core`     | Framework-agnostic client runtime (router, page store, forms, SSE client)                                            |
+| `@swarakaka/bridge-vue`      | `packages/vue`      | Vue 3 bindings (`createBridgeApp`, `usePage`, `useForm`, `useStream`, `BridgeLink`) and the SSR renderer (`/server`) |
+| `@swarakaka/bridge-react`    | `packages/react`    | Experimental React adapter skeleton                                                                                  |
+| playground                   | `playground`        | Laravel + Vue app exercising every mode; integration test environment                                                |
+| e2e                          | `e2e`               | Playwright suite against the playground                                                                              |
+| benchmarks                   | `benchmarks`        | Reproducible benchmarks (k6, Lighthouse CI, phpbench)                                                                |
 
 ## Development
 

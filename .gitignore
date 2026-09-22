@@ -38,3 +38,5 @@ benchmarks/results/*.json
 .vscode/*
 !.vscode/extensions.json
 playground/.env.e2e
+playground/database/bench.sqlite
+benchmarks/results/

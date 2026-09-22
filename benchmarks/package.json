@@ -1,0 +1,10 @@
+{
+  "name": "bridge-benchmarks",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Reproducible benchmarks for Bridge modes against the playground",
+  "scripts": {
+    "bench": "node scripts/run.mjs"
+  }
+}

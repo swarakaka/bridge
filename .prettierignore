@@ -19,3 +19,4 @@ packages/laravel/vendor
 packages/laravel/.phpstan
 packages/laravel/.phpunit.cache
 **/composer.json
+playground/bootstrap/ssr

@@ -11,6 +11,7 @@ export default tseslint.config(
       '**/vendor/**',
       'packages/protocol/src/generated/**',
       'playground/public/**',
+      'playground/bootstrap/ssr/**',
       'playground/storage/**',
       'docs/.vitepress/cache/**',
       'docs/.vitepress/dist/**',

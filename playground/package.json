@@ -7,7 +7,9 @@
     "type": "module",
     "scripts": {
         "dev": "vite",
-        "build": "vite build",
+        "build": "vite build && vite build --ssr resources/js/ssr.ts --outDir bootstrap/ssr",
+        "build:client": "vite build",
+        "build:ssr": "vite build --ssr resources/js/ssr.ts --outDir bootstrap/ssr",
         "typecheck": "vue-tsc --noEmit -p tsconfig.json",
         "test": "php artisan test"
     },

@@ -23,18 +23,23 @@
     "play": "pnpm --filter bridge-playground dev",
     "bench": "bash benchmarks/run.sh",
     "changeset": "changeset",
-    "release": "pnpm build && changeset publish"
+    "release": "pnpm build && changeset publish",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
   },
   "devDependencies": {
     "@changesets/cli": "^2.29.0",
     "@commitlint/cli": "^19.8.0",
     "@commitlint/config-conventional": "^19.8.0",
     "@eslint/js": "^9.30.0",
+    "@vitest/coverage-v8": "^3.2.7",
     "eslint": "^9.30.0",
     "eslint-config-prettier": "^10.1.0",
     "globals": "^17.12.0",
     "prettier": "^3.6.0",
     "typescript": "^5.8.0",
-    "typescript-eslint": "^8.35.0"
+    "typescript-eslint": "^8.35.0",
+    "vitepress": "^1.6.0"
   }
 }

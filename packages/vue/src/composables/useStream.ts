@@ -1,6 +1,6 @@
 import type { StreamClient, StreamEvents, StreamOptions, StreamState } from '@swarakaka/bridge-core'
 import { getCurrentScope, onScopeDispose, ref, shallowRef, type Ref, type ShallowRef } from 'vue'
-import { useBridge } from '../injection'
+import { useBridge } from '../injection.js'
 
 export interface UseStreamOptions extends StreamOptions {
   /** Close the stream when the component scope is disposed (default true). */
@@ -24,7 +24,12 @@ export interface UseStreamReturn {
 export function useStream(url: string, options: UseStreamOptions = {}): UseStreamReturn {
   const bridge = useBridge()
   const { closeOnDispose, ...streamOptions } = options
-  const stream = bridge.stream(url, streamOptions)
+  // Never open connections while rendering on the server.
+  const server = typeof window === 'undefined'
+  const stream = bridge.stream(url, {
+    ...streamOptions,
+    autoConnect: server ? false : streamOptions.autoConnect,
+  })
 
   const state = ref<StreamState>(stream.state)
   const lastEventAt = ref<number | null>(stream.lastEventAt)

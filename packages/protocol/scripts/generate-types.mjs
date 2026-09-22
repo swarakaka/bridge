@@ -28,7 +28,7 @@ for (const file of files) {
     $refOptions: { resolve: { file: { order: 1 } } },
   })
   await writeFile(path.join(outDir, `${base}.ts`), header + dedupe(ts, base))
-  index.push(`export * from './${base}'`)
+  index.push(`export * from './${base}.js'`)
 }
 
 await writeFile(path.join(outDir, 'index.ts'), header + index.join('\n') + '\n')
@@ -69,7 +69,7 @@ function dedupe(ts, module) {
     out.push(line)
   }
   const importLines = Array.from(imports.entries()).map(
-    ([name, owner]) => `import type { ${name} } from './${owner}'`,
+    ([name, owner]) => `import type { ${name} } from './${owner}.js'`,
   )
   return (importLines.length ? importLines.join('\n') + '\n\n' : '') + out.join('\n')
 }

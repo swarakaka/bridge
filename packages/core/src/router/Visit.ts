@@ -1,6 +1,6 @@
 import type { BridgeError, BridgePage } from '@swarakaka/bridge-protocol'
-import type { UploadProgress } from '../http/RequestManager'
-import type { Method } from './url'
+import type { UploadProgress } from '../http/RequestManager.js'
+import type { Method } from './url.js'
 
 export type ValidationErrors = Record<string, string[]>
 
@@ -13,6 +13,8 @@ export interface VisitOptions {
   preserveScroll?: boolean | undefined
   only?: string[] | undefined
   except?: string[] | undefined
+  /** Append props the server marked with Bridge::merge() instead of replacing them (partial reloads). */
+  merge?: boolean | undefined
   /** Let the visit use a fresh/stale cached page (GET only). Default true for GET. */
   useCache?: boolean | undefined
   forceFormData?: boolean | undefined
@@ -38,6 +40,7 @@ export interface Visit {
   preserveScroll: boolean
   only: string[]
   except: string[]
+  merge: boolean
   prefetch: boolean
   completed: boolean
   cancelled: boolean

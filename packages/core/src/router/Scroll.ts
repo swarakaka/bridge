@@ -1,4 +1,4 @@
-import type { ScrollPositions } from './History'
+import type { ScrollPositions } from './History.js'
 
 export const SCROLL_REGION_ATTRIBUTE = 'bridge-scroll-region'
 

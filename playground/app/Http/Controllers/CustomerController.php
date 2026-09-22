@@ -24,9 +24,10 @@ class CustomerController extends Controller
         $filters = ['search' => $request->string('search')->toString() ?: null];
 
         return Bridge::render('Customers/Index', [
-            'customers' => CustomerResource::collection(
-                Customer::query()->search($filters['search'])->latest('id')->paginate(20)->withQueryString(),
-            ),
+            // Bridge::merge(): a "load more" partial reload appends the next page's rows.
+            'customers' => Bridge::merge(fn () => CustomerResource::collection(
+                Customer::query()->search($filters['search'])->latest('id')->paginate(min(200, max(1, (int) $request->integer('per_page', 20))))->withQueryString(),
+            )),
             'filters' => $filters,
             'stats' => Bridge::defer(fn () => [
                 'total' => Customer::count(),

@@ -2,6 +2,7 @@ packages:
   - packages/*
   - playground
   - e2e
+  - benchmarks
 
 allowBuilds:
   esbuild: true

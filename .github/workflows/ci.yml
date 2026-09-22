@@ -29,6 +29,7 @@ jobs:
       - run: pnpm build
       - run: pnpm typecheck
       - run: pnpm test
+      - run: pnpm docs:build
 
   php:
     name: PHP ${{ matrix.php }} / Laravel ${{ matrix.laravel }}
@@ -69,6 +70,7 @@ jobs:
         run: vendor/bin/pest --coverage --min=90
         env:
           REDIS_HOST: 127.0.0.1
+          BRIDGE_TEST_REDIS: '1'
 
   playground:
     name: Playground (PHP 8.4)

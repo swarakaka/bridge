@@ -1,6 +1,6 @@
 import type { Form, FormOptions } from '@swarakaka/bridge-core'
 import { onMounted, reactive, watch, type UnwrapNestedRefs } from 'vue'
-import { useBridge } from '../injection'
+import { useBridge } from '../injection.js'
 
 export type ReactiveForm<T extends Record<string, unknown>> = UnwrapNestedRefs<Form<T>>
 

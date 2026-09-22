@@ -16,6 +16,27 @@ const props = defineProps<{
 const search = ref(props.filters.search ?? '')
 let timer: ReturnType<typeof setTimeout> | null = null
 
+// "Load more": the server marks `customers` with Bridge::merge(), so this partial
+// reload appends the next page's rows instead of replacing them.
+const loadingMore = ref(false)
+const loadMore = (): void => {
+    const next = props.customers.meta.current_page + 1
+    if (next > props.customers.meta.last_page || loadingMore.value) return
+    loadingMore.value = true
+    void router.get(
+        '/customers',
+        { ...(search.value ? { search: search.value } : {}), page: next },
+        {
+            only: ['customers'],
+            merge: true,
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+            onFinish: () => (loadingMore.value = false),
+        },
+    )
+}
+
 // Partial reload: only the `customers` prop is re-fetched; state and scroll are preserved.
 watch(search, (value) => {
     if (timer) clearTimeout(timer)
@@ -105,7 +126,22 @@ watch(search, (value) => {
         </tbody>
     </table>
 
-    <div class="mt-4">
+    <div class="mt-4 flex items-center justify-between gap-4">
         <Pagination :meta="customers.meta" :only="['customers']" />
+
+        <button
+            v-if="customers.meta.current_page < customers.meta.last_page"
+            type="button"
+            class="rounded border border-slate-300 px-3 py-1 text-sm disabled:opacity-50"
+            :disabled="loadingMore"
+            data-testid="load-more"
+            @click="loadMore"
+        >
+            {{
+                loadingMore
+                    ? 'Loading…'
+                    : `Load more (${customers.data.length} of ${customers.meta.total})`
+            }}
+        </button>
     </div>
 </template>

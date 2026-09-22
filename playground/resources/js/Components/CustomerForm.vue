@@ -27,6 +27,11 @@ const onFile = (event: Event): void => {
 const submit = (): void => {
     void form.submit(props.method, props.action, { preserveScroll: true })
 }
+
+// Live validation of one field through Laravel Precognition (route has the `precognitive` middleware).
+const validateField = (field: string): void => {
+    void form.validate(props.method, props.action, field)
+}
 </script>
 
 <template>
@@ -38,6 +43,7 @@ const submit = (): void => {
                 v-model="form.data[field]"
                 :name="field"
                 type="text"
+                @blur="validateField(field)"
                 class="mt-1 w-full rounded border border-slate-300 px-3 py-2"
                 :aria-invalid="Boolean(form.errors[field])"
             />

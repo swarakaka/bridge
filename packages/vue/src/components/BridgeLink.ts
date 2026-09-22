@@ -1,6 +1,6 @@
 import type { Method } from '@swarakaka/bridge-core'
 import { defineComponent, h, onBeforeUnmount, onMounted, type PropType } from 'vue'
-import { useBridge } from '../injection'
+import { useBridge } from '../injection.js'
 
 /**
  * Anchor that navigates through the router. `prefetch="hover"` (default)

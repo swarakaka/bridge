@@ -1,7 +1,7 @@
 import type { BridgePage } from '@swarakaka/bridge-protocol'
 import { vi } from 'vitest'
-import { createBridge, type Bridge } from '../src/createBridge'
-import type { BridgeConfig } from '../src/config'
+import { createBridge, type Bridge } from '../src/createBridge.js'
+import type { BridgeConfig } from '../src/config.js'
 
 export function page(overrides: Partial<BridgePage> = {}): BridgePage {
   return {

@@ -53,6 +53,26 @@ Note: curl POSTs above hit CSRF because the routes are in the `web` group. Use `
 | Errors                     | /errors                                                                 | 403/404/500 rendered in place; 401 navigates to login; 419 reloads           |
 | Build conflict             | Change `BRIDGE_BUILD_VERSION` in `.env` while the tab is open, navigate | Full document reload                                                         |
 
+## Phase 5 — Server-side rendering
+
+Set `BRIDGE_SSR_ENABLED=true` in `.env`, run `pnpm build` and `php artisan bridge:ssr` in a second terminal, then `php artisan view:clear` once.
+
+| Check                   | Where                                              | Expect                                                                                    |
+| ----------------------- | -------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Rendered first response | `curl -H 'Accept: text/html' localhost:8000/login` | `data-server-rendered="true"`, `<title>Sign in · Bridge</title>`, form markup in the HTML |
+| Hydration               | Any page                                           | `#app` gains `data-bridge-hydrated="true"`; interactions work without a reload            |
+| Fallback                | Stop the SSR server                                | Pages still render on the client; a warning in `storage/logs/laravel.log`                 |
+
+## Phase 4 — Hardening
+
+| Check           | Where                                                                     | Expect                                                                                                        |
+| --------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Load more       | Customers list                                                            | Rows append (20 → 40), URL gets `page=2`, request carries `X-Bridge-Only: customers`                          |
+| Live validation | New customer, type a bad email, leave the field                           | Request with `Precognition: true` and `Precognition-Validate-Only: email`; 422 shows the error, 204 clears it |
+| Stream throttle | Reconnect more than `BRIDGE_STREAM_CONNECTS_PER_MINUTE` times in a minute | 429 JSON, client backs off                                                                                    |
+| Accessibility   | Tab from the address bar                                                  | "Skip to content" link appears first; current nav link has `aria-current="page"`                              |
+| Benchmarks      | `pnpm --filter bridge-benchmarks bench`                                   | A new section in `benchmarks/RESULTS.md`                                                                      |
+
 ## Phase 3 — Realtime (browser)
 
 Sign in, open http://localhost:8000/realtime. The stream is shared by every page of the signed-in session.

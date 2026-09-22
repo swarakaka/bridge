@@ -34,7 +34,10 @@ export default function globalSetup(): void {
   if (!existsSync(database)) writeFileSync(database, '')
   const env = { ...process.env, ...e2eEnv }
   execSync('php artisan migrate:fresh --seed --force', { cwd: playground, env, stdio: 'inherit' })
-  if (!existsSync(`${playground}/public/build/manifest.json`)) {
+  if (
+    !existsSync(`${playground}/public/build/manifest.json`) ||
+    !existsSync(`${playground}/bootstrap/ssr/ssr.js`)
+  ) {
     execSync('pnpm build', { cwd: playground, stdio: 'inherit' })
   }
 }

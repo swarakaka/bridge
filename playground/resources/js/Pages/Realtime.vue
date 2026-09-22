@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { BridgeHead, router, useProp, useForm } from '@swarakaka/bridge-vue'
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import { useAppStream } from '@/composables/useAppStream'
 
@@ -53,8 +53,9 @@ if (stream) {
 onBeforeUnmount(() => offs.forEach((off) => off()))
 
 const now = ref(Date.now())
-const tick = setInterval(() => (now.value = Date.now()), 500)
-onBeforeUnmount(() => clearInterval(tick))
+let tick: ReturnType<typeof setInterval> | null = null
+onMounted(() => (tick = setInterval(() => (now.value = Date.now()), 500)))
+onBeforeUnmount(() => tick && clearInterval(tick))
 const sinceLast = computed(() =>
     stream?.lastEventAt.value ? Math.round((now.value - stream.lastEventAt.value) / 1000) : null,
 )

@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h, nextTick } from 'vue'
-import { createBridgeApp, useStream } from '../src'
-import type { BridgeApp } from '../src'
-import { embed, flush, mockFetch, page, pageResponse } from './helpers'
+import { createBridgeApp, useStream } from '../src/index.js'
+import type { BridgeApp } from '../src/index.js'
+import { embed, flush, mockFetch, page, pageResponse } from './helpers.js'
 
 function sseFetch() {
   const encoder = new TextEncoder()

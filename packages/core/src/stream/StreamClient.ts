@@ -1,11 +1,11 @@
 import { CONTROL_EVENT, isControlEvent } from '@swarakaka/bridge-protocol'
 import type { BridgeStreamControl } from '@swarakaka/bridge-protocol'
-import { Emitter } from '../events/Emitter'
-import type { PageStore } from '../pages/PageStore'
-import type { Router } from '../router/Router'
-import { isSameOrigin, toUrl } from '../router/url'
-import { Backoff, type BackoffOptions } from './backoff'
-import { SseParser, type SseEvent } from './sseParser'
+import { Emitter } from '../events/Emitter.js'
+import type { PageStore } from '../pages/PageStore.js'
+import type { Router } from '../router/Router.js'
+import { isSameOrigin, toUrl } from '../router/url.js'
+import { Backoff, type BackoffOptions } from './backoff.js'
+import { SseParser, type SseEvent } from './sseParser.js'
 
 export type StreamState = 'idle' | 'connecting' | 'open' | 'reconnecting' | 'closed'
 

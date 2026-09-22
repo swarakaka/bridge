@@ -39,7 +39,7 @@ jobs:
           composer install --prefer-dist --no-interaction --no-scripts
           php artisan package:discover
           php artisan storage:link
-          pnpm build
+          pnpm build   # client and SSR bundles; the suite runs with SSR enabled
       - name: Install Playwright browsers
         working-directory: e2e
         run: pnpm exec playwright install --with-deps chromium

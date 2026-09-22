@@ -1,5 +1,5 @@
 import { onMounted, ref, watch, type Ref } from 'vue'
-import { useBridge } from '../injection'
+import { useBridge } from '../injection.js'
 
 /** Local state that survives back/forward navigation via history state. */
 export function useRemember<T>(key: string, initial: T): Ref<T> {

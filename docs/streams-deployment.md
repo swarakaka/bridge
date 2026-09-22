@@ -41,12 +41,12 @@ For PHP-FPM behind Nginx, `fastcgi_buffering off;` on the stream location.
 
 ## Bus drivers
 
-| Driver     | When                                  | Notes                                                                                                                                           |
-| ---------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `redis`    | Production                            | Redis Streams: `XADD ... MAXLEN ~ 1000` per channel, `XREAD BLOCK` across channels. Replay via `Last-Event-ID`. Works with phpredis and predis. |
-| `database` | No Redis available, small deployments | Polling (`poll_ms`, default 1000). Run `bridge:stream:prune` on a schedule (`retain_minutes`, default 60).                                      |
-| `sync`     | Tests, one-off producer streams       | In-process only.                                                                                                                                |
-| `null`     | Disable publishing                    |                                                                                                                                                 |
+| Driver     | When                                  | Notes                                                                                                                                                                                                             |
+| ---------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `redis`    | Production                            | Redis Streams: `XADD ... MAXLEN ~ 1000` per channel, `XREAD BLOCK` across channels. Replay via `Last-Event-ID`. Works with phpredis and predis.                                                                   |
+| `database` | No Redis available, small deployments | Polling (`poll_ms`, default 1000). Run `bridge:stream:prune` on a schedule (`retain_minutes`, default 60). On SQLite enable WAL (`journal_mode => 'wal'`) and a `busy_timeout`, otherwise pollers starve writers. |
+| `sync`     | Tests, one-off producer streams       | In-process only.                                                                                                                                                                                                  |
+| `null`     | Disable publishing                    |                                                                                                                                                                                                                   |
 
 Set `BRIDGE_STREAM_PREFIX` when several apps share one Redis.
 

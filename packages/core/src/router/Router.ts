@@ -1,12 +1,12 @@
 import type { BridgeError, BridgePage } from '@swarakaka/bridge-protocol'
-import { PageCache } from '../cache/PageCache'
-import type { Emitter } from '../events/Emitter'
-import type { RequestManager } from '../http/RequestManager'
-import { parseResponse, type ParsedResponse } from '../http/responseParser'
-import type { PageStore } from '../pages/PageStore'
-import type { History, HistoryState } from './History'
-import { captureScroll, resetScroll, restoreScroll } from './Scroll'
-import { isSameOrigin, relativeUrl, toUrl } from './url'
+import { PageCache } from '../cache/PageCache.js'
+import type { Emitter } from '../events/Emitter.js'
+import type { RequestManager } from '../http/RequestManager.js'
+import { parseResponse, type ParsedResponse } from '../http/responseParser.js'
+import type { PageStore } from '../pages/PageStore.js'
+import type { History, HistoryState } from './History.js'
+import { captureScroll, resetScroll, restoreScroll } from './Scroll.js'
+import { isSameOrigin, relativeUrl, toUrl } from './url.js'
 import type {
   RouterEvents,
   ValidationErrors,
@@ -14,7 +14,7 @@ import type {
   VisitException,
   VisitOptions,
   VisitOutcome,
-} from './Visit'
+} from './Visit.js'
 
 export interface RouterDependencies {
   store: PageStore
@@ -258,6 +258,7 @@ export class Router {
       preserveScroll: options.preserveScroll ?? false,
       only: options.only ?? [],
       except: options.except ?? [],
+      merge: options.merge ?? false,
       prefetch: false,
       completed: false,
       cancelled: false,
@@ -386,6 +387,8 @@ export class Router {
         return this.handleError(parsed.error, visit, options)
 
       case 'empty':
+        // 204/304: nothing to apply (Precognition success, not modified).
+        options.onSuccess?.(this.d.store.page as BridgePage)
         return { status: 'success', page: this.d.store.page as BridgePage }
 
       case 'invalid': {
@@ -473,7 +476,7 @@ export class Router {
       current.component === page.component
 
     if (partial) {
-      this.d.store.setPage(page, { partial: true })
+      this.d.store.setPage(page, { partial: true, merge: visit.merge })
       this.d.history.updatePage(this.d.store.page!)
       this.d.events.emit('navigate', { page: this.d.store.page!, visit })
       return

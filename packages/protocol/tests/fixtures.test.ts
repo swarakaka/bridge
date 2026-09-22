@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { readFileSync, readdirSync } from 'node:fs'
 import path from 'node:path'
-import Ajv2020 from 'ajv/dist/2020'
-import addFormats from 'ajv-formats'
+import Ajv2020Module from 'ajv/dist/2020.js'
+import addFormatsModule from 'ajv-formats'
 import {
   isControlEvent,
   isError,
@@ -10,7 +10,7 @@ import {
   isPage,
   parseBridgeContentType,
   PAGE_ACCEPT,
-} from '../src'
+} from '../src/index.js'
 
 const root = path.resolve(__dirname, '..')
 const schema = (name: string) =>
@@ -20,7 +20,15 @@ const fixtures = (dir: string, ext = '.json') =>
     .filter((f) => f.endsWith(ext))
     .map((f) => [f, readFileSync(path.join(root, 'fixtures', dir, f), 'utf8')] as const)
 
+// ajv ships CommonJS; under NodeNext the default import is the module object.
+const Ajv2020 = ((Ajv2020Module as unknown as { default?: typeof Ajv2020Module }).default ??
+  Ajv2020Module) as unknown as new (opts: object) => {
+  addSchema(schema: unknown, key: string): void
+  getSchema(key: string): ((data: unknown) => boolean) & { errors?: unknown }
+}
 const ajv = new Ajv2020({ allErrors: true, strict: true })
+const addFormats = ((addFormatsModule as unknown as { default?: typeof addFormatsModule })
+  .default ?? addFormatsModule) as unknown as (ajv: unknown) => void
 addFormats(ajv)
 for (const name of ['error', 'page', 'json', 'json-error', 'stream-control']) {
   ajv.addSchema(schema(name), `${name}.schema.json`)

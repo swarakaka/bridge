@@ -1,8 +1,8 @@
 import { HEADERS, PAGE_ACCEPT } from '@swarakaka/bridge-protocol'
-import { readXsrfToken } from './csrf'
-import { hasFiles, objectToFormData } from './formData'
-import type { HttpResponse } from './responseParser'
-import { mergeQuery, type Method } from '../router/url'
+import { readXsrfToken } from './csrf.js'
+import { hasFiles, objectToFormData } from './formData.js'
+import type { HttpResponse } from './responseParser.js'
+import { mergeQuery, type Method } from '../router/url.js'
 
 export interface HttpRequest {
   method: Method

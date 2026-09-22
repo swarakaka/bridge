@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
-import { PageStore } from '../src/pages/PageStore'
-import { mergeValue, setDeep, getDeep } from '../src/pages/merge'
-import { page } from './helpers'
+import { PageStore } from '../src/pages/PageStore.js'
+import { mergeValue, setDeep, getDeep } from '../src/pages/merge.js'
+import { page } from './helpers.js'
 
 describe('merge helpers', () => {
   it('applies protocol merge modes', () => {
