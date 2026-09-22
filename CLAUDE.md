@@ -39,7 +39,7 @@ composer install && cp .env.example .env && php artisan key:generate
 touch database/database.sqlite && php artisan migrate --seed && php artisan storage:link
 php artisan test             # feature tests across modes (11)
 pnpm typecheck && pnpm build # vue-tsc + vite (needs `pnpm build` at the root first: the playground consumes packages/*/dist)
-php artisan serve            # then open http://localhost:8000 (sign in: ada@example.com / password) or run the curl checks in playground/CHECKLIST.md
+pnpm serve                   # ./serve.sh: built-in server from public/ with workers; then open http://127.0.0.1:8000 (ada@example.com / password) or run the curl checks in playground/CHECKLIST.md
 
 cd e2e
 pnpm exec playwright install chromium   # once
@@ -73,7 +73,7 @@ Git: the repository is initialized but has no commits yet. Do not commit unless 
 - `packages/laravel/src/Stream/StreamResponse.php` is the loop: ready → replay (if `Last-Event-ID`) → blocking bus reads → heartbeats → `end{max_duration}`. Tests drive it with the `sync` bus, `->maxDuration(0)` (drain once) and `Last-Event-ID: 0` (replay everything).
 - `ignore_user_abort(true)` is deliberate: the loop checks `connection_aborted()` itself so `finally` (limiter release) always runs. A replayed `end` signal is ignored (`isHistorical`).
 - The ticket middleware must run before `auth:*`; the provider inserts it with `Kernel::addToMiddlewarePriorityBefore(AuthenticatesRequests::class, …)`.
-- `php artisan serve` serves one request at a time unless `PHP_CLI_SERVER_WORKERS` is set **and** `--no-reload` is used; in no-reload mode the parent's whole environment is forwarded to workers, so E2E passes its env explicitly.
+- `php artisan serve` serves one request at a time unless `PHP_CLI_SERVER_WORKERS` is set **and** `--no-reload` is used; in no-reload mode the parent's whole environment is forwarded to workers, so E2E passes its env explicitly. Killing only the parent leaves workers bound to the port with a dead stdout pipe; Laravel's router script then prints a `file_put_contents(): Broken pipe` notice into every response and corrupts Bridge JSON. Use `playground/serve.sh` (refuses busy ports, one process group) and `lsof -ti :8000 | xargs kill -9` to clear orphans.
 - Client: `StreamClient` reconnects immediately after an orderly `end` (no resync), uses backoff otherwise, and refuses a tight loop after short-lived connections (throttled streams).
 
 ## Post-1.0 notes

@@ -1441,7 +1441,7 @@ var Router = class {
 				if (parsed.kind === "page" && current && current.component === parsed.page.component) {
 					this.d.store.setPage(parsed.page, { partial: true });
 					this.d.history.updatePage(this.d.store.page);
-				}
+				} else if (parsed.kind === "invalid") console.warn(`[bridge] deferred props ${keys.join(", ")} were not loaded: the server answered ${parsed.status} with ${parsed.contentType ?? "no content type"} instead of a Bridge page. Output printed before the response (PHP notices, debug output) breaks JSON responses.`);
 			} catch {} finally {
 				this.deferredControllers.delete(controller);
 				this.d.store.setLoading(keys, false);

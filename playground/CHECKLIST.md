@@ -9,7 +9,7 @@ cd playground
 composer install
 cp .env.example .env && php artisan key:generate
 touch database/database.sqlite && php artisan migrate --seed
-php artisan serve
+pnpm serve                       # ./serve.sh: built-in server from public/ with workers, safe to Ctrl+C
 ```
 
 ## Phase 1 — one controller, three representations (curl)
@@ -34,7 +34,7 @@ Note: curl POSTs above hit CSRF because the routes are in the `web` group. Use `
 
 ## Phase 2 — Vue UI (browser)
 
-`pnpm build` at the repo root, then `pnpm build` here, `php artisan serve`, open http://localhost:8000. Sign in as `ada@example.com` / `password`. Each row is also a Playwright spec in `../e2e/tests`.
+`pnpm build` at the repo root, then `pnpm build` and `pnpm serve` here, open http://127.0.0.1:8000. Sign in as `ada@example.com` / `password`. Each row is also a Playwright spec in `../e2e/tests`.
 
 | Check                      | Where                                                                   | Expect                                                                       |
 | -------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------- |

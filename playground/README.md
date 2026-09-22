@@ -11,5 +11,5 @@ composer install
 cp .env.example .env && php artisan key:generate
 touch database/database.sqlite && php artisan migrate --seed && php artisan storage:link
 pnpm build                      # or `pnpm dev` for Vite HMR
-php artisan serve               # http://localhost:8000 — ada@example.com / password
+pnpm serve                      # http://127.0.0.1:8000 with workers — ada@example.com / password (see serve.sh; plain `php artisan serve` serves one request at a time)
 ```

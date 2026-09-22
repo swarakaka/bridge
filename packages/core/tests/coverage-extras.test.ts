@@ -270,3 +270,31 @@ describe('Form extras', () => {
     expect(form.data.tags).toEqual(['x'])
   })
 })
+
+describe('deferred props diagnostics', () => {
+  let bridge: Bridge | null = null
+  afterEach(() => bridge?.destroy())
+
+  it('warns when a deferred response is not a Bridge page', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const fetch = mockFetch((_, init) => {
+      const only = (init.headers as Record<string, string>)['X-Bridge-Only']
+      if (only === 'stats')
+        return new Response('<b>Notice</b>{"type":"page"}', {
+          status: 200,
+          headers: { 'Content-Type': 'text/html' },
+        })
+      return pageResponse(
+        page({ component: 'Dashboard', url: '/', props: {}, deferred: { default: ['stats'] } }),
+      )
+    })
+    bridge = bridgeWith(fetch)
+    await bridge.router.visit('/')
+    await tick()
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('deferred props stats were not loaded'),
+    )
+    expect(bridge.store.current.loading.size).toBe(0)
+    warn.mockRestore()
+  })
+})
