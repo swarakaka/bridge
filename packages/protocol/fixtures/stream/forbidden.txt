@@ -1,0 +1,7 @@
+retry: 3000
+event: bridge
+data: {"type":"ready","protocol":1,"replayed":false,"heartbeat":15000,"maxDuration":null}
+
+event: bridge
+data: {"type":"error","status":403,"kind":"forbidden","message":"This action is unauthorized.","final":true}
+

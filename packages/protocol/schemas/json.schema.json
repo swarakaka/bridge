@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bridge.swarakaka.dev/schemas/v1/json.schema.json",
+  "title": "BridgeJsonDocument",
+  "description": "JSON mode success envelope (spec/json.md §1 and §3).",
+  "type": "object",
+  "properties": {
+    "data": { "type": ["object", "null"] },
+    "meta": {
+      "type": "object",
+      "properties": {
+        "location": { "type": "string" },
+        "flash": { "type": "object" }
+      }
+    }
+  },
+  "required": ["data"],
+  "additionalProperties": false
+}

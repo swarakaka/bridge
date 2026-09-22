@@ -1,0 +1,5 @@
+{
+  "data": {
+    "customer": { "id": 21, "name": "Acme", "email": "hello@acme.test" }
+  }
+}

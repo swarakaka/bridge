@@ -1,0 +1,10 @@
+{
+  "protocol": 1,
+  "type": "error",
+  "error": {
+    "status": 401,
+    "kind": "unauthenticated",
+    "message": "Unauthenticated.",
+    "redirect": "/login"
+  }
+}

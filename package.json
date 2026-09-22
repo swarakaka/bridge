@@ -1,0 +1,40 @@
+{
+  "name": "bridge-monorepo",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Bridge: a server-driven application protocol for Laravel with Page, JSON and SSE modes",
+  "license": "MIT",
+  "type": "module",
+  "repository": "github:swarakaka/Bridge",
+  "packageManager": "pnpm@11.24.0",
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  },
+  "scripts": {
+    "build": "pnpm -r --filter './packages/**' build",
+    "test": "pnpm -r --filter './packages/**' test",
+    "test:php": "composer test",
+    "test:e2e": "pnpm --filter bridge-e2e test",
+    "lint": "eslint . && prettier --check .",
+    "lint:fix": "eslint . --fix && prettier --write .",
+    "typecheck": "pnpm -r --filter './packages/**' typecheck",
+    "generate": "pnpm --filter @swarakaka/bridge-protocol generate",
+    "play": "pnpm --filter bridge-playground dev",
+    "bench": "bash benchmarks/run.sh",
+    "changeset": "changeset",
+    "release": "pnpm build && changeset publish"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.29.0",
+    "@commitlint/cli": "^19.8.0",
+    "@commitlint/config-conventional": "^19.8.0",
+    "@eslint/js": "^9.30.0",
+    "eslint": "^9.30.0",
+    "eslint-config-prettier": "^10.1.0",
+    "globals": "^17.12.0",
+    "prettier": "^3.6.0",
+    "typescript": "^5.8.0",
+    "typescript-eslint": "^8.35.0"
+  }
+}

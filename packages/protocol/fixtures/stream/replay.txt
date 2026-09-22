@@ -1,0 +1,12 @@
+retry: 3000
+event: bridge
+data: {"type":"ready","protocol":1,"replayed":true,"heartbeat":15000,"maxDuration":300000}
+
+id: 1758542400123-0
+event: bridge
+data: {"type":"invalidate","keys":["customers"]}
+
+id: 1758542400987-0
+event: customer.created
+data: {"id":12,"name":"Acme"}
+

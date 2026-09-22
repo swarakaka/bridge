@@ -1,0 +1,30 @@
+retry: 3000
+event: bridge
+data: {"type":"ready","protocol":1,"replayed":false,"heartbeat":15000,"maxDuration":60000}
+
+: hb
+
+id: 1758542400123-0
+event: bridge
+data: {"type":"invalidate","keys":["customers"]}
+
+id: 1758542400987-0
+event: customer.created
+data: {"id":12,"name":"Acme"}
+
+id: 1758542401001-0
+event: bridge
+data: {"type":"prop","key":"unreadCount","value":3,"mode":"replace"}
+
+event: bridge
+data: {"type":"notification","level":"success","title":null,"message":"Customer saved"}
+
+event: bridge
+data: {"type":"progress","id":"export-9","value":0.6,"label":"Exporting"}
+
+event: bridge
+data: {"type":"navigate","url":"/customers/12","replace":false}
+
+event: bridge
+data: {"type":"end","reason":"max_duration","reconnect":true}
+

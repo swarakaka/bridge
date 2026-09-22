@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bridge.swarakaka.dev/schemas/v1/json-error.schema.json",
+  "title": "BridgeJsonError",
+  "description": "JSON mode error body, Laravel-native (spec/errors.md §3.3).",
+  "type": "object",
+  "properties": {
+    "message": { "type": "string" },
+    "errors": {
+      "type": "object",
+      "additionalProperties": { "type": "array", "items": { "type": "string" } }
+    },
+    "exception": { "type": "string" },
+    "file": { "type": "string" },
+    "line": { "type": "integer" },
+    "trace": { "type": "array" }
+  },
+  "required": ["message"],
+  "additionalProperties": false
+}

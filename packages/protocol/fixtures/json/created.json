@@ -1,0 +1,9 @@
+{
+  "data": {
+    "customer": { "id": 23, "name": "Initech", "email": "it@initech.test" }
+  },
+  "meta": {
+    "location": "/customers/23",
+    "flash": { "message": "Customer created.", "level": "success" }
+  }
+}

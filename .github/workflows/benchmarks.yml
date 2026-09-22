@@ -1,0 +1,16 @@
+name: Benchmarks
+
+on:
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: Scenario to run (all, first-load, navigation, throughput, serialization, sse, partial)
+        default: all
+
+jobs:
+  bench:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Placeholder until Phase 4
+        run: echo "benchmarks/run.sh ${{ inputs.scenario }} is implemented in Phase 4."

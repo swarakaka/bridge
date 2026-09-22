@@ -1,0 +1,136 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  js:
+    name: JS (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm build
+      - run: pnpm typecheck
+      - run: pnpm test
+
+  php:
+    name: PHP ${{ matrix.php }} / Laravel ${{ matrix.laravel }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.2', '8.3', '8.4']
+        laravel: ['11.*', '12.*', '13.*']
+        exclude:
+          - php: '8.2'
+            laravel: '13.*'
+    services:
+      redis:
+        image: redis:7
+        ports: ['6379:6379']
+        options: --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, redis, pdo_sqlite
+          coverage: pcov
+      - name: Install
+        working-directory: packages/laravel
+        run: |
+          composer require "illuminate/contracts:${{ matrix.laravel }}" "illuminate/http:${{ matrix.laravel }}" "illuminate/support:${{ matrix.laravel }}" "illuminate/view:${{ matrix.laravel }}" --no-interaction --no-update
+          composer update --prefer-dist --no-interaction --with-all-dependencies
+      - name: Pint
+        working-directory: packages/laravel
+        run: vendor/bin/pint --test
+      - name: PHPStan
+        working-directory: packages/laravel
+        run: vendor/bin/phpstan analyse --no-progress
+      - name: Pest
+        working-directory: packages/laravel
+        run: vendor/bin/pest --coverage --min=90
+        env:
+          REDIS_HOST: 127.0.0.1
+
+  playground:
+    name: Playground (PHP 8.4)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_sqlite, sqlite3, gd
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Install
+        working-directory: playground
+        run: |
+          composer install --prefer-dist --no-interaction --no-scripts
+          php artisan package:discover
+      - name: Prepare
+        working-directory: playground
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          touch database/database.sqlite
+          php artisan migrate --seed --force
+          php artisan storage:link
+      - name: Frontend typecheck and build
+        working-directory: playground
+        run: |
+          pnpm typecheck
+          pnpm build
+      - name: Test
+        working-directory: playground
+        run: php artisan test
+      - name: Milestone 1 smoke (curl)
+        working-directory: playground
+        run: |
+          php artisan serve --port=8000 > /tmp/serve.log 2>&1 &
+          sleep 3
+          curl -sf -H 'Accept: text/html' localhost:8000/customers | grep -q 'id="bridge-page"'
+          curl -sf -H 'Accept: application/vnd.bridge+json; v=1' localhost:8000/customers | grep -q '"component":"Customers/Index"'
+          curl -sf -H 'Accept: application/json' localhost:8000/customers | grep -q '"data":{"customers"'
+          test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Accept: text/event-stream' localhost:8000/customers)" = "406"
+          test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Accept: application/vnd.bridge+json; v=1' -H 'X-Bridge-Build: stale' localhost:8000/customers)" = "409"
+          test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Accept: application/json' -H 'Authorization: Bearer x' -X POST -d 'name=' localhost:8000/customers)" = "422"
+
+  commitlint:
+    name: Conventional commits
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose

@@ -1,0 +1,58 @@
+name: E2E
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  pull_request:
+    types: [labeled, synchronize, opened]
+  workflow_dispatch:
+
+jobs:
+  playwright:
+    name: Playwright (${{ matrix.runtime }})
+    # Runs nightly, on manual dispatch, or on PRs carrying the `e2e` label.
+    if: >-
+      github.event_name != 'pull_request' ||
+      contains(github.event.pull_request.labels.*.name, 'e2e')
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # `serve` is PHP's built-in server (one worker). FrankenPHP is added in Phase 3 with the stream tests.
+        runtime: [serve]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_sqlite, sqlite3, gd
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Playground install and build
+        working-directory: playground
+        run: |
+          composer install --prefer-dist --no-interaction --no-scripts
+          php artisan package:discover
+          php artisan storage:link
+          pnpm build
+      - name: Install Playwright browsers
+        working-directory: e2e
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Run E2E
+        working-directory: e2e
+        run: pnpm test
+        env:
+          CI: true
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report-${{ matrix.runtime }}
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+          retention-days: 7

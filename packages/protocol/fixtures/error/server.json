@@ -1,0 +1,5 @@
+{
+  "protocol": 1,
+  "type": "error",
+  "error": { "status": 500, "kind": "server", "message": "Server Error." }
+}

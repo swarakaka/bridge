@@ -1,0 +1,45 @@
+{
+  "name": "@swarakaka/bridge-protocol",
+  "version": "0.1.0",
+  "description": "Bridge protocol: specification, JSON Schemas, golden fixtures and TypeScript types",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/swarakaka/Bridge",
+    "directory": "packages/protocol"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./schemas/*": "./schemas/*"
+  },
+  "files": [
+    "dist",
+    "schemas",
+    "spec",
+    "fixtures"
+  ],
+  "scripts": {
+    "generate": "node scripts/generate-types.mjs",
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.4",
+    "ajv": "^8.17.0",
+    "ajv-formats": "^3.0.1",
+    "json-schema-to-typescript": "^15.0.4",
+    "typescript": "^5.8.0",
+    "vitest": "^3.2.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

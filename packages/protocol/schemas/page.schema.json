@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bridge.swarakaka.dev/schemas/v1/page.schema.json",
+  "title": "BridgePage",
+  "description": "Bridge protocol v1 page object (spec/page.md §1).",
+  "type": "object",
+  "properties": {
+    "protocol": { "type": "integer", "const": 1 },
+    "type": { "type": "string", "const": "page" },
+    "component": { "type": "string", "minLength": 1 },
+    "url": { "type": "string", "pattern": "^/" },
+    "props": { "type": "object" },
+    "build": { "type": ["string", "null"] },
+    "deferred": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": { "type": "string", "minLength": 1 },
+        "minItems": 1
+      }
+    },
+    "meta": { "type": "object" }
+  },
+  "required": ["protocol", "type", "component", "url", "props", "build"],
+  "additionalProperties": false
+}

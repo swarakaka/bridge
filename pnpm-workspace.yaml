@@ -1,0 +1,7 @@
+packages:
+  - packages/*
+  - playground
+  - e2e
+
+allowBuilds:
+  esbuild: true

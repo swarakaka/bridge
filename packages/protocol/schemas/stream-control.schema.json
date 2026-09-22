@@ -1,0 +1,218 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bridge.swarakaka.dev/schemas/v1/stream-control.schema.json",
+  "title": "BridgeStreamControl",
+  "description": "The data object of an `event: bridge` control event (spec/stream.md \u00a73).",
+  "type": "object",
+  "required": ["type"],
+  "oneOf": [
+    {
+      "$ref": "#/$defs/ready"
+    },
+    {
+      "$ref": "#/$defs/invalidate"
+    },
+    {
+      "$ref": "#/$defs/prop"
+    },
+    {
+      "$ref": "#/$defs/notification"
+    },
+    {
+      "$ref": "#/$defs/navigate"
+    },
+    {
+      "$ref": "#/$defs/progress"
+    },
+    {
+      "$ref": "#/$defs/error"
+    },
+    {
+      "$ref": "#/$defs/end"
+    }
+  ],
+  "$defs": {
+    "ready": {
+      "title": "StreamReady",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "ready"
+        },
+        "protocol": {
+          "type": "integer",
+          "const": 1
+        },
+        "replayed": {
+          "type": "boolean"
+        },
+        "heartbeat": {
+          "type": "integer",
+          "minimum": 1000
+        },
+        "maxDuration": {
+          "type": ["integer", "null"],
+          "minimum": 1000
+        }
+      },
+      "required": ["type", "protocol", "replayed", "heartbeat", "maxDuration"],
+      "additionalProperties": false
+    },
+    "invalidate": {
+      "title": "StreamInvalidate",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "invalidate"
+        },
+        "keys": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "minItems": 1
+            },
+            {
+              "const": "*"
+            }
+          ]
+        }
+      },
+      "required": ["type", "keys"],
+      "additionalProperties": false
+    },
+    "prop": {
+      "title": "StreamProp",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "prop"
+        },
+        "key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "value": {},
+        "mode": {
+          "type": "string",
+          "enum": ["replace", "merge", "append", "prepend"],
+          "default": "replace"
+        }
+      },
+      "required": ["type", "key", "value"],
+      "additionalProperties": false
+    },
+    "notification": {
+      "title": "StreamNotification",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "notification"
+        },
+        "level": {
+          "type": "string",
+          "enum": ["info", "success", "warning", "error"]
+        },
+        "title": {
+          "type": ["string", "null"]
+        },
+        "message": {
+          "type": "string"
+        },
+        "meta": {
+          "type": "object"
+        }
+      },
+      "required": ["type", "level", "message"],
+      "additionalProperties": false
+    },
+    "navigate": {
+      "title": "StreamNavigate",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "navigate"
+        },
+        "url": {
+          "type": "string",
+          "minLength": 1
+        },
+        "replace": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": ["type", "url"],
+      "additionalProperties": false
+    },
+    "progress": {
+      "title": "StreamProgress",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "progress"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "value": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "maximum": 1
+        },
+        "label": {
+          "type": ["string", "null"]
+        }
+      },
+      "required": ["type", "id", "value"],
+      "additionalProperties": false
+    },
+    "error": {
+      "title": "StreamError",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "error"
+        },
+        "status": {
+          "type": "integer",
+          "minimum": 400,
+          "maximum": 599
+        },
+        "kind": {
+          "$ref": "error.schema.json#/$defs/kind"
+        },
+        "message": {
+          "type": "string"
+        },
+        "final": {
+          "type": "boolean"
+        }
+      },
+      "required": ["type", "status", "kind", "message", "final"],
+      "additionalProperties": false
+    },
+    "end": {
+      "title": "StreamEnd",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "end"
+        },
+        "reason": {
+          "type": "string",
+          "enum": ["max_duration", "server_shutdown", "unauthorized", "closed"]
+        },
+        "reconnect": {
+          "type": "boolean"
+        }
+      },
+      "required": ["type", "reason", "reconnect"],
+      "additionalProperties": false
+    }
+  }
+}

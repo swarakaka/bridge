@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Build output
+dist/
+*.tsbuildinfo
+playground/public/build/
+playground/public/hot
+docs/.vitepress/cache/
+docs/.vitepress/dist/
+
+# Laravel runtime
+playground/storage/*.key
+playground/storage/logs/
+playground/storage/framework/cache/data/
+playground/storage/framework/sessions/
+playground/storage/framework/views/
+playground/.env
+playground/.env.*.local
+playground/database/*.sqlite
+
+# Tests and tooling
+coverage/
+.phpunit.cache/
+packages/laravel/.phpstan/
+playground/public/storage
+playground/storage/app/public/avatars/
+.phpunit.result.cache
+e2e/test-results/
+e2e/playwright-report/
+benchmarks/results/*.json
+.eslintcache
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+playground/.env.e2e

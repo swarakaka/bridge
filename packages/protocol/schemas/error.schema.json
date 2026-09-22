@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bridge.swarakaka.dev/schemas/v1/error.schema.json",
+  "title": "BridgeError",
+  "description": "Bridge protocol v1 error object for page mode (spec/errors.md \u00a73.2).",
+  "type": "object",
+  "properties": {
+    "protocol": {
+      "type": "integer",
+      "const": 1
+    },
+    "type": {
+      "type": "string",
+      "const": "error"
+    },
+    "error": {
+      "$ref": "#/$defs/envelope"
+    }
+  },
+  "required": ["protocol", "type", "error"],
+  "additionalProperties": false,
+  "$defs": {
+    "kind": {
+      "title": "BridgeErrorKind",
+      "type": "string",
+      "enum": [
+        "validation",
+        "unauthenticated",
+        "forbidden",
+        "not_found",
+        "csrf",
+        "throttled",
+        "conflict",
+        "http",
+        "server"
+      ]
+    },
+    "envelope": {
+      "title": "BridgeErrorEnvelope",
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "integer",
+          "minimum": 400,
+          "maximum": 599
+        },
+        "kind": {
+          "$ref": "#/$defs/kind"
+        },
+        "message": {
+          "type": "string"
+        },
+        "errors": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "redirect": {
+          "type": "string"
+        },
+        "retryAfter": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": ["status", "kind", "message"],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "validation"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "errors": true
+            },
+            "required": ["errors"]
+          }
+        }
+      ]
+    }
+  }
+}

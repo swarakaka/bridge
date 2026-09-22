@@ -1,0 +1,13 @@
+{
+  "protocol": 1,
+  "type": "error",
+  "error": {
+    "status": 422,
+    "kind": "validation",
+    "message": "The email field is required. (and 1 more error)",
+    "errors": {
+      "email": ["The email field is required."],
+      "name": ["The name field must be at least 2 characters."]
+    }
+  }
+}

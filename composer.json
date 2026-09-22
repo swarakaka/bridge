@@ -1,0 +1,31 @@
+{
+  "name": "swarakaka/bridge-monorepo",
+  "description": "Development root for the Bridge monorepo. Not published.",
+  "type": "project",
+  "license": "MIT",
+  "require": {
+    "php": "^8.2"
+  },
+  "require-dev": {
+    "swarakaka/bridge-laravel": "@dev"
+  },
+  "repositories": [
+    {
+      "type": "path",
+      "url": "packages/laravel",
+      "options": {
+        "symlink": true
+      }
+    }
+  ],
+  "scripts": {
+    "test": "@php packages/laravel/vendor/bin/pest --configuration packages/laravel/phpunit.xml",
+    "lint": "@php packages/laravel/vendor/bin/pint --config packages/laravel/pint.json --test packages/laravel",
+    "analyse": "@php packages/laravel/vendor/bin/phpstan analyse -c packages/laravel/phpstan.neon"
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+  "config": {
+    "sort-packages": true
+  }
+}

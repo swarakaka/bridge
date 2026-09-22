@@ -1,0 +1,8 @@
+{
+  "protocol": 1,
+  "type": "page",
+  "component": "Welcome",
+  "url": "/",
+  "props": {},
+  "build": null
+}
