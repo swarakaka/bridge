@@ -11,17 +11,19 @@ php artisan bridge:install
 
 `bridge:install` publishes `config/bridge.php` and `resources/views/app.blade.php`. Set `bridge.shell.view` to `app` to use the published shell. The `bridge` middleware is appended to the `web` group automatically.
 
-The shell uses two Blade directives:
+The shell marks the mount point with Blade components (or the equivalent `@bridgeHead` and `@bridge` directives; the output is identical):
 
 ```blade
 <head>
-    @bridgeHead   {{-- <meta name="bridge-protocol"> and <meta name="bridge-build"> --}}
+    <x-bridge::head />                {{-- <meta name="bridge-protocol">, <meta name="bridge-build">, SSR head fragments --}}
     @vite(['resources/js/app.ts'])
 </head>
 <body>
-    @bridge       {{-- the embedded page object and <div id="app"> --}}
+    <x-bridge::app class="h-full" />  {{-- the embedded page data block and <div id="app" data-bridge> --}}
 </body>
 ```
+
+`<x-bridge::app>` passes extra attributes (class, `data-*`) through to the root element, takes `id` to change the root id, and `:page="false"` to render an empty root without a data block. The page itself always travels in the `<script type="application/json" id="bridge-page">` block described in the protocol; it is never encoded into an attribute.
 
 ## Client
 

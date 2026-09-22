@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- `<x-bridge::app />` and `<x-bridge::head />` Blade components as a declarative alternative to the `@bridge` and `@bridgeHead` directives, with attribute passthrough and explicit `id`, `:page` (`false` for an empty root), `:ssr-body`, `:protocol`, `build` and `:ssr-head` overrides. Output is byte-identical to the directives; the protocol is unchanged.
+
 ## [1.0.0] - 2026-09-22
 
 First release. One Laravel controller action serves an HTML shell, a Bridge page object, a JSON API document and server-sent event streams from the same route, guards and business logic. Companion npm packages at 1.0.0: `@swarakaka/bridge-protocol`, `@swarakaka/bridge-core`, `@swarakaka/bridge-vue`. `@swarakaka/bridge-react` 0.2.0 is an experimental skeleton outside the 1.0 API surface. Not included in 1.0: FrankenPHP runs in CI, the Inertia baseline benchmark, the external stream relay (design only).

@@ -76,6 +76,10 @@ Git: the repository is initialized but has no commits yet. Do not commit unless 
 - `php artisan serve` serves one request at a time unless `PHP_CLI_SERVER_WORKERS` is set **and** `--no-reload` is used; in no-reload mode the parent's whole environment is forwarded to workers, so E2E passes its env explicitly.
 - Client: `StreamClient` reconnects immediately after an orderly `end` (no resync), uses backoff otherwise, and refuses a tight loop after short-lived connections (throttled streams).
 
+## Post-1.0 notes
+
+- `<x-bridge::app />` / `<x-bridge::head />` (`Bridge\View\Components`) read the current response's shell data from the `bridge.shell` request attribute set by `HtmlRepresenter`; the directives keep reading view variables. Both must stay byte-identical (`BladeComponentsTest` checks). Named multiple roots were considered and deferred: two routers cannot both own history.
+
 ## Phase 5 notes
 
 - Package ESM output uses explicit `.js` import specifiers with `moduleResolution: NodeNext`, so Node can load `dist/` (the SSR bundle imports `@swarakaka/bridge-vue/server`). Keep `.js` on relative imports in `packages/*/src`; the protocol generator emits them.
