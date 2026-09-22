@@ -20,7 +20,7 @@ public function index()
 
 Bridge is inspired by Inertia's developer experience but is designed as `Laravel → Bridge Protocol → Client`, so the Laravel package has no Vue-specific assumptions and React, mobile, and CLI clients can consume the same backend.
 
-> **Status: pre-alpha.** Phases 0–2 are in place: protocol spec and fixtures, the Laravel package (HTML, page and JSON modes), the client runtime and Vue adapter, and a playground with Playwright coverage. Phase 3 added streams (SSE) end to end; Phase 4 added merge props, Precognition, rate limiting, the security review, benchmarks and the docs site. Phase 5 added server-side rendering with hydration, the React adapter skeleton, the mobile SDK guide, the relay design and the release-readiness checklist. See `docs/release-readiness.md` for what 1.0 includes. See [`docs/PLAN.md`](docs/PLAN.md) for the plan and phase breakdown.
+> **Status: pre-alpha.** Phases 0–2 are in place: protocol spec and fixtures, the Laravel package (HTML, page and JSON modes), the client runtime and Vue adapter, and a playground with Playwright coverage. Phase 3 added streams (SSE) end to end; Phase 4 added merge props, Precognition, rate limiting, the security review, benchmarks and the docs site. Phase 5 added server-side rendering with hydration, the React adapter skeleton, the mobile SDK guide, the relay design and the release-readiness checklist. See `development/release-readiness.md` for what 1.0 includes. See [`development/PLAN.md`](development/PLAN.md) for the plan and phase breakdown.
 
 ## Packages
 
@@ -52,7 +52,7 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/) with
 
 ## Documentation
 
-- [Technical implementation plan](docs/PLAN.md)
+- [Technical implementation plan](development/PLAN.md)
 - [Protocol specification](packages/protocol/spec/README.md)
 - [Contributing](CONTRIBUTING.md) · [Security policy](SECURITY.md) · [Changelog](CHANGELOG.md)
 

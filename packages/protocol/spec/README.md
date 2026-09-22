@@ -18,7 +18,7 @@ Machine-readable counterparts live in `../schemas` (JSON Schema 2020-12) and `..
 
 ## Status
 
-Draft for protocol version `1`. It becomes final when Phase 3 of `docs/PLAN.md` ships. Until then, breaking changes are allowed but MUST be reflected in the schemas and fixtures in the same change.
+Draft for protocol version `1`. It becomes final when Phase 3 of `development/PLAN.md` ships. Until then, breaking changes are allowed but MUST be reflected in the schemas and fixtures in the same change.
 
 ## Terminology
 

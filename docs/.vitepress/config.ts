@@ -4,14 +4,6 @@ export default defineConfig({
   title: 'Bridge',
   description:
     'A server-driven application protocol for Laravel: page, JSON and stream modes from one controller.',
-  srcExclude: [
-    'PLAN.md',
-    'propmts.md',
-    'security-review.md',
-    'relay-design.md',
-    'release-readiness.md',
-    'README.md',
-  ],
   themeConfig: {
     nav: [
       { text: 'Guide', link: '/guide/introduction' },

@@ -9,8 +9,8 @@ playground/public/build
 playground/storage
 docs/.vitepress/cache
 docs/.vitepress/dist
-docs/propmts.md
-docs/PLAN.md
+development/propmts.md
+development/PLAN.md
 playground/vendor
 playground/storage
 playground/bootstrap/cache

@@ -16,7 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         // Bridge's CSRF variant keeps Laravel's protection for cookie sessions and
         // skips it only for bearer-token requests that carry no session cookie,
-        // so the same web routes serve mobile/API clients (docs/PLAN.md §21.3).
+        // so the same web routes serve mobile/API clients (development/PLAN.md §21.3).
         $middleware->replaceInGroup('web', PreventRequestForgery::class, VerifyCsrfToken::class);
         $middleware->redirectGuestsTo('/login');
     })

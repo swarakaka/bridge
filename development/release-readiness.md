@@ -29,7 +29,7 @@ Measured on 2026-09-22 with `vitest run --coverage` (line coverage):
 
 - FrankenPHP and PHP-FPM runs in CI (the deployment guide documents them).
 - The Inertia baseline benchmark app.
-- The external relay (design in `docs/relay-design.md`).
+- The external relay (design in `development/relay-design.md`).
 - `@swarakaka/bridge-react` is an experimental skeleton, not part of the 1.0 API surface.
 
 ## Cutting 1.0

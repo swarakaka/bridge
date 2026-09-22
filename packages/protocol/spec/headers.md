@@ -31,14 +31,14 @@ Rejected alternatives: `Prefer` (RFC 7240) for partial selection (advisory seman
 
 ### 2.1 Standard
 
-| Header                                   | Use                                                                                                                             |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `Content-Type`                           | `application/vnd.bridge+json; v=<n>`, `application/json`, `text/event-stream; charset=utf-8`, or `text/html; charset=utf-8`.    |
-| `Vary`                                   | See [negotiation.md](negotiation.md) §5.                                                                                        |
-| `Cache-Control`, `ETag`, `Last-Modified` | Caching. Defaults per mode are defined in `docs/PLAN.md` §24 and summarised in [page.md](page.md) §7 and [json.md](json.md) §5. |
-| `Location`                               | Redirect target for `302`/`303`, and the created/target resource for JSON-mode mutation results.                                |
-| `Retry-After`                            | With `429` and `503`.                                                                                                           |
-| `X-Accel-Buffering: no`                  | Sent on streams to disable proxy buffering (Nginx convention; harmless elsewhere).                                              |
+| Header                                   | Use                                                                                                                                    |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `Content-Type`                           | `application/vnd.bridge+json; v=<n>`, `application/json`, `text/event-stream; charset=utf-8`, or `text/html; charset=utf-8`.           |
+| `Vary`                                   | See [negotiation.md](negotiation.md) §5.                                                                                               |
+| `Cache-Control`, `ETag`, `Last-Modified` | Caching. Defaults per mode are defined in `development/PLAN.md` §24 and summarised in [page.md](page.md) §7 and [json.md](json.md) §5. |
+| `Location`                               | Redirect target for `302`/`303`, and the created/target resource for JSON-mode mutation results.                                       |
+| `Retry-After`                            | With `429` and `503`.                                                                                                                  |
+| `X-Accel-Buffering: no`                  | Sent on streams to disable proxy buffering (Nginx convention; harmless elsewhere).                                                     |
 
 ### 2.2 Custom
 

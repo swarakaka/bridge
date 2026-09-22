@@ -15,4 +15,4 @@ Rules for application code:
 - Schedule `bridge:stream:prune` when using the database bus.
 - Treat access logs as sensitive if they capture ticket URLs, or lower `ticket_ttl_s`.
 
-The full review with evidence per control is in the repository at `docs/security-review.md`.
+The full review with evidence per control is in the repository at `development/security-review.md`.

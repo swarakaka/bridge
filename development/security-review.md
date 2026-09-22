@@ -1,6 +1,6 @@
 # Security review (Phase 4)
 
-A walk through `docs/PLAN.md` §23 against the implementation as of 2026-09-22. Each row names where the control lives and which test exercises it. "Gap" rows were fixed in this phase.
+A walk through `development/PLAN.md` §23 against the implementation as of 2026-09-22. Each row names where the control lives and which test exercises it. "Gap" rows were fixed in this phase.
 
 | Concern                    | Control                                                                                                                                                                                                           | Where                                                                                               | Evidence                                                                |
 | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |

@@ -1,6 +1,6 @@
 # Contributing to Bridge
 
-Thanks for helping. Please read `docs/PLAN.md` first; it is the architectural source of truth. Changes that alter a decision recorded there must update the plan in the same PR.
+Thanks for helping. Please read `development/PLAN.md` first; it is the architectural source of truth. Changes that alter a decision recorded there must update the plan in the same PR.
 
 ## Setup
 
