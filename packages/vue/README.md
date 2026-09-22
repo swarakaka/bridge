@@ -41,4 +41,7 @@ const form = useForm({ name: '', email: '' })
 
 Exports: `createBridgeApp`, `createBridgePlugin`, `useBridge`, `usePage`, `useProp`, `useDeferred`, `useForm`, `useRemember`, `BridgeLink`, `Deferred`, `BridgeHead`, plus `router` from the core.
 
-`useStream` and the realtime bindings arrive in Phase 3.
+```ts
+const { state, on, lastEventAt, reconnectAttempts, close } = useStream('/events')
+on('customer.created', (payload) => ...)   // closed automatically when the component scope is disposed
+```

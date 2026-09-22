@@ -36,14 +36,17 @@ test.describe('navigation', () => {
     await login()
     await page.goto('/customers')
     const link = page.getByTestId('customer-row').nth(1).getByRole('link')
-    const prefetch = page.waitForRequest((r) => r.headers()['purpose'] === 'prefetch')
+    const prefetch = page.waitForResponse((r) => r.request().headers()['purpose'] === 'prefetch')
     await link.hover()
     await prefetch
 
     const requests = trackPageRequests(page)
     await link.click()
     await expect(page.getByTestId('customer-name')).toBeVisible()
-    expect(requests.count()).toBe(0)
+    // The prefetched page itself was not requested again (other pages may reload from stream invalidations).
+    expect(
+      requests.urls().filter((u) => u.includes('/customers/') && !u.includes('/create')),
+    ).toHaveLength(0)
   })
 
   test('sets the document title through BridgeHead', async ({ page, login }) => {

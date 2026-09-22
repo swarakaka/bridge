@@ -53,6 +53,21 @@ Note: curl POSTs above hit CSRF because the routes are in the `web` group. Use `
 | Errors                     | /errors                                                                 | 403/404/500 rendered in place; 401 navigates to login; 419 reloads           |
 | Build conflict             | Change `BRIDGE_BUILD_VERSION` in `.env` while the tab is open, navigate | Full document reload                                                         |
 
-## Phase 3 — Realtime (pending)
+## Phase 3 — Realtime (browser)
 
-Connection status, live events, notifications, prop updates, invalidation, reconnect, heartbeat.
+Sign in, open http://localhost:8000/realtime. The stream is shared by every page of the signed-in session.
+
+| Check             | Where                                                                                         | Expect                                                                      |
+| ----------------- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Connection status | Status cards                                                                                  | `open`, heartbeat age ticking, reconnects 0                                 |
+| Heartbeat         | Event log                                                                                     | `heartbeat` rows every `BRIDGE_STREAM_HEARTBEAT_MS`                         |
+| Notification      | "Notify me"                                                                                   | Toast top-right and a `bridge:notification` log row                         |
+| Broadcast         | "Notify everyone"                                                                             | Toast in every open browser                                                 |
+| Prop push         | "Push prop"                                                                                   | `unreadCount` changes without a request                                     |
+| Invalidation      | "Invalidate customers"                                                                        | Request with `X-Bridge-Only: customersCount,customers`                      |
+| Two browsers      | Create a customer in browser A                                                                | Browser B logs `customer.created`, count increments, customers list updates |
+| Server-side end   | "End connection (server)"                                                                     | `bridge:end` row, reconnects 1, back to `open`                              |
+| Max duration      | Wait `BRIDGE_STREAM_MAX_DURATION` seconds                                                     | `bridge:end` (max_duration) then immediate reconnect                        |
+| Producer stream   | "Run export"                                                                                  | Progress bar to 100 %, row count                                            |
+| Ticket            | JSON demo or curl: `POST /realtime/ticket` then open the URL with `Accept: text/event-stream` | 200 stream without a session or token header                                |
+| Doctor            | `php artisan bridge:doctor --url=http://localhost:8000/events --token=<token>`                | All OK                                                                      |

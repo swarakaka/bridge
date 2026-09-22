@@ -2,7 +2,7 @@
 
 A full Laravel + Vue application that exercises every Bridge mode. It is the manual verification environment (`CHECKLIST.md`, Phase 2) and the target of the Playwright suite in `../e2e`.
 
-Phase 1 built the Laravel side (Customers CRUD verified with curl). Phase 2 added the Vue UI: Dashboard with deferred props, Customers CRUD with search (partial reloads), pagination, uploads, login, Sanctum tokens, a JSON demo client and in-place error pages. The Realtime page and stream integration tests arrive in Phase 3.
+Phase 1 built the Laravel side (Customers CRUD verified with curl). Phase 2 added the Vue UI: Dashboard with deferred props, Customers CRUD with search (partial reloads), pagination, uploads, login, Sanctum tokens, a JSON demo client and in-place error pages. Phase 3 added the Realtime page (one shared SSE stream per user, notifications, prop pushes, invalidation, server-side end, producer stream, tickets) with `CustomerChanged` events published on every create, update and delete.
 
 ```bash
 pnpm build                      # at the repo root: builds packages/{protocol,core,vue}

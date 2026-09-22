@@ -38,7 +38,9 @@ export interface StreamEvents extends Record<string, unknown> {
   notification: Extract<BridgeStreamControl, { type: 'notification' }>
   navigate: Extract<BridgeStreamControl, { type: 'navigate' }>
   progress: Extract<BridgeStreamControl, { type: 'progress' }>
-  error: Extract<BridgeStreamControl, { type: 'error' }> | { type: 'transport'; status?: number | undefined; message: string }
+  error:
+    | Extract<BridgeStreamControl, { type: 'error' }>
+    | { type: 'transport'; status?: number | undefined; message: string }
   end: Extract<BridgeStreamControl, { type: 'end' }>
   /** Every application event: { name, data, id }. */
   event: { name: string; data: unknown; id: string | null }
@@ -107,7 +109,10 @@ export class StreamClient {
     return this._reconnects
   }
 
-  on<K extends keyof StreamEvents>(event: K, listener: (payload: StreamEvents[K]) => void): () => void
+  on<K extends keyof StreamEvents>(
+    event: K,
+    listener: (payload: StreamEvents[K]) => void,
+  ): () => void
   on(event: string, listener: (payload: unknown) => void): () => void
   on(event: string, listener: (payload: never) => void): () => void {
     return this.events.on(event, listener as never)
@@ -159,7 +164,10 @@ export class StreamClient {
   }
 
   private headers(): Record<string, string> {
-    const custom = typeof this.options.headers === 'function' ? this.options.headers() : (this.options.headers ?? {})
+    const custom =
+      typeof this.options.headers === 'function'
+        ? this.options.headers()
+        : (this.options.headers ?? {})
     const headers: Record<string, string> = { Accept: 'text/event-stream', ...custom }
     if (this.lastEventId) headers['Last-Event-ID'] = this.lastEventId
     return headers
@@ -232,6 +240,7 @@ export class StreamClient {
     if (this.pendingEnd) {
       const end = this.pendingEnd
       this.pendingEnd = null
+      this.lastCloseOrderly = true
       if (!end.reconnect) {
         this.close()
         return
@@ -258,7 +267,9 @@ export class StreamClient {
   }
 
   private connectEventSource(target: string): void {
-    const source = new EventSource(target, { withCredentials: this.options.withCredentials !== false })
+    const source = new EventSource(target, {
+      withCredentials: this.options.withCredentials !== false,
+    })
     this.source = source
     source.onopen = () => {
       this.everConnected = true
@@ -274,11 +285,25 @@ export class StreamClient {
         this.setState('reconnecting')
       }
     }
-    source.addEventListener(CONTROL_EVENT, (e) => this.handleEvent({ event: CONTROL_EVENT, data: (e as MessageEvent).data, id: (e as MessageEvent).lastEventId || null, retry: null }))
+    source.addEventListener(CONTROL_EVENT, (e) =>
+      this.handleEvent({
+        event: CONTROL_EVENT,
+        data: (e as MessageEvent).data,
+        id: (e as MessageEvent).lastEventId || null,
+        retry: null,
+      }),
+    )
     // Application events are unknown ahead of time; route the generic message
     // event and any explicitly listened names. Consumers register names with onApp().
     for (const name of this.appEventNames) {
-      source.addEventListener(name, (e) => this.handleEvent({ event: name, data: (e as MessageEvent).data, id: (e as MessageEvent).lastEventId || null, retry: null }))
+      source.addEventListener(name, (e) =>
+        this.handleEvent({
+          event: name,
+          data: (e as MessageEvent).data,
+          id: (e as MessageEvent).lastEventId || null,
+          retry: null,
+        }),
+      )
     }
   }
 
@@ -288,6 +313,8 @@ export class StreamClient {
   private pendingEnd: Extract<BridgeStreamControl, { type: 'end' }> | null = null
   private finalError = false
   private sawError = false
+  /** True when the last connection ended with an `end` control event (nothing was missed). */
+  private lastCloseOrderly = false
 
   private handleEvent(event: SseEvent): void {
     this.touch()
@@ -321,12 +348,15 @@ export class StreamClient {
         const reconnect = this._reconnects > 0
         this.events.emit('ready', control)
         this.events.emit('open', { replayed: control.replayed, reconnect })
-        if (apply && reconnect && !control.replayed) void this.deps.router.invalidate('*')
+        if (apply && reconnect && !control.replayed && !this.lastCloseOrderly)
+          void this.deps.router.invalidate('*')
+        this.lastCloseOrderly = false
         break
       }
       case 'invalidate':
         this.events.emit('invalidate', control)
-        if (apply) void this.deps.router.invalidate(control.keys === '*' ? '*' : Array.from(control.keys))
+        if (apply)
+          void this.deps.router.invalidate(control.keys === '*' ? '*' : Array.from(control.keys))
         break
       case 'prop':
         this.events.emit('prop', control)
@@ -334,7 +364,8 @@ export class StreamClient {
         break
       case 'navigate':
         this.events.emit('navigate', control)
-        if (apply && isSameOrigin(control.url)) void this.deps.router.navigate(control.url, control.replace ?? false)
+        if (apply && isSameOrigin(control.url))
+          void this.deps.router.navigate(control.url, control.replace ?? false)
         break
       case 'notification':
         this.events.emit('notification', control)

@@ -8,11 +8,11 @@ export const AppStreamKey: InjectionKey<UseStreamReturn> = Symbol('appStream')
  * page (and the Realtime demo) shares a single connection.
  */
 export function provideAppStream(): UseStreamReturn {
-  const stream = useStream('/events', { autoConnect: true })
-  provide(AppStreamKey, stream)
-  return stream
+    const stream = useStream('/events', { autoConnect: true })
+    provide(AppStreamKey, stream)
+    return stream
 }
 
 export function useAppStream(): UseStreamReturn | null {
-  return inject(AppStreamKey, null)
+    return inject(AppStreamKey, null)
 }

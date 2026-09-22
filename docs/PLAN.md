@@ -1257,6 +1257,18 @@ plus green Pest, PHPStan, and conformance suites. This milestone proves the prot
 
 Recorded as phases ship. Each entry names the section it refines.
 
+### Phase 3 (2026-09-22)
+
+- **§8.3 / §20.3 replay and `end`.** An `end` control message replayed from the bus after `Last-Event-ID` is ignored; only `end` signals published while the connection is live close it. Otherwise a fresh connection replaying history would close on an old shutdown signal.
+- **§20.5 resync rule.** The client resyncs (`invalidate: "*"`) only when the previous connection did not end orderly and the server could not replay. After an orderly `end{reconnect:true}` nothing was missed, so no reload is issued. Immediate reconnects are also gated on a healthy previous connection (≥ 1 s, no error) to avoid a tight loop when the server throttles.
+- **§20.3 abort handling.** The stream loop runs with `ignore_user_abort(true)` and checks `connection_aborted()` after each flush; with the default PHP would terminate the script on a failed write and skip `finally`, leaking the per-user connection count. A shutdown function releases the counter as a backstop.
+- **§21.2 tickets.** `Bridge::streamTicket()` builds a temporary signed route with `bridge_user`; `AuthenticateStreamTicket` authenticates it with `onceUsingId` and is inserted before `AuthenticatesRequests` in the kernel's priority list so it runs ahead of `auth:*`.
+- **§20.2 bus cursor.** One cursor spans channels: per-channel positions when known, else a fallback id. Redis Streams ids are time-based, so `Last-Event-ID` from one channel applies to all; the database and sync drivers have a global order. Messages published to several channels carry a uuid and are deduplicated per connection.
+- **§20.2 Redis driver** uses raw commands (`XADD`, `XREAD BLOCK`, `TIME`) so it works with phpredis and predis alike; it is not exercised in CI yet (Phase 4 adds a Redis service run).
+- **§17 / §8.4 `ShouldStream::toStream()`** may return several messages (an application event plus an invalidation is the common case).
+- **§27 playground.** The layout opens one stream per signed-in user and provides it; pages subscribe through `useAppStream()`. Under `php artisan serve` the suite needs `PHP_CLI_SERVER_WORKERS` with `--no-reload`, and because that mode forwards the parent's environment, the E2E config passes its variables explicitly rather than relying on `.env.e2e`.
+- **Deployment guide** lives in `docs/streams-deployment.md` until the VitePress site (Phase 4).
+
 ### Phase 2 (2026-09-22)
 
 - **§10 core.** `Router` gained a `prepare(page)` hook (config `prepare`) that adapters use to load the page component before the swap; without it the first render after navigation was empty. The store keeps a non-validation `error` state that adapters render in place (`resolveError`); an `error` listener returning `false` suppresses it, and `hardReloadOnError` forces a document load instead.

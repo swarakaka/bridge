@@ -27,4 +27,19 @@ What it does:
 
 Errors: validation is delivered to the visit and never touches the page; `unauthenticated` follows its `redirect`; `csrf` reloads the document; other errors go to the store's `error` state (adapters render an error page) unless an `error` listener returns `false`.
 
-The SSE stream client arrives in Phase 3.
+### Streams
+
+```ts
+const stream = bridge.stream('/events', {
+  transport: 'fetch',                       // default; can send Authorization. 'eventsource' for cookie-only setups
+  headers: () => ({ Authorization: `Bearer ${token}` }),
+  channels: ['tenant.7'],                   // authorized server-side
+  heartbeatTimeout: 2.5,                    // × server heartbeat before a reconnect
+})
+stream.on('customer.created', (data) => ...)
+stream.on('notification', (n) => ...)
+stream.on('state', (s) => ...)              // idle | connecting | open | reconnecting | closed
+stream.close()
+```
+
+Control events are applied to the page automatically: `invalidate` runs a coalesced partial reload, `prop` patches the store, `navigate` visits same-origin URLs. Reconnection uses exponential backoff with jitter, honours `retry:`, sends `Last-Event-ID`, reconnects immediately after an orderly `end`, resyncs only after a dropped connection the server could not replay, and stops after a final error or a 401/403.

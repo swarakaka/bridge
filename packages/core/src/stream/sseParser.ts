@@ -32,7 +32,6 @@ export class SseParser {
   feed(chunk: string): void {
     this.buffer += chunk
     let index: number
-    // eslint-disable-next-line no-cond-assign
     while ((index = this.findLineEnd()) !== -1) {
       const line = this.buffer.slice(0, index)
       const skip = this.buffer[index] === '\r' && this.buffer[index + 1] === '\n' ? 2 : 1

@@ -63,11 +63,12 @@ test.describe('stream protocol', () => {
 
   test.beforeAll(async ({ browser, baseURL }) => {
     base = baseURL!
-    const page = await browser.newPage()
+    const page = await (await browser.newContext({ baseURL: base })).newPage()
     await page.goto('/login')
     await page.getByLabel('Email').fill('ada@example.com')
     await page.getByLabel('Password').fill('password')
     await page.getByTestId('submit').click()
+    await expect(page.getByTestId('user-name')).toHaveText('Ada Lovelace')
     await page.goto('/tokens')
     await page.getByTestId('token-form').locator('input').fill('protocol-spec')
     await page.getByTestId('token-form').getByRole('button').click()
@@ -141,9 +142,14 @@ test.describe('stream protocol', () => {
         'Last-Event-ID': '0',
       },
     })
-    const frames = parse(await readStream(response, 1500))
+    const text = await readStream(response, 3000)
+    const frames = parse(text)
     expect(frames[1]!.data).toMatchObject({ type: 'ready', replayed: true })
-    expect(frames.some((f) => (f.data as { message?: string })?.message === 'replay me')).toBe(true)
+    const summary = `${frames.length} frames; last: ${JSON.stringify(frames.slice(-2))}`
+    expect(
+      frames.some((f) => (f.data as { message?: string })?.message === 'replay me'),
+      summary,
+    ).toBe(true)
   })
 
   test('signed tickets open the stream without headers and refuse tampering', async () => {

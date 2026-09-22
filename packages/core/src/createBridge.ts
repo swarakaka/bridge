@@ -83,7 +83,8 @@ export function createBridge(config: BridgeConfig = {}): Bridge {
     build,
     on: events.on.bind(events),
     form: (initial, options) => new Form(router, initial, options),
-    stream: (url, options = {}) => new StreamClient(url, { fetch: config.fetch, ...options }, { store, router, window: win }),
+    stream: (url, options = {}) =>
+      new StreamClient(url, { fetch: config.fetch, ...options }, { store, router, window: win }),
     bootstrap: async () => {
       if (store.page || !win) return store.page
       const outcome = await router.visit(win.location.href, { replace: true, useCache: false })

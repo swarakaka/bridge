@@ -25,7 +25,7 @@ class CustomerController extends Controller
 
         return Bridge::render('Customers/Index', [
             'customers' => CustomerResource::collection(
-                Customer::query()->search($filters['search'])->latest()->paginate(20)->withQueryString(),
+                Customer::query()->search($filters['search'])->latest('id')->paginate(20)->withQueryString(),
             ),
             'filters' => $filters,
             'stats' => Bridge::defer(fn () => [

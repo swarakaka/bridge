@@ -29,12 +29,14 @@ const links = [
     { href: '/errors', label: 'Errors' },
 ]
 
-const notifications = ref<Array<{ id: number; message: string; level: string; title: string | null }>>([])
+const notifications = ref<
+    Array<{ id: number; message: string; level: string; title: string | null }>
+>([])
 let nextId = 1
 const pushNotification = (n: { message: string; level: string; title: string | null }): void => {
-  const id = nextId++
-  notifications.value.push({ id, ...n })
-  setTimeout(() => (notifications.value = notifications.value.filter((x) => x.id !== id)), 5000)
+    const id = nextId++
+    notifications.value.push({ id, ...n })
+    setTimeout(() => (notifications.value = notifications.value.filter((x) => x.id !== id)), 5000)
 }
 
 const isActive = (href: string): boolean =>
@@ -92,24 +94,26 @@ const isActive = (href: string): boolean =>
         </header>
 
         <main class="mx-auto max-w-5xl px-4 py-8">
-          <!-- One SSE connection per signed-in user, shared by every page. -->
-          <StreamProvider v-if="user" :key="user.id" @notification="pushNotification">
-            <slot />
-          </StreamProvider>
-          <slot v-else />
+            <!-- One SSE connection per signed-in user, shared by every page. -->
+            <StreamProvider v-if="user" :key="user.id" @notification="pushNotification">
+                <slot />
+            </StreamProvider>
+            <slot v-else />
         </main>
 
         <div class="fixed right-4 top-16 z-50 space-y-2" data-testid="notifications">
-          <div
-            v-for="n in notifications"
-            :key="n.id"
-            class="w-72 rounded border border-slate-200 bg-white p-3 text-sm shadow-lg"
-            :data-level="n.level"
-            data-testid="notification"
-          >
-            <div v-if="n.title" class="text-xs font-medium uppercase text-slate-500">{{ n.title }}</div>
-            <div>{{ n.message }}</div>
-          </div>
+            <div
+                v-for="n in notifications"
+                :key="n.id"
+                class="w-72 rounded border border-slate-200 bg-white p-3 text-sm shadow-lg"
+                :data-level="n.level"
+                data-testid="notification"
+            >
+                <div v-if="n.title" class="text-xs font-medium uppercase text-slate-500">
+                    {{ n.title }}
+                </div>
+                <div>{{ n.message }}</div>
+            </div>
         </div>
 
         <Toast

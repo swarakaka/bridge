@@ -20,7 +20,7 @@ public function index()
 
 Bridge is inspired by Inertia's developer experience but is designed as `Laravel → Bridge Protocol → Client`, so the Laravel package has no Vue-specific assumptions and React, mobile, and CLI clients can consume the same backend.
 
-> **Status: pre-alpha.** Phases 0–2 are in place: protocol spec and fixtures, the Laravel package (HTML, page and JSON modes), the client runtime and Vue adapter, and a playground with Playwright coverage. Streams (SSE) are next (Phase 3). See [`docs/PLAN.md`](docs/PLAN.md) for the plan and phase breakdown.
+> **Status: pre-alpha.** Phases 0–2 are in place: protocol spec and fixtures, the Laravel package (HTML, page and JSON modes), the client runtime and Vue adapter, and a playground with Playwright coverage. Phase 3 added streams (SSE) end to end. Next is Phase 4: hardening, benchmarks and the docs site. See [`docs/PLAN.md`](docs/PLAN.md) for the plan and phase breakdown.
 
 ## Packages
 
@@ -58,4 +58,5 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/) with
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
 # bridge

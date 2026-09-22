@@ -11,7 +11,7 @@ class DashboardController extends Controller
     public function __invoke()
     {
         return Bridge::render('Dashboard', [
-            'recentCustomers' => CustomerResource::collection(Customer::latest()->limit(5)->get()),
+            'recentCustomers' => CustomerResource::collection(Customer::latest('id')->limit(5)->get()),
             'stats' => Bridge::defer(fn () => [
                 'customers' => Customer::count(),
                 'active' => Customer::where('status', 'active')->count(),

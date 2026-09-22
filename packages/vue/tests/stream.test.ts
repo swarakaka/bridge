@@ -31,16 +31,29 @@ describe('useStream', () => {
         const { state, on, lastEventAt } = useStream('/events', { fetch: sse.fetch })
         const log: string[] = []
         on('customer.created', (d) => log.push(JSON.stringify(d)))
-        return () => h('div', [h('span', { id: 'state' }, state.value), h('span', { id: 'unread' }, String(props.unread)), h('span', { id: 'log' }, log.join('|')), h('span', { id: 'seen' }, String(lastEventAt.value !== null))])
+        return () =>
+          h('div', [
+            h('span', { id: 'state' }, state.value),
+            h('span', { id: 'unread' }, String(props.unread)),
+            h('span', { id: 'log' }, log.join('|')),
+            h('span', { id: 'seen' }, String(lastEventAt.value !== null)),
+          ])
       },
     })
     const initial = page({ component: 'Realtime', url: '/realtime', props: { unread: 0 } })
     window.history.replaceState(null, '', '/realtime')
     embed(initial)
-    app = await createBridgeApp({ resolve: () => Realtime, fetch: mockFetch(() => pageResponse(initial)) })
+    app = await createBridgeApp({
+      resolve: () => Realtime,
+      fetch: mockFetch(() => pageResponse(initial)),
+    })
     await flush()
-    sse.send('event: bridge\ndata: {"type":"ready","protocol":1,"replayed":false,"heartbeat":100000,"maxDuration":null}\n\n')
-    sse.send('event: customer.created\ndata: {"id":3}\n\nevent: bridge\ndata: {"type":"prop","key":"unread","value":5}\n\n')
+    sse.send(
+      'event: bridge\ndata: {"type":"ready","protocol":1,"replayed":false,"heartbeat":100000,"maxDuration":null}\n\n',
+    )
+    sse.send(
+      'event: customer.created\ndata: {"id":3}\n\nevent: bridge\ndata: {"type":"prop","key":"unread","value":5}\n\n',
+    )
     await flush()
     await nextTick()
 

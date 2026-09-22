@@ -26,10 +26,17 @@ class CustomerChanged implements ShouldStream
         return ['customers'];
     }
 
-    public function toStream(): StreamMessage
+    /**
+     * The application event for listeners, plus an invalidation so every page
+     * showing customers re-fetches through the authorized request path.
+     */
+    public function toStream(): array
     {
-        return StreamMessage::event("customer.{$this->action}", [
-            'customer' => CustomerResource::make($this->customer)->resolve(),
-        ]);
+        return [
+            StreamMessage::event("customer.{$this->action}", [
+                'customer' => CustomerResource::make($this->customer)->resolve(),
+            ]),
+            StreamMessage::invalidate(['customers', 'customersCount', 'recentCustomers', 'stats']),
+        ];
     }
 }

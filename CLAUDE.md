@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current state of the repository
 
-**Phases 0, 1 and 2 are complete** (2026-09-22). Phase 0: pnpm monorepo, tooling, CI, protocol package (spec, schemas, fixtures, generated TS types). Phase 1: the Laravel package serves HTML, page and JSON from one controller with negotiation, props, errors, redirects, caching, CSRF variant, testing helpers and a conformance suite. Phase 2: `@swarakaka/bridge-core` (request manager, router, history, page store, forms, cache), `@swarakaka/bridge-vue` (`createBridgeApp`, composables, `BridgeLink`, `Deferred`, `BridgeHead`), the playground's Vue UI (Dashboard, Customers CRUD with uploads, JSON demo, login, Sanctum tokens, error pages) and a 20-spec Playwright suite. Streams/SSE are Phase 3.
+**Phases 0 to 3 are complete** (2026-09-22). Phase 0: pnpm monorepo, tooling, CI, protocol package (spec, schemas, fixtures, generated TS types). Phase 1: the Laravel package serves HTML, page and JSON from one controller with negotiation, props, errors, redirects, caching, CSRF variant, testing helpers and a conformance suite. Phase 2: `@swarakaka/bridge-core` (request manager, router, history, page store, forms, cache), `@swarakaka/bridge-vue` (`createBridgeApp`, composables, `BridgeLink`, `Deferred`, `BridgeHead`), the playground's Vue UI (Dashboard, Customers CRUD with uploads, JSON demo, login, Sanctum tokens, error pages). Phase 3: SSE end to end: event bus (`sync`, `database`, `redis`), `Bridge::stream()`/`Bridge::to()`, `ShouldStream`, tickets, `bridge:doctor`; the core `StreamClient` (fetch and EventSource transports, backoff, `Last-Event-ID`, watchdog, control dispatch); `useStream`; the playground Realtime page with one shared stream per user; 30 Playwright specs including a two-browser realtime test and raw-protocol checks over Node fetch. Next: Phase 4 (hardening, benchmarks, docs site).
 
 Two documents govern all work:
 
@@ -40,7 +40,7 @@ php artisan serve            # then open http://localhost:8000 (sign in: ada@exa
 
 cd e2e
 pnpm exec playwright install chromium   # once
-pnpm test                    # Playwright; boots `php artisan serve` on :8787 with playground/.env.e2e (generated) and a fresh seeded database/e2e.sqlite
+pnpm test                    # Playwright; boots `php artisan serve --no-reload` on :8787 with PHP_CLI_SERVER_WORKERS=12 and the explicit env in playwright.config.ts (e2eEnv), fresh seeded database/e2e.sqlite
 ```
 
 Client packages consume each other's `dist`, so after changing `packages/core` or `packages/vue` run `pnpm build` before testing the playground or E2E.
@@ -64,6 +64,14 @@ Git: the repository is initialized but has no commits yet. Do not commit unless 
 - Page components get `page.props` as Vue props; a static `layout` option (`defineOptions({ layout })`) wraps them. Non-validation errors render the `resolveError` component in place without touching history.
 - Forms expose `form.data.*` (not flattened fields) and `form.errors.*` holds the first message per field.
 - E2E specs use `data-testid` attributes; keep them stable when editing playground pages.
+
+## Streams (Phase 3) notes
+
+- `packages/laravel/src/Stream/StreamResponse.php` is the loop: ready → replay (if `Last-Event-ID`) → blocking bus reads → heartbeats → `end{max_duration}`. Tests drive it with the `sync` bus, `->maxDuration(0)` (drain once) and `Last-Event-ID: 0` (replay everything).
+- `ignore_user_abort(true)` is deliberate: the loop checks `connection_aborted()` itself so `finally` (limiter release) always runs. A replayed `end` signal is ignored (`isHistorical`).
+- The ticket middleware must run before `auth:*`; the provider inserts it with `Kernel::addToMiddlewarePriorityBefore(AuthenticatesRequests::class, …)`.
+- `php artisan serve` serves one request at a time unless `PHP_CLI_SERVER_WORKERS` is set **and** `--no-reload` is used; in no-reload mode the parent's whole environment is forwarded to workers, so E2E passes its env explicitly.
+- Client: `StreamClient` reconnects immediately after an orderly `end` (no resync), uses backoff otherwise, and refuses a tight loop after short-lived connections (throttled streams).
 
 ## What Bridge is
 
