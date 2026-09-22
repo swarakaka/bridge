@@ -1287,7 +1287,7 @@ Recorded as phases ship. Each entry names the section it refines.
 - **§20.2 Redis driver** uses raw commands (`XADD`, `XREAD BLOCK`, `TIME`) so it works with phpredis and predis alike; it is not exercised in CI yet (Phase 4 adds a Redis service run).
 - **§17 / §8.4 `ShouldStream::toStream()`** may return several messages (an application event plus an invalidation is the common case).
 - **§27 playground.** The layout opens one stream per signed-in user and provides it; pages subscribe through `useAppStream()`. Under `php artisan serve` the suite needs `PHP_CLI_SERVER_WORKERS` with `--no-reload`, and because that mode forwards the parent's environment, the E2E config passes its variables explicitly rather than relying on `.env.e2e`.
-- **Deployment guide** lives in `docs/streams-deployment.md` until the VitePress site (Phase 4).
+- **Deployment guide** lives in `docs/guide/streams-deployment.md` until the VitePress site (Phase 4).
 
 ### Phase 2 (2026-09-22)
 

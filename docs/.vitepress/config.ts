@@ -8,7 +8,6 @@ export default defineConfig({
     'PLAN.md',
     'propmts.md',
     'security-review.md',
-    'streams-deployment.md',
     'relay-design.md',
     'release-readiness.md',
     'README.md',
