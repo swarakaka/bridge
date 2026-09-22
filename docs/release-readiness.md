@@ -17,7 +17,13 @@ Status as of 2026-09-22.
 
 ## Coverage
 
-Measured with `vendor/bin/pest --coverage` and `vitest run --coverage`; numbers are recorded in the CHANGELOG entry for each release.
+Measured on 2026-09-22 with `vitest run --coverage` (line coverage):
+
+| Package                    |                                                                                                             Lines | Target |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------: | -----: |
+| `@swarakaka/bridge-core`   |                                                                                                            91.7 % |   90 % |
+| `@swarakaka/bridge-vue`    |                                                                                                            89.9 % |   80 % |
+| `swarakaka/bridge-laravel` | enforced in CI with pcov (`pest --coverage --min=90`); not measurable on the development machine (no pcov/Xdebug) |   90 % |
 
 ## Not in 1.0
 
@@ -28,5 +34,10 @@ Measured with `vendor/bin/pest --coverage` and `vitest run --coverage`; numbers 
 
 ## Cutting 1.0
 
-1. `pnpm changeset version` (the pending changeset bumps the npm packages to 1.0.0) and update `CHANGELOG.md`'s Laravel section to `1.0.0`.
-2. Tag `laravel-v1.0.0` and let the release workflow publish the npm packages.
+Done in the working tree: `pnpm changeset version` bumped `@swarakaka/bridge-protocol`, `@swarakaka/bridge-core` and `@swarakaka/bridge-vue` to 1.0.0 (`@swarakaka/bridge-react` to 0.2.0) and wrote their changelogs; `CHANGELOG.md` has the `1.0.0` section for the Laravel package.
+
+Remaining, by the maintainer:
+
+1. Commit: `git add -A && git commit -m "chore(repo): release 1.0.0"`.
+2. Tag the Laravel package: `git tag laravel-v1.0.0 && git push --tags`.
+3. Push `main`; the release workflow publishes the npm packages from the versioned manifests (requires `NPM_TOKEN`).

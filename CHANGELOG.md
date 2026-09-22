@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-09-22
+
+First release. One Laravel controller action serves an HTML shell, a Bridge page object, a JSON API document and server-sent event streams from the same route, guards and business logic. Companion npm packages at 1.0.0: `@swarakaka/bridge-protocol`, `@swarakaka/bridge-core`, `@swarakaka/bridge-vue`. `@swarakaka/bridge-react` 0.2.0 is an experimental skeleton outside the 1.0 API surface. Not included in 1.0: FrankenPHP runs in CI, the Inertia baseline benchmark, the external stream relay (design only).
+
 ### Added
 
 - Phase 5 (SSR and 1.0 readiness): `SsrGateway` with `HttpSsrGateway`/`NullSsrGateway`, `bridge.ssr.*` config, `@bridge`/`@bridgeHead` emit server-rendered markup and head fragments, `bridge:ssr` command, release-readiness checklist (`docs/release-readiness.md`), relay design (`docs/relay-design.md`), mobile SDK guide.

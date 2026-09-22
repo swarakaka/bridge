@@ -98,6 +98,7 @@ test.describe('realtime', () => {
     // And on the customers list, the invalidation reloads the table.
     await page.goto('/customers')
     await expect(page.getByTestId('stream-state')).toHaveCount(0)
+    await expect(page.locator('html')).toHaveAttribute('data-bridge-stream', 'open')
     const rowsBefore = await page.getByTestId('customer-row').count()
     await other.goto('/customers/create')
     await other.getByLabel('name').fill('Second from A')
