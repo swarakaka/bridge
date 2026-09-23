@@ -12,10 +12,11 @@ docs/.vitepress/dist/
 
 # Laravel runtime
 playground/storage/*.key
-playground/storage/logs/
-playground/storage/framework/cache/data/
-playground/storage/framework/sessions/
-playground/storage/framework/views/
+playground/storage/logs/*
+playground/storage/framework/cache/data/*
+playground/storage/framework/sessions/*
+playground/storage/framework/views/*
+!playground/storage/**/.gitignore
 playground/.env
 playground/.env.*.local
 playground/database/*.sqlite
