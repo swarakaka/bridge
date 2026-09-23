@@ -61,9 +61,9 @@ const isActive = (href: string): boolean =>
                 <nav class="flex items-center gap-4" aria-label="Primary">
                     <BridgeLink href="/" class="flex items-center">
                         <img
-                            src="/logo.svg"
+                            :src="'/logo.svg'"
                             alt="Bridge"
-                            width="76"
+                            width="104"
                             height="32"
                             class="h-8 w-auto"
                         />

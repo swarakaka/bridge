@@ -1,4 +1,4 @@
-import { a as BridgeLink, t as AppLayout_default } from "./AppLayout-B-H39FZD.js";
+import { a as BridgeLink, t as AppLayout_default } from "./AppLayout-DGvamj7i.js";
 import { createTextVNode, defineComponent, mergeProps, unref, useSSRContext, withCtx } from "vue";
 import { ssrInterpolate, ssrRenderAttrs, ssrRenderComponent } from "vue/server-renderer";
 //#region resources/js/Pages/Errors/Error.vue?vue&type=script&setup=true&lang.ts

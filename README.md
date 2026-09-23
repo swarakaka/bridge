@@ -1,8 +1,5 @@
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/public/logo-dark.svg">
-    <img src="docs/public/logo.svg" alt="Bridge" width="416">
-  </picture>
+  <img src="docs/public/logo.svg" alt="Bridge" width="360">
 </p>
 
 # Bridge

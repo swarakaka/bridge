@@ -1,4 +1,4 @@
-import { o as useJson, r as BridgeHead, t as AppLayout_default } from "./AppLayout-B-H39FZD.js";
+import { o as useJson, r as BridgeHead, t as AppLayout_default } from "./AppLayout-DGvamj7i.js";
 import { computed, defineComponent, ref, unref, useSSRContext } from "vue";
 import { ssrIncludeBooleanAttr, ssrInterpolate, ssrLooseContain, ssrLooseEqual, ssrRenderAttr, ssrRenderComponent, ssrRenderList } from "vue/server-renderer";
 //#region resources/js/Pages/Json.vue?vue&type=script&setup=true&lang.ts

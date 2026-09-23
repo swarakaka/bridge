@@ -1,4 +1,4 @@
-import { a as BridgeLink, c as useDeferred, i as Deferred, r as BridgeHead, t as AppLayout_default } from "./AppLayout-B-H39FZD.js";
+import { a as BridgeLink, c as useDeferred, i as Deferred, r as BridgeHead, t as AppLayout_default } from "./AppLayout-DGvamj7i.js";
 import { Fragment, createBlock, createTextVNode, createVNode, defineComponent, openBlock, renderList, toDisplayString, unref, useSSRContext, withCtx } from "vue";
 import { ssrInterpolate, ssrRenderAttr, ssrRenderComponent, ssrRenderList, ssrRenderStyle } from "vue/server-renderer";
 //#region resources/js/Pages/Dashboard.vue?vue&type=script&setup=true&lang.ts

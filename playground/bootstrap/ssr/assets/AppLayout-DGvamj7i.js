@@ -1,5 +1,5 @@
 import { n as useHeadContext, r as pageStateRef, t as useBridge } from "../ssr.js";
-import { computed, createTextVNode, defineComponent, getCurrentScope, h, inject, mergeProps, onBeforeUnmount, onMounted, onScopeDispose, provide, reactive, ref, renderSlot, shallowRef, toDisplayString, unref, useSSRContext, watch, watchEffect, withCtx } from "vue";
+import { computed, createTextVNode, createVNode, defineComponent, getCurrentScope, h, inject, mergeProps, onBeforeUnmount, onMounted, onScopeDispose, provide, reactive, ref, renderSlot, shallowRef, toDisplayString, unref, useSSRContext, watch, watchEffect, withCtx } from "vue";
 import { ssrInterpolate, ssrRenderAttr, ssrRenderAttrs, ssrRenderComponent, ssrRenderList, ssrRenderSlot } from "vue/server-renderer";
 //#region ../packages/vue/dist/composables/usePage.js
 /** Reactive access to the current page. */
@@ -433,11 +433,17 @@ var AppLayout_vue_vue_type_script_setup_true_lang_default = /*@__PURE__*/ define
 			_push(`<header class="border-b border-slate-200 bg-white"><div class="mx-auto flex max-w-5xl items-center justify-between px-4 py-3"><nav class="flex items-center gap-4" aria-label="Primary">`);
 			_push(ssrRenderComponent(unref(BridgeLink), {
 				href: "/",
-				class: "text-lg font-semibold tracking-tight text-indigo-600"
+				class: "flex items-center"
 			}, {
 				default: withCtx((_, _push, _parent, _scopeId) => {
-					if (_push) _push(`Bridge`);
-					else return [createTextVNode("Bridge")];
+					if (_push) _push(`<img${ssrRenderAttr("src", "/logo.svg")} alt="Bridge" width="104" height="32" class="h-8 w-auto"${_scopeId}>`);
+					else return [createVNode("img", {
+						src: "/logo.svg",
+						alt: "Bridge",
+						width: "104",
+						height: "32",
+						class: "h-8 w-auto"
+					})];
 				}),
 				_: 1
 			}, _parent));

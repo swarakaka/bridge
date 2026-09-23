@@ -1,4 +1,4 @@
-import { l as useProp, n as useAppStream, r as BridgeHead, s as useForm, t as AppLayout_default } from "./AppLayout-B-H39FZD.js";
+import { l as useProp, n as useAppStream, r as BridgeHead, s as useForm, t as AppLayout_default } from "./AppLayout-DGvamj7i.js";
 import { computed, defineComponent, onBeforeUnmount, onMounted, ref, unref, useSSRContext } from "vue";
 import { ssrIncludeBooleanAttr, ssrInterpolate, ssrLooseContain, ssrLooseEqual, ssrRenderAttr, ssrRenderClass, ssrRenderComponent, ssrRenderList, ssrRenderStyle } from "vue/server-renderer";
 //#region resources/js/Pages/Realtime.vue?vue&type=script&setup=true&lang.ts

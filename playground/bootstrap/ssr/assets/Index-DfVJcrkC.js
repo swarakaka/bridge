@@ -1,5 +1,5 @@
 import { i as router } from "../ssr.js";
-import { a as BridgeLink, i as Deferred, r as BridgeHead, t as AppLayout_default } from "./AppLayout-B-H39FZD.js";
+import { a as BridgeLink, i as Deferred, r as BridgeHead, t as AppLayout_default } from "./AppLayout-DGvamj7i.js";
 import { createTextVNode, createVNode, defineComponent, mergeProps, ref, toDisplayString, unref, useSSRContext, watch, withCtx } from "vue";
 import { ssrIncludeBooleanAttr, ssrInterpolate, ssrRenderAttr, ssrRenderAttrs, ssrRenderClass, ssrRenderComponent, ssrRenderList } from "vue/server-renderer";
 //#region resources/js/Components/Pagination.vue?vue&type=script&setup=true&lang.ts

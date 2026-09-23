@@ -2584,17 +2584,17 @@ async function createSsrServer(options) {
 * then `php artisan bridge:ssr` (or `node bootstrap/ssr/ssr.js`).
 */
 var pages = /* #__PURE__ */ Object.assign({
-	"./Pages/Auth/Login.vue": () => import("./assets/Login-Cp8JLan_.js"),
-	"./Pages/Auth/Tokens.vue": () => import("./assets/Tokens-CqGWE58l.js"),
-	"./Pages/Customers/Create.vue": () => import("./assets/Create-B-we-Ddh.js"),
-	"./Pages/Customers/Edit.vue": () => import("./assets/Edit-C2i2Ueal.js"),
-	"./Pages/Customers/Index.vue": () => import("./assets/Index-Bitd_BvD.js"),
-	"./Pages/Customers/Show.vue": () => import("./assets/Show-BMJNAm39.js"),
-	"./Pages/Dashboard.vue": () => import("./assets/Dashboard-DWQD51rj.js"),
-	"./Pages/Errors/Error.vue": () => import("./assets/Error-CZFCtkzZ.js"),
-	"./Pages/Errors/Index.vue": () => import("./assets/Index-DVHWBvnM.js"),
-	"./Pages/Json.vue": () => import("./assets/Json-68XH0swm.js"),
-	"./Pages/Realtime.vue": () => import("./assets/Realtime-umRQu8b3.js")
+	"./Pages/Auth/Login.vue": () => import("./assets/Login-CqqSDplA.js"),
+	"./Pages/Auth/Tokens.vue": () => import("./assets/Tokens-BISPVvWT.js"),
+	"./Pages/Customers/Create.vue": () => import("./assets/Create-DzR2ETqB.js"),
+	"./Pages/Customers/Edit.vue": () => import("./assets/Edit-CX00wp1H.js"),
+	"./Pages/Customers/Index.vue": () => import("./assets/Index-DfVJcrkC.js"),
+	"./Pages/Customers/Show.vue": () => import("./assets/Show-IzdPXpOD.js"),
+	"./Pages/Dashboard.vue": () => import("./assets/Dashboard-YWj8OyiB.js"),
+	"./Pages/Errors/Error.vue": () => import("./assets/Error-BSKLBNDR.js"),
+	"./Pages/Errors/Index.vue": () => import("./assets/Index-SawDt9iD.js"),
+	"./Pages/Json.vue": () => import("./assets/Json-CjvtOdfg.js"),
+	"./Pages/Realtime.vue": () => import("./assets/Realtime-iJ9vnIJ_.js")
 });
 createSsrServer({ render: createSsrRenderer({ resolve: (name) => {
 	const loader = pages[`./Pages/${name}.vue`];
