@@ -1,6 +1,6 @@
 # Bridge — Technical Implementation Plan
 
-**Status:** v1 plan, 2026-09-22. Source of requirements: `development/propmts.md`.
+**Status:** v1 plan, 2026-09-22. Source of requirements: the original design brief (`development/propmts.md`, removed 2026-09-23; available in git history). Its 20 open questions are answered in Appendix A.
 **Audience:** the developer (or Claude Code session) that will run "Implement Phase 1".
 
 ---
@@ -979,7 +979,7 @@ Bridge/
 ├── playground/                  Laravel + Vue app; depends on packages via path repositories / workspace
 ├── e2e/                         Playwright project targeting the playground
 ├── benchmarks/                  k6, Lighthouse CI, phpbench, inertia-baseline app, docker-compose, RESULTS.md
-├── docs/                        VitePress site + propmts.md + PLAN.md (this file)
+├── docs/                        VitePress site (development documents live in development/)
 ├── .github/workflows/           ci.yml, e2e.yml, benchmarks.yml (manual), release.yml
 ├── composer.json                root: path repos + scripts for CI convenience (not published)
 ├── package.json                 pnpm workspace root, scripts (build, test, lint, play)

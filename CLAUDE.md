@@ -6,10 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Phases 0 to 5 are complete** (2026-09-22). Phase 0: pnpm monorepo, tooling, CI, protocol package (spec, schemas, fixtures, generated TS types). Phase 1: the Laravel package serves HTML, page and JSON from one controller with negotiation, props, errors, redirects, caching, CSRF variant, testing helpers and a conformance suite. Phase 2: `@swarakaka/bridge-core` (request manager, router, history, page store, forms, cache), `@swarakaka/bridge-vue` (`createBridgeApp`, composables, `BridgeLink`, `Deferred`, `BridgeHead`), the playground's Vue UI (Dashboard, Customers CRUD with uploads, JSON demo, login, Sanctum tokens, error pages). Phase 3: SSE end to end: event bus (`sync`, `database`, `redis`), `Bridge::stream()`/`Bridge::to()`, `ShouldStream`, tickets, `bridge:doctor`; the core `StreamClient` (fetch and EventSource transports, backoff, `Last-Event-ID`, watchdog, control dispatch); `useStream`; the playground Realtime page with one shared stream per user; 30 Playwright specs including a two-browser realtime test and raw-protocol checks over Node fetch. Phase 4: merge props ("load more"), `jsonRoot`, Precognition live validation, the `throttle:bridge-stream` limiter and channel caps, a real-Redis bus test, the security review, the benchmark harness with recorded results, the VitePress docs site, and playground accessibility. Phase 5: SSR gateway and `@swarakaka/bridge-vue/server` renderer with hydration (E2E runs the whole suite under SSR), the experimental `@swarakaka/bridge-react` skeleton, the mobile SDK guide, the relay design and `development/release-readiness.md`. Cutting 1.0 (changeset version, tag) is the maintainer's call.
 
-Two documents in `development/` govern all work (the `docs/` directory is the user-facing VitePress site only):
+One document in `development/` governs all work (the `docs/` directory is the user-facing VitePress site only):
 
-- `development/propmts.md` (filename typo is deliberate) is the original design brief and source of truth for requirements.
-- `development/PLAN.md` is the technical implementation plan. It answers the brief's 20 open questions, fixes the protocol, and defines Phases 0–5. Its final section records deviations made during implementation. Implementation must follow the plan; if a decision must change, update the plan first, in the same change.
+- `development/PLAN.md` is the technical implementation plan and the source of truth for requirements. It answers the original design brief's 20 open questions (Appendix A), fixes the protocol, and defines Phases 0–5. Its final section records deviations made during implementation. Implementation must follow the plan; if a decision must change, update the plan first, in the same change. The brief itself (`development/propmts.md`) was removed on 2026-09-23 and lives only in git history.
 
 `packages/protocol/spec/*.md` is the **normative** protocol text; `packages/protocol/schemas` and `packages/protocol/fixtures` are its machine-readable form. Any protocol change starts there, then `pnpm generate`, then implementation on both sides. The PHP conformance suite (`packages/laravel/tests/Conformance`) asserts the server produces the fixtures exactly, so fixture edits and server changes go together.
 
@@ -48,7 +47,7 @@ pnpm test                    # Playwright; boots `php artisan serve --no-reload`
 
 Client packages consume each other's `dist`, so after changing `packages/core` or `packages/vue` run `pnpm build` before testing the playground or E2E.
 
-Conventions enforced by tooling: Conventional Commits with scopes `laravel|core|vue|protocol|playground|e2e|benchmarks|docs|ci|repo` (commitlint), Prettier (no semicolons, single quotes, width 100; `development/propmts.md`, `development/PLAN.md` and `composer.json` files are excluded), ESLint with `consistent-type-imports`, Pint `laravel` preset with `declare_strict_types`, PHPStan level 8 (no baseline, no ignores).
+Conventions enforced by tooling: Conventional Commits with scopes `laravel|core|vue|protocol|playground|e2e|benchmarks|docs|ci|repo` (commitlint), Prettier (no semicolons, single quotes, width 100; `development/PLAN.md` and `composer.json` files are excluded), ESLint with `consistent-type-imports`, Pint `laravel` preset with `declare_strict_types`, PHPStan level 8 (no baseline, no ignores).
 
 Git: the repository is initialized but has no commits yet. Do not commit unless asked.
 
@@ -110,7 +109,7 @@ One Laravel controller returning `Bridge::render('Customers/Index', [...])` must
 
 A plain `Accept: text/html` request returns the minimal app shell.
 
-## Non-negotiable architectural rules (from the brief)
+## Non-negotiable architectural rules (from the original brief, now in PLAN.md)
 
 - **Protocol first, not Laravel → Vue.** The layering is `Laravel → Bridge Protocol → Client`. The Laravel package must contain no Vue-specific assumptions so React, mobile, and CLI clients can consume it later.
 - **Centralized content negotiation.** Never put `if (request()->expectsJson())` in controllers. A single negotiator resolves HTML / Bridge Page / JSON / SSE from `Accept` (standard headers preferred; custom `X-Bridge-*` headers only where HTTP cannot express the intent, and every custom header must be documented).
@@ -124,7 +123,7 @@ A plain `Accept: text/html` request returns the minimal app shell.
 
 ## Planned repository layout
 
-The brief proposes a pnpm monorepo. Treat it as a starting point, not a decision:
+The original brief proposed a pnpm monorepo. Treat it as a starting point, not a decision (PLAN §28 has the final layout):
 
 ```
 packages/laravel/    Laravel package (negotiator, responses, SSE stream, event bus)
@@ -138,6 +137,6 @@ The playground must exercise Dashboard, Customers CRUD, a JSON demo, and a `Real
 
 ## Workflow expectations
 
-- The brief's final deliverable is a **technical implementation plan**, not code. If asked to "plan", produce the plan; do not scaffold files. Implementation starts only on an explicit instruction such as "Implement Phase 1".
-- Section 36 of the brief lists 20 open architectural questions (embedded initial props, JSON resources, SSE prop-update vs invalidate, PHP-FPM viability, protocol versioning, etc.). Any plan or implementation must answer these explicitly rather than leave them implicit.
+- If asked to "plan", produce or update the plan; do not scaffold files. Implementation starts only on an explicit instruction such as "Implement Phase 1".
+- The original brief listed 20 open architectural questions (embedded initial props, JSON resources, SSE prop-update vs invalidate, PHP-FPM viability, protocol versioning, etc.). PLAN.md Appendix A answers them; any change must keep those answers explicit rather than leave them implicit.
 - Testing must cover all three modes on both sides, including real SSE integration tests, and Playwright for E2E.

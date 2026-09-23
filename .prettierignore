@@ -9,7 +9,6 @@ playground/public/build
 playground/storage
 docs/.vitepress/cache
 docs/.vitepress/dist
-development/propmts.md
 development/PLAN.md
 playground/vendor
 playground/storage
