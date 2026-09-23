@@ -59,11 +59,15 @@ const isActive = (href: string): boolean =>
         <header class="border-b border-slate-200 bg-white">
             <div class="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
                 <nav class="flex items-center gap-4" aria-label="Primary">
-                    <BridgeLink
-                        href="/"
-                        class="text-lg font-semibold tracking-tight text-indigo-600"
-                        >Bridge</BridgeLink
-                    >
+                    <BridgeLink href="/" class="flex items-center">
+                        <img
+                            src="/logo.svg"
+                            alt="Bridge"
+                            width="76"
+                            height="32"
+                            class="h-8 w-auto"
+                        />
+                    </BridgeLink>
                     <BridgeLink
                         v-for="link in links"
                         :key="link.href"

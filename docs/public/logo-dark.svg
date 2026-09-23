@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-32 -34 416 176" width="416" height="176" role="img" aria-label="Bridge">
+  <title>Bridge</title>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 -24 Q113.5 48 215 -24" stroke="#FB923C" stroke-width="5"/>
+    <path d="M76 7 V100 M127 11.4 V100 M160 4.5 V100" stroke="#FB923C" stroke-width="3"/>
+    <path d="M-20 100 H372" stroke="#F8FAFC" stroke-width="12"/>
+    <path stroke="#F8FAFC" stroke-width="12" d="M12 -24 V100 M12 6 H34 A20 20 0 0 1 34 46 H12 M12 46 H37 A27 27 0 0 1 37 100 H12 M88 100 V58 M88 78 A20 20 0 0 1 108 58 H114 M142 100 V58 M215 -24 V100 M284 58 V110 Q284 130 262 130 H254 M309 79 H351 A21 21 0 1 0 343.5 95.1"/>
+    <circle cx="194" cy="79" r="21" stroke="#F8FAFC" stroke-width="12"/>
+    <circle cx="263" cy="79" r="21" stroke="#F8FAFC" stroke-width="12"/>
+  </g>
+  <circle cx="142" cy="30" r="7" fill="#FB923C"/>
+</svg>

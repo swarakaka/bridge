@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/public/logo-dark.svg">
+    <img src="docs/public/logo.svg" alt="Bridge" width="416">
+  </picture>
+</p>
+
 # Bridge
 
 **A server-driven application protocol for Laravel.** One controller action serves a Vue page, a JSON API response, and a real-time event stream from the same route, guards, and business logic.
