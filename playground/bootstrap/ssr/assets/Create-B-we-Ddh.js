@@ -1,5 +1,5 @@
-import { r as BridgeHead, t as AppLayout_default } from "./AppLayout-BzYPQJMZ.js";
-import { t as CustomerForm_default } from "./CustomerForm-B_juC4zm.js";
+import { r as BridgeHead, t as AppLayout_default } from "./AppLayout-B-H39FZD.js";
+import { t as CustomerForm_default } from "./CustomerForm-5WWT3CWF.js";
 import { defineComponent, unref, useSSRContext } from "vue";
 import { ssrRenderComponent } from "vue/server-renderer";
 //#region resources/js/Pages/Customers/Create.vue?vue&type=script&setup=true&lang.ts

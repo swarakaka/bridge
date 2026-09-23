@@ -104,6 +104,9 @@ function isPage(value) {
 function isError(value) {
 	return isObject(value) && value.type === "error" && isObject(value.error);
 }
+function isJsonDocument(value) {
+	return isObject(value) && "data" in value && (value.data === null || isObject(value.data));
+}
 function isControlEvent(value) {
 	return isObject(value) && typeof value.type === "string";
 }
@@ -640,6 +643,324 @@ function parseHeaders(raw) {
 function currentHref() {
 	return typeof window === "undefined" ? "http://localhost/" : window.location.href;
 }
+//#endregion
+//#region ../packages/core/dist/json/JsonClient.js
+var JSON_ACCEPT = "application/json";
+/**
+* Calls the application's JSON mode: the same routes as page mode with
+* `Accept: application/json`. Shares the CSRF, credentials and upload path of
+* page visits. Never throws: every result is a `JsonOutcome`.
+*/
+var JsonClient = class {
+	http;
+	constructor(http) {
+		this.http = http;
+	}
+	async request(method, url, options = {}) {
+		let response;
+		try {
+			response = await this.http.send({
+				method,
+				url,
+				data: options.data,
+				headers: {
+					Accept: JSON_ACCEPT,
+					...options.headers ?? {}
+				},
+				only: options.only,
+				except: options.except,
+				signal: options.signal,
+				onProgress: options.onProgress,
+				forceFormData: options.forceFormData
+			});
+		} catch (error) {
+			if (isAbort(error) || options.signal?.aborted) return { status: "cancelled" };
+			return {
+				status: "exception",
+				error
+			};
+		}
+		try {
+			return await this.classify(response);
+		} catch (error) {
+			return {
+				status: "exception",
+				error
+			};
+		}
+	}
+	get(url, options) {
+		return this.request("get", url, options);
+	}
+	post(url, options) {
+		return this.request("post", url, options);
+	}
+	put(url, options) {
+		return this.request("put", url, options);
+	}
+	patch(url, options) {
+		return this.request("patch", url, options);
+	}
+	delete(url, options) {
+		return this.request("delete", url, options);
+	}
+	async classify(response) {
+		const status = response.status;
+		if (status === 204 || status === 205 || status === 304) return {
+			status: "success",
+			data: null,
+			meta: {},
+			location: null,
+			httpStatus: status,
+			envelope: false
+		};
+		const json = decode(await response.text(), response.headers.get("content-type"));
+		if (status >= 200 && status < 300) {
+			if (json.ok && isJsonDocument(json.value)) {
+				const document = json.value;
+				const meta = { ...document.meta ?? {} };
+				return {
+					status: "success",
+					data: document.data,
+					meta,
+					location: typeof meta.location === "string" ? meta.location : null,
+					httpStatus: status,
+					envelope: true
+				};
+			}
+			if (json.ok) return {
+				status: "success",
+				data: json.value,
+				meta: {},
+				location: null,
+				httpStatus: status,
+				envelope: false
+			};
+			return {
+				status: "error",
+				httpStatus: status,
+				error: invalid(status, "The response was not JSON.")
+			};
+		}
+		const body = json.ok && isJsonError(json.value) ? json.value : null;
+		if (status === 422) return {
+			status: "invalid",
+			errors: normalizeErrors(body?.errors),
+			message: body?.message ?? "The given data was invalid.",
+			httpStatus: 422
+		};
+		if (!json.ok || body === null) return {
+			status: "error",
+			httpStatus: status,
+			error: invalid(status, `HTTP ${status}`)
+		};
+		const retryAfter = Number.parseInt(response.headers.get("retry-after") ?? "", 10);
+		return {
+			status: "error",
+			httpStatus: status,
+			error: {
+				kind: kindFor(status),
+				status,
+				message: body.message,
+				retryAfter: Number.isFinite(retryAfter) ? retryAfter : null,
+				body
+			}
+		};
+	}
+};
+function kindFor(status) {
+	switch (status) {
+		case 401: return "unauthenticated";
+		case 403: return "forbidden";
+		case 404: return "not_found";
+		case 409: return "conflict";
+		case 419: return "csrf";
+		case 429: return "throttled";
+		default: return status >= 500 ? "server" : "http";
+	}
+}
+/** First message per field, the shape `Form.errors` uses. */
+function firstErrors(errors) {
+	const flat = {};
+	for (const [key, messages] of Object.entries(errors)) flat[key] = messages[0] ?? "";
+	return flat;
+}
+function normalizeErrors(errors) {
+	const out = {};
+	if (!errors) return out;
+	for (const [key, messages] of Object.entries(errors)) if (Array.isArray(messages)) out[key] = messages.map(String);
+	else if (typeof messages === "string") out[key] = [messages];
+	return out;
+}
+function decode(text, contentType) {
+	if (contentType && !contentType.toLowerCase().includes("json")) return { ok: false };
+	if (text.trim() === "") return {
+		ok: true,
+		value: null
+	};
+	try {
+		return {
+			ok: true,
+			value: JSON.parse(text)
+		};
+	} catch {
+		return { ok: false };
+	}
+}
+function invalid(status, message) {
+	return {
+		kind: "invalid",
+		status,
+		message,
+		retryAfter: null,
+		body: null
+	};
+}
+function isJsonError(value) {
+	return typeof value === "object" && value !== null && typeof value.message === "string";
+}
+function isAbort(error) {
+	return typeof error === "object" && error !== null && error.name === "AbortError";
+}
+//#endregion
+//#region ../packages/core/dist/json/JsonRequest.js
+/**
+* A stateful JSON-mode request handle: the counterpart of `Form` for calls
+* that do not navigate. One request in flight at a time; starting another
+* cancels the previous one. Adapters wrap it in their reactivity system.
+*/
+var JsonRequest = class {
+	client;
+	options;
+	/** `data` of the last successful response. */
+	data = null;
+	meta = {};
+	/** First message per field from the last 422. */
+	errors = {};
+	/** All messages per field from the last 422. */
+	allErrors = {};
+	/** Message of the last 422 or error response. */
+	message = null;
+	lastError = null;
+	processing = false;
+	progress = null;
+	httpStatus = null;
+	wasSuccessful = false;
+	controller = null;
+	constructor(client, options = {}) {
+		this.client = client;
+		this.options = options;
+	}
+	get hasErrors() {
+		return Object.keys(this.errors).length > 0;
+	}
+	async request(method, url, options = {}) {
+		this.cancel();
+		const controller = typeof AbortController === "undefined" ? null : new AbortController();
+		this.controller = controller;
+		this.processing = true;
+		this.progress = null;
+		this.wasSuccessful = false;
+		this.message = null;
+		this.lastError = null;
+		const { onSuccess, onInvalid, onError, onException, onFinish, ...request } = options;
+		const outcome = await this.client.request(method, url, {
+			...request,
+			headers: {
+				...this.options.headers ?? {},
+				...request.headers ?? {}
+			},
+			signal: controller?.signal,
+			onProgress: (progress) => {
+				this.progress = progress;
+				request.onProgress?.(progress);
+			}
+		});
+		if (controller !== this.controller) return outcome;
+		this.controller = null;
+		this.processing = false;
+		this.progress = null;
+		switch (outcome.status) {
+			case "success":
+				this.data = outcome.data;
+				this.meta = outcome.meta;
+				this.httpStatus = outcome.httpStatus;
+				this.wasSuccessful = true;
+				this.clearErrors();
+				onSuccess?.(outcome.data, outcome.meta);
+				break;
+			case "invalid":
+				this.httpStatus = 422;
+				this.errors = firstErrors(outcome.errors);
+				this.allErrors = { ...outcome.errors };
+				this.message = outcome.message;
+				onInvalid?.(outcome.errors, outcome.message);
+				break;
+			case "error":
+				this.httpStatus = outcome.httpStatus;
+				this.lastError = outcome.error;
+				this.message = outcome.error.message;
+				onError?.(outcome.error);
+				break;
+			case "exception":
+				this.httpStatus = null;
+				onException?.(outcome.error);
+		}
+		onFinish?.(outcome);
+		return outcome;
+	}
+	get(url, options) {
+		return this.request("get", url, options);
+	}
+	post(url, options) {
+		return this.request("post", url, options);
+	}
+	put(url, options) {
+		return this.request("put", url, options);
+	}
+	patch(url, options) {
+		return this.request("patch", url, options);
+	}
+	delete(url, options) {
+		return this.request("delete", url, options);
+	}
+	/** Abort the in-flight request, if any. `processing` returns to false. */
+	cancel() {
+		const controller = this.controller;
+		if (!controller) return;
+		this.controller = null;
+		this.processing = false;
+		this.progress = null;
+		controller.abort();
+	}
+	clearErrors(...fields) {
+		if (fields.length === 0) {
+			this.errors = {};
+			this.allErrors = {};
+			return this;
+		}
+		const errors = { ...this.errors };
+		const all = { ...this.allErrors };
+		for (const field of fields) {
+			delete errors[field];
+			delete all[field];
+		}
+		this.errors = errors;
+		this.allErrors = all;
+		return this;
+	}
+	/** Forget data, meta, errors and status. Cancels an in-flight request. */
+	reset() {
+		this.cancel();
+		this.data = null;
+		this.meta = {};
+		this.message = null;
+		this.lastError = null;
+		this.httpStatus = null;
+		this.wasSuccessful = false;
+		return this.clearErrors();
+	}
+};
 //#endregion
 //#region ../packages/core/dist/pages/merge.js
 /** Applies a stream/partial prop update using the protocol's merge modes. */
@@ -1988,6 +2309,7 @@ function createBridge(config = {}) {
 		fetch: config.fetch,
 		credentials: config.credentials
 	});
+	const json = new JsonClient(http);
 	const history = new History({ window: win ?? void 0 });
 	const cache = new PageCache({
 		ttl: config.cache?.ttl ?? DEFAULT_CONFIG.cache.ttl,
@@ -2014,6 +2336,7 @@ function createBridge(config = {}) {
 		store,
 		router,
 		http,
+		json,
 		history,
 		cache,
 		events,
@@ -2021,6 +2344,7 @@ function createBridge(config = {}) {
 		build,
 		on: events.on.bind(events),
 		form: (initial, options) => new Form(router, initial, options),
+		jsonRequest: (options) => new JsonRequest(json, options),
 		stream: (url, options = {}) => new StreamClient(url, {
 			fetch: config.fetch,
 			...options
@@ -2260,17 +2584,17 @@ async function createSsrServer(options) {
 * then `php artisan bridge:ssr` (or `node bootstrap/ssr/ssr.js`).
 */
 var pages = /* #__PURE__ */ Object.assign({
-	"./Pages/Auth/Login.vue": () => import("./assets/Login-CgEE8rPj.js"),
-	"./Pages/Auth/Tokens.vue": () => import("./assets/Tokens-BW75RKTc.js"),
-	"./Pages/Customers/Create.vue": () => import("./assets/Create-D72xv_3r.js"),
-	"./Pages/Customers/Edit.vue": () => import("./assets/Edit-BdgKciEh.js"),
-	"./Pages/Customers/Index.vue": () => import("./assets/Index-DRrkDuN6.js"),
-	"./Pages/Customers/Show.vue": () => import("./assets/Show-DVN2ONuW.js"),
-	"./Pages/Dashboard.vue": () => import("./assets/Dashboard-Nqm8cBAQ.js"),
-	"./Pages/Errors/Error.vue": () => import("./assets/Error-wqzF9gUV.js"),
-	"./Pages/Errors/Index.vue": () => import("./assets/Index-CB6oKKn0.js"),
-	"./Pages/Json.vue": () => import("./assets/Json-DyN5rq7K.js"),
-	"./Pages/Realtime.vue": () => import("./assets/Realtime-B6lQDvku.js")
+	"./Pages/Auth/Login.vue": () => import("./assets/Login-Cp8JLan_.js"),
+	"./Pages/Auth/Tokens.vue": () => import("./assets/Tokens-CqGWE58l.js"),
+	"./Pages/Customers/Create.vue": () => import("./assets/Create-B-we-Ddh.js"),
+	"./Pages/Customers/Edit.vue": () => import("./assets/Edit-C2i2Ueal.js"),
+	"./Pages/Customers/Index.vue": () => import("./assets/Index-Bitd_BvD.js"),
+	"./Pages/Customers/Show.vue": () => import("./assets/Show-BMJNAm39.js"),
+	"./Pages/Dashboard.vue": () => import("./assets/Dashboard-DWQD51rj.js"),
+	"./Pages/Errors/Error.vue": () => import("./assets/Error-CZFCtkzZ.js"),
+	"./Pages/Errors/Index.vue": () => import("./assets/Index-DVHWBvnM.js"),
+	"./Pages/Json.vue": () => import("./assets/Json-68XH0swm.js"),
+	"./Pages/Realtime.vue": () => import("./assets/Realtime-umRQu8b3.js")
 });
 createSsrServer({ render: createSsrRenderer({ resolve: (name) => {
 	const loader = pages[`./Pages/${name}.vue`];

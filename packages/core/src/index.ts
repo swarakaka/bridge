@@ -17,6 +17,16 @@ export type {
 export { parseResponse, isBridgeContentType } from './http/responseParser.js'
 export type { HttpResponse, ParsedResponse } from './http/responseParser.js'
 export { readXsrfToken } from './http/csrf.js'
+export { JsonClient, JSON_ACCEPT, kindFor, firstErrors } from './json/JsonClient.js'
+export type {
+  JsonMeta,
+  JsonError,
+  JsonErrorKind,
+  JsonOutcome,
+  JsonRequestOptions,
+} from './json/JsonClient.js'
+export { JsonRequest } from './json/JsonRequest.js'
+export type { JsonHandleOptions, JsonCallOptions } from './json/JsonRequest.js'
 export { hasFiles, objectToFormData } from './http/formData.js'
 export { PageStore, readMergeKeys, appendProp } from './pages/PageStore.js'
 export type { PageState, PageListener, SetPageOptions } from './pages/PageStore.js'

@@ -10,6 +10,8 @@
   "../packages/core/dist/http/formData.js": [],
   "../packages/core/dist/http/responseParser.js": [],
   "../packages/core/dist/index.js": [],
+  "../packages/core/dist/json/JsonClient.js": [],
+  "../packages/core/dist/json/JsonRequest.js": [],
   "../packages/core/dist/pages/PageStore.js": [],
   "../packages/core/dist/pages/merge.js": [],
   "../packages/core/dist/router/History.js": [],
@@ -22,135 +24,138 @@
   "../packages/protocol/dist/index.js": [],
   "../packages/vue/dist/app.js": [],
   "../packages/vue/dist/components/BridgeHead.js": [
-    "/build/assets/AppLayout-BzYPQJMZ.js"
+    "/build/assets/AppLayout-B-H39FZD.js"
   ],
   "../packages/vue/dist/components/BridgeLink.js": [
-    "/build/assets/AppLayout-BzYPQJMZ.js"
+    "/build/assets/AppLayout-B-H39FZD.js"
   ],
   "../packages/vue/dist/components/Deferred.js": [
-    "/build/assets/AppLayout-BzYPQJMZ.js"
+    "/build/assets/AppLayout-B-H39FZD.js"
   ],
   "../packages/vue/dist/composables/useForm.js": [
-    "/build/assets/AppLayout-BzYPQJMZ.js"
+    "/build/assets/AppLayout-B-H39FZD.js"
+  ],
+  "../packages/vue/dist/composables/useJson.js": [
+    "/build/assets/AppLayout-B-H39FZD.js"
   ],
   "../packages/vue/dist/composables/usePage.js": [
-    "/build/assets/AppLayout-BzYPQJMZ.js"
+    "/build/assets/AppLayout-B-H39FZD.js"
   ],
   "../packages/vue/dist/composables/useRemember.js": [
-    "/build/assets/AppLayout-BzYPQJMZ.js"
+    "/build/assets/AppLayout-B-H39FZD.js"
   ],
   "../packages/vue/dist/composables/useStream.js": [
-    "/build/assets/AppLayout-BzYPQJMZ.js"
+    "/build/assets/AppLayout-B-H39FZD.js"
   ],
   "../packages/vue/dist/createBridgeApp.js": [
-    "/build/assets/AppLayout-BzYPQJMZ.js"
+    "/build/assets/AppLayout-B-H39FZD.js"
   ],
   "../packages/vue/dist/head.js": [],
   "../packages/vue/dist/index.js": [
-    "/build/assets/AppLayout-BzYPQJMZ.js"
+    "/build/assets/AppLayout-B-H39FZD.js"
   ],
   "../packages/vue/dist/injection.js": [],
   "../packages/vue/dist/plugin.js": [],
   "../packages/vue/dist/server/index.js": [],
   "../packages/vue/dist/state.js": [],
   "resources/js/Components/CustomerForm.vue": [
-    "/build/assets/CustomerForm-B_juC4zm.js"
+    "/build/assets/CustomerForm-5WWT3CWF.js"
   ],
   "resources/js/Components/CustomerForm.vue?vue&type=script&setup=true&lang.ts": [
-    "/build/assets/CustomerForm-B_juC4zm.js"
+    "/build/assets/CustomerForm-5WWT3CWF.js"
   ],
   "resources/js/Components/Pagination.vue": [
-    "/build/assets/Index-DRrkDuN6.js"
+    "/build/assets/Index-Bitd_BvD.js"
   ],
   "resources/js/Components/Pagination.vue?vue&type=script&setup=true&lang.ts": [
-    "/build/assets/Index-DRrkDuN6.js"
+    "/build/assets/Index-Bitd_BvD.js"
   ],
   "resources/js/Components/StreamProvider.vue": [
-    "/build/assets/AppLayout-BzYPQJMZ.js"
+    "/build/assets/AppLayout-B-H39FZD.js"
   ],
   "resources/js/Components/StreamProvider.vue?vue&type=script&setup=true&lang.ts": [
-    "/build/assets/AppLayout-BzYPQJMZ.js"
+    "/build/assets/AppLayout-B-H39FZD.js"
   ],
   "resources/js/Components/Toast.vue": [
-    "/build/assets/AppLayout-BzYPQJMZ.js"
+    "/build/assets/AppLayout-B-H39FZD.js"
   ],
   "resources/js/Components/Toast.vue?vue&type=script&setup=true&lang.ts": [
-    "/build/assets/AppLayout-BzYPQJMZ.js"
+    "/build/assets/AppLayout-B-H39FZD.js"
   ],
   "resources/js/Layouts/AppLayout.vue": [
-    "/build/assets/AppLayout-BzYPQJMZ.js"
+    "/build/assets/AppLayout-B-H39FZD.js"
   ],
   "resources/js/Layouts/AppLayout.vue?vue&type=script&setup=true&lang.ts": [
-    "/build/assets/AppLayout-BzYPQJMZ.js"
+    "/build/assets/AppLayout-B-H39FZD.js"
   ],
   "resources/js/Pages/Auth/Login.vue": [
-    "/build/assets/Login-CgEE8rPj.js"
+    "/build/assets/Login-Cp8JLan_.js"
   ],
   "resources/js/Pages/Auth/Login.vue?vue&type=script&setup=true&lang.ts": [
-    "/build/assets/Login-CgEE8rPj.js"
+    "/build/assets/Login-Cp8JLan_.js"
   ],
   "resources/js/Pages/Auth/Tokens.vue": [
-    "/build/assets/Tokens-BW75RKTc.js"
+    "/build/assets/Tokens-CqGWE58l.js"
   ],
   "resources/js/Pages/Auth/Tokens.vue?vue&type=script&setup=true&lang.ts": [
-    "/build/assets/Tokens-BW75RKTc.js"
+    "/build/assets/Tokens-CqGWE58l.js"
   ],
   "resources/js/Pages/Customers/Create.vue": [
-    "/build/assets/Create-D72xv_3r.js"
+    "/build/assets/Create-B-we-Ddh.js"
   ],
   "resources/js/Pages/Customers/Create.vue?vue&type=script&setup=true&lang.ts": [
-    "/build/assets/Create-D72xv_3r.js"
+    "/build/assets/Create-B-we-Ddh.js"
   ],
   "resources/js/Pages/Customers/Edit.vue": [
-    "/build/assets/Edit-BdgKciEh.js"
+    "/build/assets/Edit-C2i2Ueal.js"
   ],
   "resources/js/Pages/Customers/Edit.vue?vue&type=script&setup=true&lang.ts": [
-    "/build/assets/Edit-BdgKciEh.js"
+    "/build/assets/Edit-C2i2Ueal.js"
   ],
   "resources/js/Pages/Customers/Index.vue": [
-    "/build/assets/Index-DRrkDuN6.js"
+    "/build/assets/Index-Bitd_BvD.js"
   ],
   "resources/js/Pages/Customers/Index.vue?vue&type=script&setup=true&lang.ts": [
-    "/build/assets/Index-DRrkDuN6.js"
+    "/build/assets/Index-Bitd_BvD.js"
   ],
   "resources/js/Pages/Customers/Show.vue": [
-    "/build/assets/Show-DVN2ONuW.js"
+    "/build/assets/Show-BMJNAm39.js"
   ],
   "resources/js/Pages/Customers/Show.vue?vue&type=script&setup=true&lang.ts": [
-    "/build/assets/Show-DVN2ONuW.js"
+    "/build/assets/Show-BMJNAm39.js"
   ],
   "resources/js/Pages/Dashboard.vue": [
-    "/build/assets/Dashboard-Nqm8cBAQ.js"
+    "/build/assets/Dashboard-DWQD51rj.js"
   ],
   "resources/js/Pages/Dashboard.vue?vue&type=script&setup=true&lang.ts": [
-    "/build/assets/Dashboard-Nqm8cBAQ.js"
+    "/build/assets/Dashboard-DWQD51rj.js"
   ],
   "resources/js/Pages/Errors/Error.vue": [
-    "/build/assets/Error-wqzF9gUV.js"
+    "/build/assets/Error-CZFCtkzZ.js"
   ],
   "resources/js/Pages/Errors/Error.vue?vue&type=script&setup=true&lang.ts": [
-    "/build/assets/Error-wqzF9gUV.js"
+    "/build/assets/Error-CZFCtkzZ.js"
   ],
   "resources/js/Pages/Errors/Index.vue": [
-    "/build/assets/Index-CB6oKKn0.js"
+    "/build/assets/Index-DVHWBvnM.js"
   ],
   "resources/js/Pages/Errors/Index.vue?vue&type=script&setup=true&lang.ts": [
-    "/build/assets/Index-CB6oKKn0.js"
+    "/build/assets/Index-DVHWBvnM.js"
   ],
   "resources/js/Pages/Json.vue": [
-    "/build/assets/Json-DyN5rq7K.js"
+    "/build/assets/Json-68XH0swm.js"
   ],
   "resources/js/Pages/Json.vue?vue&type=script&setup=true&lang.ts": [
-    "/build/assets/Json-DyN5rq7K.js"
+    "/build/assets/Json-68XH0swm.js"
   ],
   "resources/js/Pages/Realtime.vue": [
-    "/build/assets/Realtime-B6lQDvku.js"
+    "/build/assets/Realtime-umRQu8b3.js"
   ],
   "resources/js/Pages/Realtime.vue?vue&type=script&setup=true&lang.ts": [
-    "/build/assets/Realtime-B6lQDvku.js"
+    "/build/assets/Realtime-umRQu8b3.js"
   ],
   "resources/js/composables/useAppStream.ts": [
-    "/build/assets/AppLayout-BzYPQJMZ.js"
+    "/build/assets/AppLayout-B-H39FZD.js"
   ],
   "resources/js/ssr.ts": []
 }

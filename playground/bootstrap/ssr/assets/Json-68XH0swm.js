@@ -1,4 +1,4 @@
-import { r as BridgeHead, t as AppLayout_default } from "./AppLayout-BzYPQJMZ.js";
+import { o as useJson, r as BridgeHead, t as AppLayout_default } from "./AppLayout-B-H39FZD.js";
 import { computed, defineComponent, ref, unref, useSSRContext } from "vue";
 import { ssrIncludeBooleanAttr, ssrInterpolate, ssrLooseContain, ssrLooseEqual, ssrRenderAttr, ssrRenderComponent, ssrRenderList } from "vue/server-renderer";
 //#region resources/js/Pages/Json.vue?vue&type=script&setup=true&lang.ts
@@ -19,6 +19,12 @@ var Json_vue_vue_type_script_setup_true_lang_default = /*@__PURE__*/ defineCompo
 		const result = ref(null);
 		const running = ref(false);
 		const endpoint = computed(() => props.endpoints[selected.value]);
+		const json = useJson();
+		const jsonBody = computed(() => {
+			if (json.hasErrors) return JSON.stringify(json.allErrors, null, 2);
+			if (json.lastError) return JSON.stringify(json.lastError, null, 2);
+			return json.data === null ? "" : JSON.stringify(json.data, null, 2);
+		});
 		const curl = computed(() => {
 			const parts = ["curl -i", `-H 'Accept: ${accept.value}'`];
 			if (token.value) parts.push(`-H 'Authorization: Bearer ${token.value}'`);
@@ -40,7 +46,17 @@ var Json_vue_vue_type_script_setup_true_lang_default = /*@__PURE__*/ defineCompo
 			_push(`<!--]--></select></label><label class="block"><span class="font-medium">Bearer token (optional)</span><input${ssrRenderAttr("value", token.value)} class="mt-1 w-full rounded border border-slate-300 px-3 py-2" placeholder="from /tokens" data-testid="token"></label>`);
 			if (endpoint.value.method !== "GET") _push(`<label class="block"><span class="font-medium">JSON body</span><textarea rows="3" class="mt-1 w-full rounded border border-slate-300 px-3 py-2 font-mono text-xs" data-testid="body">${ssrInterpolate(body.value)}</textarea></label>`);
 			else _push(`<!---->`);
-			_push(`<button class="rounded bg-indigo-600 px-4 py-2 text-white disabled:opacity-50"${ssrIncludeBooleanAttr(running.value) ? " disabled" : ""} data-testid="run"> Send </button><pre class="overflow-x-auto rounded bg-slate-900 p-3 text-xs text-slate-100" data-testid="curl">${ssrInterpolate(curl.value)}</pre></div>`);
+			_push(`<button class="rounded bg-indigo-600 px-4 py-2 text-white disabled:opacity-50"${ssrIncludeBooleanAttr(running.value) ? " disabled" : ""} data-testid="run"> Send </button><pre class="overflow-x-auto rounded bg-slate-900 p-3 text-xs text-slate-100" data-testid="curl">${ssrInterpolate(curl.value)}</pre><div class="rounded border border-slate-200 p-3"><div class="font-medium">Through <code>useJson()</code></div><p class="mt-1 text-xs text-slate-500"> The same endpoint and body sent by the Vue client in JSON mode: CSRF and credentials handled, the envelope unwrapped, a 422 mapped to <code>errors</code>. </p><button class="mt-2 rounded border border-indigo-600 px-4 py-2 text-indigo-700 disabled:opacity-50"${ssrIncludeBooleanAttr(unref(json).processing) ? " disabled" : ""} data-testid="run-json"> Send with useJson </button>`);
+			if (unref(json).httpStatus !== null) {
+				_push(`<div class="mt-2" data-testid="json-result"><div> HTTP <span data-testid="json-status">${ssrInterpolate(unref(json).httpStatus)}</span>`);
+				if (unref(json).meta.location) _push(`<span class="text-xs text-slate-500"> · location <span data-testid="json-location">${ssrInterpolate(unref(json).meta.location)}</span></span>`);
+				else _push(`<!---->`);
+				_push(`</div>`);
+				if (unref(json).message) _push(`<p class="text-xs text-rose-700" data-testid="json-message">${ssrInterpolate(unref(json).message)}</p>`);
+				else _push(`<!---->`);
+				_push(`<pre class="mt-2 max-h-60 overflow-auto rounded bg-slate-900 p-3 text-xs text-slate-100" data-testid="json-body">${ssrInterpolate(jsonBody.value)}</pre></div>`);
+			} else _push(`<!---->`);
+			_push(`</div></div>`);
 			if (result.value) {
 				_push(`<div class="text-sm" data-testid="result"><div class="font-medium"> HTTP <span data-testid="result-status">${ssrInterpolate(result.value.status)}</span></div><ul class="mt-1 text-xs text-slate-500" data-testid="result-headers"><!--[-->`);
 				ssrRenderList(result.value.headers, ([name, value]) => {

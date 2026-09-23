@@ -573,9 +573,11 @@ Bridge::redirect()->route('customers.show', $c)->flash('Saved')->with('customer'
 
 | Module                  | Responsibility                                                                                                                                                                                                                          |
 | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `createBridge(options)` | Builds a `Bridge` instance: `{ http, router, pages, forms, stream, events, cache, config }`.                                                                                                                                            |
+| `createBridge(options)` | Builds a `Bridge` instance: `{ http, json, router, pages, forms, stream, events, cache, config }`.                                                                                                                                      |
 | `http/RequestManager`   | `fetch` wrapper: sets `Accept: application/vnd.bridge+json; v=1`, `X-Bridge-Build`, partial headers, `X-XSRF-TOKEN` from cookie, `credentials: 'same-origin'`; dedupes and aborts in-flight visits; XHR path for uploads with progress. |
 | `http/responseParser`   | Classifies responses: page / error / redirect(409) / 406 / non-Bridge (HTML) and validates `Content-Type`.                                                                                                                              |
+| `json/JsonClient`       | Stateless JSON-mode client over `RequestManager`: `Accept: application/json`, same CSRF/credentials/upload path as visits, unwraps the `{ data, meta }` envelope, maps 422 to `errors` and other statuses to an error kind by status. Returns a `JsonOutcome` (`success` / `invalid` / `error` / `exception` / `cancelled`), never throws. |
+| `json/JsonRequest`      | Stateful handle over `JsonClient`, the JSON-mode counterpart of `forms/createForm`: `data`, `meta`, `errors`, `allErrors`, `message`, `processing`, `progress`, `httpStatus`, `get/post/put/patch/delete`, `cancel`, `clearErrors`, `reset`. One in-flight request per handle; a new request aborts the previous one.                   |
 | `router/Router`         | `visit`, `get/post/put/patch/delete`, `reload`, `prefetch`, `back`; visit lifecycle events; `preserveState`, `preserveScroll`, `replace`, `only/except`.                                                                                |
 | `router/History`        | `pushState`/`replaceState` with serialized page + scroll positions + `remember` state; `popstate` restore.                                                                                                                              |
 | `router/Scroll`         | Scroll region tracking and restoration.                                                                                                                                                                                                 |
@@ -596,6 +598,7 @@ Bridge::redirect()->route('customers.show', $c)->flash('Saved')->with('customer'
 | `useProp<T>(key)`                                                | Reactive ref to one prop, updated by navigation, partial reload, and stream `prop`/`invalidate`.                                                                          |
 | `useForm(initial)`                                               | Reactive wrapper around `createForm`.                                                                                                                                     |
 | `useStream(url, options)`                                        | Reactive `state`, `on`, `close`; unmount cleanup.                                                                                                                         |
+| `useJson<T>(options)`                                            | Reactive wrapper around `JsonRequest`: JSON-mode calls without a page visit (`json.get('/customers')`, `json.data`, `json.errors.email`). Named after the mode, like `usePage`/`useStream`. |
 | `useRemember(key, value)`                                        | Persist local state into history.                                                                                                                                         |
 | `useDeferred(key)`                                               | `{ loading, value }` for deferred props.                                                                                                                                  |
 | `<BridgeLink>`                                                   | Anchor that calls `router.visit`; props `href`, `method`, `data`, `replace`, `preserveState`, `preserveScroll`, `only`, `prefetch` (`hover` \| `mount` \| `false`), `as`. |
@@ -1256,6 +1259,10 @@ plus green Pest, PHPStan, and conformance suites. This milestone proves the prot
 ## Implementation notes and deviations
 
 Recorded as phases ship. Each entry names the section it refines.
+
+### Post-1.0 (2026-09-23)
+
+- **§10.2, §10.3 JSON-mode client.** Added `JsonClient`/`JsonRequest` in core and `useJson` in the Vue adapter so a component can call the application's JSON mode (the same routes, `Accept: application/json`) without a page visit; before this the playground used raw `fetch`. The name follows the mode names already used by the composables (`usePage`, `useStream`), not Inertia's `useHttp`. The Bridge envelope is unwrapped (`data`, `meta`); a 2xx body that is not an envelope is exposed as `data` unchanged so non-Bridge JSON routes work too. Error kinds are derived from the HTTP status using the table in `spec/errors.md` §2 because the JSON representation is Laravel-native and carries no `kind`. `useJson` does not react to `csrf`/`unauthenticated` (no reload, no redirect): the caller decides, since JSON calls are not navigations.
 
 ### Phase 5 (2026-09-22)
 

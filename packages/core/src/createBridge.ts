@@ -5,6 +5,8 @@ import { readBuild, readEmbeddedPage } from './dom.js'
 import { Emitter } from './events/Emitter.js'
 import { Form, type FormData_, type FormOptions } from './forms/createForm.js'
 import { RequestManager } from './http/RequestManager.js'
+import { JsonClient } from './json/JsonClient.js'
+import { JsonRequest, type JsonHandleOptions } from './json/JsonRequest.js'
 import { PageStore } from './pages/PageStore.js'
 import { History } from './router/History.js'
 import { Router } from './router/Router.js'
@@ -15,6 +17,8 @@ export interface Bridge {
   readonly store: PageStore
   readonly router: Router
   readonly http: RequestManager
+  /** JSON-mode client: the same routes with `Accept: application/json`, no navigation. */
+  readonly json: JsonClient
   readonly history: History
   readonly cache: PageCache
   readonly events: Emitter<RouterEvents>
@@ -22,6 +26,8 @@ export interface Bridge {
   build: string | null
   on: Emitter<RouterEvents>['on']
   form<T extends FormData_>(initial: T, options?: FormOptions): Form<T>
+  /** A stateful JSON-mode request handle (what `useJson` wraps). */
+  jsonRequest<T = unknown>(options?: JsonHandleOptions): JsonRequest<T>
   /** Open an SSE stream (fetch transport by default). */
   stream(url: string, options?: StreamOptions): StreamClient
   /** Fetch the page for the current URL when no page was embedded (static shell mode). */
@@ -45,6 +51,7 @@ export function createBridge(config: BridgeConfig = {}): Bridge {
   const events = new Emitter<RouterEvents>()
   const store = new PageStore(initialPage)
   const http = new RequestManager({ fetch: config.fetch, credentials: config.credentials })
+  const json = new JsonClient(http)
   const history = new History({ window: win ?? undefined })
   const cache = new PageCache({
     ttl: config.cache?.ttl ?? DEFAULT_CONFIG.cache.ttl,
@@ -76,6 +83,7 @@ export function createBridge(config: BridgeConfig = {}): Bridge {
     store,
     router,
     http,
+    json,
     history,
     cache,
     events,
@@ -83,6 +91,7 @@ export function createBridge(config: BridgeConfig = {}): Bridge {
     build,
     on: events.on.bind(events),
     form: (initial, options) => new Form(router, initial, options),
+    jsonRequest: (options) => new JsonRequest(json, options),
     stream: (url, options = {}) =>
       new StreamClient(url, { fetch: config.fetch, ...options }, { store, router, window: win }),
     bootstrap: async () => {

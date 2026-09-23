@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { BridgeHead } from '@swarakaka/bridge-vue'
+import { BridgeHead, useJson, type Method } from '@swarakaka/bridge-vue'
 import { computed, ref } from 'vue'
 import AppLayout from '@/Layouts/AppLayout.vue'
 
@@ -17,6 +17,28 @@ const result = ref<{ status: number; headers: Array<[string, string]>; body: str
 const running = ref(false)
 
 const endpoint = computed(() => props.endpoints[selected.value]!)
+
+// The same call through the client: no Accept juggling, no manual CSRF, errors mapped.
+const json = useJson<Record<string, unknown>>()
+const runJson = (): Promise<unknown> => {
+    let data: Record<string, unknown> | undefined
+    if (endpoint.value.method !== 'GET') {
+        try {
+            data = JSON.parse(body.value) as Record<string, unknown>
+        } catch {
+            data = {}
+        }
+    }
+    return json.request(endpoint.value.method.toLowerCase() as Method, endpoint.value.path, {
+        data,
+        headers: token.value ? { Authorization: `Bearer ${token.value}` } : {},
+    })
+}
+const jsonBody = computed(() => {
+    if (json.hasErrors) return JSON.stringify(json.allErrors, null, 2)
+    if (json.lastError) return JSON.stringify(json.lastError, null, 2)
+    return json.data === null ? '' : JSON.stringify(json.data, null, 2)
+})
 
 const curl = computed(() => {
     const parts = ['curl -i', `-H 'Accept: ${accept.value}'`]
@@ -131,6 +153,39 @@ const run = async (): Promise<void> => {
                 class="overflow-x-auto rounded bg-slate-900 p-3 text-xs text-slate-100"
                 data-testid="curl"
                 >{{ curl }}</pre>
+
+            <div class="rounded border border-slate-200 p-3">
+                <div class="font-medium">Through <code>useJson()</code></div>
+                <p class="mt-1 text-xs text-slate-500">
+                    The same endpoint and body sent by the Vue client in JSON mode: CSRF and
+                    credentials handled, the envelope unwrapped, a 422 mapped to
+                    <code>errors</code>.
+                </p>
+                <button
+                    class="mt-2 rounded border border-indigo-600 px-4 py-2 text-indigo-700 disabled:opacity-50"
+                    :disabled="json.processing"
+                    data-testid="run-json"
+                    @click="runJson"
+                >
+                    Send with useJson
+                </button>
+                <div v-if="json.httpStatus !== null" class="mt-2" data-testid="json-result">
+                    <div>
+                        HTTP <span data-testid="json-status">{{ json.httpStatus }}</span>
+                        <span v-if="json.meta.location" class="text-xs text-slate-500">
+                            · location
+                            <span data-testid="json-location">{{ json.meta.location }}</span>
+                        </span>
+                    </div>
+                    <p v-if="json.message" class="text-xs text-rose-700" data-testid="json-message">
+                        {{ json.message }}
+                    </p>
+                    <pre
+                        class="mt-2 max-h-60 overflow-auto rounded bg-slate-900 p-3 text-xs text-slate-100"
+                        data-testid="json-body"
+                        >{{ jsonBody }}</pre>
+                </div>
+            </div>
         </div>
 
         <div v-if="result" class="text-sm" data-testid="result">

@@ -17,7 +17,7 @@ Nothing in the Laravel package changes for a new adapter. Mobile SDKs need only 
 
 `packages/react` (`@swarakaka/bridge-react`, experimental) is the reference for a second adapter. It is about 250 lines: a context providing the bridge, `usePageState` built on `useSyncExternalStore`, `usePage`, `useProp`, `useDeferred`, a `useForm` that re-renders on every mutation through a proxy, `BridgeLink` with hover prefetch, `Deferred`, and a `createBridgeApp` that resolves components, applies static `layout` properties, renders the store's error state, and hydrates when the root is server-rendered. Its tests run against the same mocked responses as the Vue adapter's.
 
-Not yet in the React skeleton: `useRemember`, `useStream`, `BridgeHead`, and an SSR renderer. The core APIs they wrap are available through `getBridge()`.
+Not yet in the React skeleton: `useRemember`, `useStream`, `useJson`, `BridgeHead`, and an SSR renderer. The core APIs they wrap are available through `getBridge()`.
 
 ## Server-side rendering
 

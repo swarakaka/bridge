@@ -16,6 +16,8 @@ export { useForm } from './composables/useForm.js'
 export type { ReactiveForm, UseFormOptions } from './composables/useForm.js'
 export { useRemember } from './composables/useRemember.js'
 export { useStream } from './composables/useStream.js'
+export { useJson } from './composables/useJson.js'
+export type { ReactiveJsonRequest, UseJsonOptions } from './composables/useJson.js'
 export type { UseStreamOptions, UseStreamReturn } from './composables/useStream.js'
 export { BridgeLink } from './components/BridgeLink.js'
 export { Deferred } from './components/Deferred.js'
@@ -29,4 +31,8 @@ export type {
   VisitOutcome,
   Form,
   Method,
+  JsonOutcome,
+  JsonError,
+  JsonMeta,
+  JsonCallOptions,
 } from '@swarakaka/bridge-core'

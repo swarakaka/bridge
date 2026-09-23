@@ -46,4 +46,30 @@ test.describe('JSON demo', () => {
     await expect(page.getByTestId('result-status')).toHaveText('201')
     await expect(page.getByTestId('result-headers')).toContainText('location')
   })
+
+  test('useJson calls the same routes from the client and maps errors', async ({ page, login }) => {
+    await login()
+    await page.goto('/json')
+
+    await page.getByTestId('endpoint').selectOption({ index: 4 })
+    await page.getByTestId('body').fill('{"name": ""}')
+    await page.getByTestId('run-json').click()
+    await expect(page.getByTestId('json-status')).toHaveText('422')
+    await expect(page.getByTestId('json-body')).toContainText('"email"')
+    await expect(page.getByTestId('json-message')).toBeVisible()
+
+    await page
+      .getByTestId('body')
+      .fill(`{"name": "UseJson Co", "email": "usejson-${Date.now()}@example.com"}`)
+    await page.getByTestId('run-json').click()
+    await expect(page.getByTestId('json-status')).toHaveText('201')
+    await expect(page.getByTestId('json-location')).toContainText('/customers/')
+    await expect(page.getByTestId('json-body')).toContainText('"customer"')
+    await expect(page.getByTestId('json-message')).toHaveCount(0)
+
+    await page.getByTestId('endpoint').selectOption({ index: 5 })
+    await page.getByTestId('run-json').click()
+    await expect(page.getByTestId('json-status')).toHaveText('404')
+    await expect(page.getByTestId('json-body')).toContainText('"not_found"')
+  })
 })

@@ -94,6 +94,20 @@ function useStream(url, options = {}) {
 	};
 }
 //#endregion
+//#region ../packages/vue/dist/composables/useJson.js
+/**
+* JSON mode from a component: the same routes as page mode, requested with
+* `Accept: application/json`, without navigating. `json.data` holds the last
+* envelope's `data`, `json.errors.email` the first validation message.
+*/
+function useJson(options = {}) {
+	const bridge = useBridge();
+	const { cancelOnDispose, ...handleOptions } = options;
+	const json = reactive(bridge.jsonRequest(handleOptions));
+	if (cancelOnDispose !== false && getCurrentScope()) onScopeDispose(() => json.cancel());
+	return json;
+}
+//#endregion
 //#region ../packages/vue/dist/components/BridgeLink.js
 /**
 * Anchor that navigates through the router. `prefetch="hover"` (default)
@@ -519,4 +533,4 @@ AppLayout_vue_vue_type_script_setup_true_lang_default.setup = (props, ctx) => {
 };
 var AppLayout_default = AppLayout_vue_vue_type_script_setup_true_lang_default;
 //#endregion
-export { BridgeLink as a, useProp as c, Deferred as i, useAppStream as n, useForm as o, BridgeHead as r, useDeferred as s, AppLayout_default as t };
+export { BridgeLink as a, useDeferred as c, Deferred as i, useProp as l, useAppStream as n, useJson as o, BridgeHead as r, useForm as s, AppLayout_default as t };

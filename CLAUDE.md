@@ -79,6 +79,7 @@ Git: the repository is initialized but has no commits yet. Do not commit unless 
 ## Post-1.0 notes
 
 - `<x-bridge::app />` / `<x-bridge::head />` (`Bridge\View\Components`) read the current response's shell data from the `bridge.shell` request attribute set by `HtmlRepresenter`; the directives keep reading view variables. Both must stay byte-identical (`BladeComponentsTest` checks). Named multiple roots were considered and deferred: two routers cannot both own history.
+- `useJson` (Vue) wraps core `JsonRequest` over `JsonClient` (`bridge.json`): JSON mode from components without a visit. Deliberately not named `useHttp`; kinds come from the HTTP status because JSON errors are Laravel-native. `useJson` never reloads or redirects on `419`/`401`.
 
 ## Phase 5 notes
 
