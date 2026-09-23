@@ -6,10 +6,12 @@
  */
 export * from './generated/index.js'
 
-import type { BridgePage } from './generated/page.js'
-import type { BridgeError } from './generated/error.js'
-import type { BridgeJsonDocument } from './generated/json.js'
-import type { BridgeStreamControl } from './generated/stream-control.js'
+import type {
+  BridgeError,
+  BridgeJsonDocument,
+  BridgePage,
+  BridgeStreamControl,
+} from './generated/index.js'
 
 /** Highest protocol version this package describes. */
 export const PROTOCOL_VERSION = 1 as const
