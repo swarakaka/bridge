@@ -1262,7 +1262,7 @@ Recorded as phases ship. Each entry names the section it refines.
 - **§26 SSR.** `HttpSsrGateway` POSTs the page object to `@swarakaka/bridge-vue/server` (`createSsrRenderer` + `createSsrServer`, node:http only). The shell's `@bridge` marks the root `data-server-rendered` and `@bridgeHead` appends head fragments (`BridgeHead` records title/meta into a head context on the server). The client hydrates with `createSSRApp` and marks `data-bridge-hydrated`. Failures fall back to client rendering. The E2E suite runs entirely under SSR.
 - **Packaging.** ESM output now uses explicit `.js` specifiers (`NodeNext`); previously Node could not import `dist/`, which no bundler-based consumer had noticed.
 - **§33 React.** `packages/react` is an experimental skeleton proving adapter independence; not part of the 1.0 surface.
-- **§34 mobile.** Guide written (`docs/guide/mobile-sdks.md`); fixtures are the offline test data.
+- **§34 mobile.** Guide written (`docs/beyond/mobile-clients.md`); fixtures are the offline test data.
 - **§20.4 relay.** Design recorded in `development/relay-design.md`; not implemented.
 - **§38 DoD.** `development/release-readiness.md` tracks each criterion; FrankenPHP in CI and the Inertia baseline remain open and are excluded from 1.0.
 
@@ -1287,7 +1287,7 @@ Recorded as phases ship. Each entry names the section it refines.
 - **§20.2 Redis driver** uses raw commands (`XADD`, `XREAD BLOCK`, `TIME`) so it works with phpredis and predis alike; it is not exercised in CI yet (Phase 4 adds a Redis service run).
 - **§17 / §8.4 `ShouldStream::toStream()`** may return several messages (an application event plus an invalidation is the common case).
 - **§27 playground.** The layout opens one stream per signed-in user and provides it; pages subscribe through `useAppStream()`. Under `php artisan serve` the suite needs `PHP_CLI_SERVER_WORKERS` with `--no-reload`, and because that mode forwards the parent's environment, the E2E config passes its variables explicitly rather than relying on `.env.e2e`.
-- **Deployment guide** lives in `docs/guide/streams-deployment.md` until the VitePress site (Phase 4).
+- **Deployment guide** lives in `docs/realtime/deployment.md` until the VitePress site (Phase 4).
 
 ### Phase 2 (2026-09-22)
 

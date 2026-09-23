@@ -7,10 +7,10 @@ hero:
   actions:
     - theme: brand
       text: Get started
-      link: /guide/introduction
+      link: /getting-started/introduction
     - theme: alt
-      text: Protocol reference
-      link: /guide/protocol
+      text: Coming from Inertia
+      link: /getting-started/coming-from-inertia
 features:
   - title: Standard content negotiation
     details: The Accept header selects the HTML shell, a Bridge page object, or a plain JSON document. No mode-specific code in controllers.
