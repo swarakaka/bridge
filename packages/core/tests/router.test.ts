@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { bridgeWith, header, mockFetch, page, pageResponse, tick, withUrl } from './helpers.js'
-import type { Bridge } from '../src/createBridge.js'
+import type { Bridge } from '../src/index.js'
 
 let bridge: Bridge | null = null
 

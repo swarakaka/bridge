@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { PageCache } from '../src/cache/PageCache.js'
+import { PageCache } from '../src/index.js'
 import { page } from './helpers.js'
 
 describe('PageCache', () => {

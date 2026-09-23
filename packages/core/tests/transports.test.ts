@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { RequestManager } from '../src/http/RequestManager.js'
+import { RequestManager } from '../src/index.js'
+import type { Bridge } from '../src/index.js'
 import { bridgeWith, mockFetch, page, pageResponse, tick } from './helpers.js'
-import type { Bridge } from '../src/createBridge.js'
 
 /** Minimal XMLHttpRequest double: records the request and lets the test drive progress and completion. */
 class FakeXhr {

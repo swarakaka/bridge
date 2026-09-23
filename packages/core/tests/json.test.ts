@@ -1,7 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { RequestManager } from '../src/http/RequestManager.js'
-import { JsonClient, kindFor } from '../src/json/JsonClient.js'
-import { JsonRequest } from '../src/json/JsonRequest.js'
+import { RequestManager, JsonClient, kindFor, JsonRequest } from '../src/index.js'
 
 type Handler = (url: string, init: RequestInit) => Response | Promise<Response>
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseResponse } from '../src/http/responseParser.js'
+import { parseResponse } from '../src/index.js'
 import { page, pageResponse } from './helpers.js'
 
 const wrap = (response: Response, url = 'http://localhost/customers') => ({

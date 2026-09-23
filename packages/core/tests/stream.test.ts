@@ -1,8 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { Backoff } from '../src/stream/backoff.js'
-import { SseParser, type SseEvent } from '../src/stream/sseParser.js'
+import { Backoff, SseParser } from '../src/index.js'
+import type { SseEvent, Bridge } from '../src/index.js'
 import { bridgeWith, mockFetch, page, pageResponse, header, tick } from './helpers.js'
-import type { Bridge } from '../src/createBridge.js'
 
 describe('SseParser', () => {
   function parse(chunks: string[]): { events: SseEvent[]; comments: string[]; retry: number[] } {

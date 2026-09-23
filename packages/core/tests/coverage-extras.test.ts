@@ -1,10 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { Emitter } from '../src/events/Emitter.js'
-import { readBuild, readEmbeddedPage, readMeta } from '../src/dom.js'
-import { createBridge, getBridge, router as lazyRouter } from '../src/createBridge.js'
-import { isSameOrigin, mergeQuery, relativeUrl, stripHash } from '../src/router/url.js'
+import {
+  Emitter,
+  readBuild,
+  readEmbeddedPage,
+  readMeta,
+  createBridge,
+  getBridge,
+  router as lazyRouter,
+  isSameOrigin,
+  mergeQuery,
+  relativeUrl,
+  stripHash,
+} from '../src/index.js'
+import type { Bridge } from '../src/index.js'
 import { bridgeWith, mockFetch, page, pageResponse, tick } from './helpers.js'
-import type { Bridge } from '../src/createBridge.js'
 
 describe('Emitter', () => {
   it('supports once, off, count and clear', () => {

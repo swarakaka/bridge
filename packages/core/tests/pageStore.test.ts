@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { PageStore } from '../src/pages/PageStore.js'
-import { mergeValue, setDeep, getDeep } from '../src/pages/merge.js'
+import { PageStore, mergeValue, setDeep, getDeep } from '../src/index.js'
 import { page } from './helpers.js'
 
 describe('merge helpers', () => {

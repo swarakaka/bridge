@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { appendProp, PageStore } from '../src/pages/PageStore.js'
+import { appendProp, PageStore } from '../src/index.js'
+import type { Bridge } from '../src/index.js'
 import { bridgeWith, header, mockFetch, page, pageResponse } from './helpers.js'
-import type { Bridge } from '../src/createBridge.js'
 
 describe('merge props', () => {
   it('appends arrays and paginator data for keys listed in meta.merge', () => {
