@@ -52,6 +52,8 @@ composer install    # Laravel package (from Phase 1)
 composer test       # Pest
 ```
 
+To run the playground locally, follow the setup in [`docs/getting-started/demo-application.md`](docs/getting-started/demo-application.md), then start it with `pnpm serve` (or `./serve.sh` from `playground/`). The script runs PHP's built-in server with several workers so open streams do not block other requests, refuses a busy port, and stops all workers on Ctrl+C; `PORT` and `WORKERS` override the defaults.
+
 Commits follow [Conventional Commits](https://www.conventionalcommits.org/) with scopes `laravel`, `core`, `vue`, `protocol`, `playground`, `e2e`, `benchmarks`, `docs`, `ci`, `repo`.
 
 ## Documentation

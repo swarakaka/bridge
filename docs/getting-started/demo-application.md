@@ -29,5 +29,13 @@ Sign in with `ada@example.com` / `password`.
 `playground/CHECKLIST.md` lists a manual check for each feature with the expected result, and `e2e/` contains the Playwright specs that automate them.
 
 ::: tip Use the serve script
-`pnpm serve` runs PHP's built-in server with several workers so open streams do not block other requests, and refuses to start when the port is taken by a stale server. A plain `php artisan serve` handles one request at a time.
+`pnpm serve` runs `playground/serve.sh`: PHP's built-in server started from `public/` with several workers so open streams do not block other requests. It refuses to start when the port is taken by a stale server and stops every worker on Ctrl+C. A plain `php artisan serve` handles one request at a time.
+
+```bash
+./serve.sh                 # http://127.0.0.1:8000, 8 workers
+PORT=8080 ./serve.sh       # another port
+WORKERS=16 ./serve.sh      # more workers for many open streams
+lsof -ti :8000 | xargs kill -9   # clear orphaned workers when the script reports a busy port
+```
+
 :::
