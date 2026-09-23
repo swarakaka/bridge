@@ -106,17 +106,21 @@ jobs:
       - name: Test
         working-directory: playground
         run: php artisan test
-      - name: Milestone 1 smoke (curl)
+      - name: Smoke (curl, three modes)
         working-directory: playground
+        # /customers requires auth:sanctum, which accepts bearer tokens; mint one for the seeded user.
         run: |
+          TOKEN="$(php artisan tinker --execute 'echo App\Models\User::where("email", "ada@example.com")->firstOrFail()->createToken("ci")->plainTextToken;' | tail -1)"
           php artisan serve --port=8000 > /tmp/serve.log 2>&1 &
           sleep 3
-          curl -sf -H 'Accept: text/html' localhost:8000/customers | grep -q 'id="bridge-page"'
-          curl -sf -H 'Accept: application/vnd.bridge+json; v=1' localhost:8000/customers | grep -q '"component":"Customers/Index"'
-          curl -sf -H 'Accept: application/json' localhost:8000/customers | grep -q '"data":{"customers"'
-          test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Accept: text/event-stream' localhost:8000/customers)" = "406"
-          test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Accept: application/vnd.bridge+json; v=1' -H 'X-Bridge-Build: stale' localhost:8000/customers)" = "409"
-          test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Accept: application/json' -H 'Authorization: Bearer x' -X POST -d 'name=' localhost:8000/customers)" = "422"
+          check() { echo "$1"; shift; "$@" || { echo "FAILED"; cat /tmp/serve.log; exit 1; }; }
+          check "html shell"        sh -c "curl -sf -H 'Authorization: Bearer $TOKEN' -H 'Accept: text/html' localhost:8000/customers | grep -q 'id=\"bridge-page\"'"
+          check "page object"       sh -c "curl -sf -H 'Authorization: Bearer $TOKEN' -H 'Accept: application/vnd.bridge+json; v=1' localhost:8000/customers | grep -q '\"component\":\"Customers/Index\"'"
+          check "json envelope"     sh -c "curl -sf -H 'Authorization: Bearer $TOKEN' -H 'Accept: application/json' localhost:8000/customers | grep -q '\"customers\":{\"data\":\['"
+          check "sse on render 406" test "$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $TOKEN" -H 'Accept: text/event-stream' localhost:8000/customers)" = "406"
+          check "stale build 409"   test "$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $TOKEN" -H 'Accept: application/vnd.bridge+json; v=1' -H 'X-Bridge-Build: stale' localhost:8000/customers)" = "409"
+          check "validation 422"    test "$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $TOKEN" -H 'Accept: application/json' -X POST -d 'name=' localhost:8000/customers)" = "422"
+          check "anonymous 401"     test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Accept: application/json' localhost:8000/customers)" = "401"
 
   commitlint:
     name: Conventional commits
