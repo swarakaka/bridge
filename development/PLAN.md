@@ -1099,7 +1099,7 @@ Standard Laravel skeleton plus: `app/Http/Controllers/{Dashboard,Customer,Realti
 `ci.yml` (push, PR):
 
 - `php`: matrix PHP 8.4 × Laravel 13; services Redis, MySQL; Pint check, PHPStan, Pest with coverage; conformance tests.
-- `js`: Node 20/22; pnpm install (frozen), build protocol → core → vue, ESLint, `vue-tsc`, Vitest with coverage.
+- `js`: Node 22/24 (pnpm 11 requires Node 22.13+ for `node:sqlite`); pnpm install (frozen), build protocol → core → vue, ESLint, `vue-tsc`, Vitest with coverage.
 - `playground`: composer + pnpm install, migrate, `vite build`, integration stream tests (database + redis drivers).
 
 `e2e.yml` (PR label `e2e` and nightly): Playwright against the playground under PHP-FPM/Nginx docker image and under FrankenPHP.

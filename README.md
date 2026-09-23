@@ -41,7 +41,7 @@ Bridge is inspired by Inertia's developer experience but is designed as `Laravel
 
 ## Development
 
-Requirements: PHP 8.4+, Laravel 13, Composer 2, Node 20+, pnpm 9+.
+Requirements: PHP 8.4+, Laravel 13, Composer 2, Node 22.13+, pnpm 9+ (the repo pins pnpm 11, which needs Node 22.13 or newer).
 
 ```bash
 pnpm install
