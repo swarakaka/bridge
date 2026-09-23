@@ -12,6 +12,12 @@ For visits that update the current page rather than leave it, keep the position:
 <BridgeLink href="/customers?page=2" :only="['customers']" preserve-scroll>Next</BridgeLink>
 ```
 
+```tsx [React]
+<BridgeLink href="/customers?page=2" only={['customers']} preserveScroll>
+  Next
+</BridgeLink>
+```
+
 ```ts [Router]
 router.reload({ only: ['stats'], preserveScroll: true })
 ```

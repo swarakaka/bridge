@@ -1,6 +1,6 @@
 # Introduction
 
-Bridge lets you build a single-page application with Laravel controllers and Vue components, without writing an API for the page and another for everything else. One controller action returns a page; Bridge serves it as a rendered HTML shell on first load, as a page object when the client navigates, as a plain JSON document to mobile and script clients, and can push updates to it over server-sent events.
+Bridge lets you build a single-page application with Laravel controllers and Vue or React components, without writing an API for the page and another for everything else. One controller action returns a page; Bridge serves it as a rendered HTML shell on first load, as a page object when the client navigates, as a plain JSON document to mobile and script clients, and can push updates to it over server-sent events.
 
 ```php
 class CustomerController extends Controller

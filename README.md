@@ -4,7 +4,7 @@
 
 # Bridge
 
-**A server-driven application protocol for Laravel.** One controller action serves a Vue page, a JSON API response, and a real-time event stream from the same route, guards, and business logic.
+**A server-driven application protocol for Laravel.** One controller action serves a Vue or React page, a JSON API response, and a real-time event stream from the same route, guards, and business logic.
 
 ```php
 public function index()

@@ -97,7 +97,7 @@ Git: the repository is initialized but has no commits yet. Do not commit unless 
 
 ## What Bridge is
 
-Bridge is a planned open-source **server-driven application bridge for Laravel** with a Vue 3 first-party client, intended to live at `github.com/swarakaka/Bridge`. It is inspired by Inertia's developer experience but must not copy Inertia's internals.
+Bridge is a planned open-source **server-driven application bridge for Laravel** with first-party Vue 3 and React clients (React is experimental), intended to live at `github.com/swarakaka/Bridge`. It is inspired by Inertia's developer experience but must not copy Inertia's internals.
 
 One Laravel controller returning `Bridge::render('Customers/Index', [...])` must be consumable in three modes from the same route and business logic:
 

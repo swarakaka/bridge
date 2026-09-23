@@ -56,7 +56,7 @@
 
 ## 1. Executive summary
 
-Bridge is a **server-driven application protocol for Laravel** with a first-party Vue 3 client. One controller action returning `Bridge::render('Customers/Index', [...])` is served in three representations from the same route, guards, policies, and business logic:
+Bridge is a **server-driven application protocol for Laravel** with first-party Vue 3 and React clients (the React adapter is experimental until it reaches parity, see §33). One controller action returning `Bridge::render('Customers/Index', [...])` is served in three representations from the same route, guards, policies, and business logic:
 
 | Mode                                      | Selected by                                | Body                                                                     |
 | ----------------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------ |
