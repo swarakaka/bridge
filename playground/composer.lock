@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "f552ef155bbec047e686e3cf54486406",
+    "content-hash": "ab27e8f958d6ce3538186670e5375c3f",
     "packages": [
         {
             "name": "brick/math",
@@ -3338,22 +3338,22 @@
             "dist": {
                 "type": "path",
                 "url": "../packages/laravel",
-                "reference": "4c8a186a98c4b98d032ddca9a625f81f01c84af5"
+                "reference": "fb546e0173249a82b70697eb5c04f889f34f73bc"
             },
             "require": {
-                "illuminate/contracts": "^11.0|^12.0|^13.0",
-                "illuminate/http": "^11.0|^12.0|^13.0",
-                "illuminate/support": "^11.0|^12.0|^13.0",
-                "illuminate/view": "^11.0|^12.0|^13.0",
-                "php": "^8.2"
+                "illuminate/contracts": "^13.0",
+                "illuminate/http": "^13.0",
+                "illuminate/support": "^13.0",
+                "illuminate/view": "^13.0",
+                "php": "^8.4"
             },
             "require-dev": {
                 "larastan/larastan": "^3.0",
                 "laravel/pint": "^1.20",
                 "opis/json-schema": "^2.3",
-                "orchestra/testbench": "^9.0|^10.0|^11.0",
-                "pestphp/pest": "^3.0|^4.0",
-                "pestphp/pest-plugin-laravel": "^3.0|^4.0"
+                "orchestra/testbench": "^11.0",
+                "pestphp/pest": "^4.0",
+                "pestphp/pest-plugin-laravel": "^4.0"
             },
             "type": "library",
             "extra": {
@@ -8493,7 +8493,7 @@
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
-        "php": "^8.3"
+        "php": "^8.4"
     },
     "platform-dev": {},
     "plugin-api-version": "2.9.0"

@@ -1,6 +1,6 @@
 # Server-side setup
 
-Requirements: PHP 8.2 or newer (8.3 for Laravel 13) and Laravel 11, 12 or 13.
+Requirements: PHP 8.4 or newer and Laravel 13.
 
 ## Install the package
 
@@ -59,8 +59,7 @@ Put the routes behind `auth:sanctum` so browser sessions and bearer tokens share
 
 ```php
 // bootstrap/app.php
-$middleware->replaceInGroup('web', PreventRequestForgery::class, \Bridge\Http\Middleware\VerifyCsrfToken::class); // Laravel 13
-$middleware->replaceInGroup('web', ValidateCsrfToken::class, \Bridge\Http\Middleware\VerifyCsrfToken::class);     // Laravel 11 and 12
+$middleware->replaceInGroup('web', PreventRequestForgery::class, \Bridge\Http\Middleware\VerifyCsrfToken::class);
 ```
 
 See [JSON mode](/beyond/json-mode) and [CSRF protection](/security/csrf).

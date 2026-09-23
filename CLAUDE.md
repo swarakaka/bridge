@@ -14,7 +14,7 @@ One document in `development/` governs all work (the `docs/` directory is the us
 
 ## Commands
 
-Requirements: Node 20+, pnpm 9+ (repo pins pnpm 11), PHP 8.2+ (8.3+ for Laravel 13), Composer 2.
+Requirements: Node 20+, pnpm 9+ (repo pins pnpm 11), PHP 8.4+, Laravel 13, Composer 2.
 
 ```bash
 pnpm install                 # workspace deps

@@ -12,8 +12,7 @@ When mobile apps share `web` routes with the browser, they carry no session cook
 
 ```php
 // bootstrap/app.php
-$middleware->replaceInGroup('web', PreventRequestForgery::class, \Bridge\Http\Middleware\VerifyCsrfToken::class); // Laravel 13
-$middleware->replaceInGroup('web', ValidateCsrfToken::class, \Bridge\Http\Middleware\VerifyCsrfToken::class);     // Laravel 11 and 12
+$middleware->replaceInGroup('web', PreventRequestForgery::class, \Bridge\Http\Middleware\VerifyCsrfToken::class);
 ```
 
 It skips verification only for requests that carry `Authorization: Bearer …` **and no session cookie**. A browser with a cookie session is always verified, so the relaxation cannot be used to forge a request on behalf of a logged-in browser. Disable it with `bridge.csrf.skip_for_bearer`.

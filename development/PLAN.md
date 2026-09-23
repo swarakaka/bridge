@@ -482,7 +482,7 @@ Vue: `const { state, on, close, lastEventAt, reconnectAttempts } = useStream('/e
 
 ## 9. Laravel package architecture
 
-Composer package `swarakaka/bridge-laravel`, namespace `Bridge\`. PHP 8.2+, Laravel 11/12 (13 when stable).
+Composer package `swarakaka/bridge-laravel`, namespace `Bridge\`. PHP 8.4+, Laravel 13 (minimums raised from PHP 8.2 / Laravel 11 on 2026-09-23, see the deviations section).
 
 ### 9.1 Public facade surface
 
@@ -1098,7 +1098,7 @@ Standard Laravel skeleton plus: `app/Http/Controllers/{Dashboard,Customer,Realti
 
 `ci.yml` (push, PR):
 
-- `php`: matrix PHP 8.2/8.3/8.4 × Laravel 11/12; services Redis, MySQL; Pint check, PHPStan, Pest with coverage; conformance tests.
+- `php`: matrix PHP 8.4 × Laravel 13; services Redis, MySQL; Pint check, PHPStan, Pest with coverage; conformance tests.
 - `js`: Node 20/22; pnpm install (frozen), build protocol → core → vue, ESLint, `vue-tsc`, Vitest with coverage.
 - `playground`: composer + pnpm install, migrate, `vite build`, integration stream tests (database + redis drivers).
 
@@ -1262,6 +1262,7 @@ Recorded as phases ship. Each entry names the section it refines.
 
 ### Post-1.0 (2026-09-23)
 
+- **§9, §30 Minimum versions.** The package now requires PHP 8.4 and Laravel 13 only (`illuminate/*: ^13.0`, Testbench 11, Pest 4); Laravel 11 and 12 and PHP 8.2/8.3 were dropped, so the CI matrix is PHP 8.4 × Laravel 13 and the CSRF setup no longer documents the `ValidateCsrfToken` swap. The `method_exists` guards in `BridgeServiceProvider` stay because they type-narrow the kernel and handler contracts, not Laravel versions.
 - **§10.2, §10.3 JSON-mode client.** Added `JsonClient`/`JsonRequest` in core and `useJson` in the Vue adapter so a component can call the application's JSON mode (the same routes, `Accept: application/json`) without a page visit; before this the playground used raw `fetch`. The name follows the mode names already used by the composables (`usePage`, `useStream`), not Inertia's `useHttp`. The Bridge envelope is unwrapped (`data`, `meta`); a 2xx body that is not an envelope is exposed as `data` unchanged so non-Bridge JSON routes work too. Error kinds are derived from the HTTP status using the table in `spec/errors.md` §2 because the JSON representation is Laravel-native and carries no `kind`. `useJson` does not react to `csrf`/`unauthenticated` (no reload, no redirect): the caller decides, since JSON calls are not navigations.
 
 ### Phase 5 (2026-09-22)
@@ -1310,7 +1311,7 @@ Recorded as phases ship. Each entry names the section it refines.
 
 - **§5 negotiation, wildcard-only requests.** When every acceptable mode matched only through `*/*` and the configured default mode is excluded with `q=0`, the negotiator falls back to `json`, then `page`, `html`, `stream`. Rank order alone would have picked `stream`, which is useless to a generic client. Spec updated (`negotiation.md` §2).
 - **§9.2 middleware registration.** `HandleBridgeRequests` is appended to the `web` group through the HTTP kernel (`callAfterResolving(Kernel::class)` + `appendMiddlewareToGroup`) rather than `Router::pushMiddlewareToGroup`, because the kernel re-syncs its groups to the router when constructed and would drop the router-level push. Config `bridge.middleware.auto_register` disables it.
-- **§9.2 CSRF variant on Laravel 13.** Laravel 13 ships `PreventRequestForgery` (origin-based) in the `web` group. `Bridge\Http\Middleware\VerifyCsrfToken` still extends the token-based `VerifyCsrfToken`, which exists on 11–13; swap it with `replaceInGroup('web', …)`. Revisit in Phase 4 whether to extend `PreventRequestForgery` when present.
+- **§9.2 CSRF variant on Laravel 13.** Laravel 13 ships `PreventRequestForgery` (origin-based) in the `web` group. `Bridge\Http\Middleware\VerifyCsrfToken` still extends the token-based `VerifyCsrfToken`, which Laravel 13 keeps; swap it with `replaceInGroup('web', …)`. Revisit whether to extend `PreventRequestForgery` instead.
 - **§6.5 / Appendix C flash.** `Bridge::redirect()->flash($message, $level)` writes the configured `bridge.flash.keys` (default `message`, `level`) to the session; the `flash` shared prop reads the same keys and is `null` when none are set. JSON mode echoes them under `meta.flash`.
 - **§7.1 `jsonRoot`, §12 `Merge` props** were deferred to Phase 4 as planned; `Merge` is not yet in the package.
 - **§29.2 fixtures.** Paginated resource fixtures now carry Laravel's real `meta.links` array and correct `from`/`to`; `page/partial.json` contains only requested props (no `auth`), matching spec/page.md §3; the validation fixture message is Laravel's real `"The email field is required. (and 1 more error)"`.
