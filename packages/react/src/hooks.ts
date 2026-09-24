@@ -120,6 +120,7 @@ export const QUIET_FORM_METHODS: ReadonlySet<PropertyKey> = new Set([
   'withPrecognition',
   'setValidationTimeout',
   'validateFiles',
+  'optimistic',
 ])
 
 /**

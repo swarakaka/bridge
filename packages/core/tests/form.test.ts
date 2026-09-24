@@ -175,3 +175,35 @@ describe('validation errors passed only to onError', () => {
     warn.mockRestore()
   })
 })
+
+describe('app-wide form defaults', () => {
+  it('config.forms applies to every form, and a form’s own options win', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    try {
+      bridge = bridgeWith(
+        mockFetch(() => pageResponse(page())),
+        {
+          forms: { recentlySuccessfulFor: 5000 },
+        },
+      )
+      const app = bridge.form({ name: '' })
+      const own = bridge.form({ name: '' }, { recentlySuccessfulFor: 100 })
+      const json = bridge.jsonForm({ name: '' })
+
+      // One page visit at a time: a second one would cancel the first.
+      await app.post('/a')
+      await own.post('/b')
+      await vi.advanceTimersByTimeAsync(2500)
+      expect(app.recentlySuccessful).toBe(true)
+      expect(own.recentlySuccessful).toBe(false)
+      await vi.advanceTimersByTimeAsync(2500)
+      expect(app.recentlySuccessful).toBe(false)
+      expect(
+        (json as unknown as { options: { recentlySuccessfulFor?: number } }).options
+          .recentlySuccessfulFor,
+      ).toBe(5000)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})

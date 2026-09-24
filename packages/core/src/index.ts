@@ -37,7 +37,13 @@ export type { JsonHandleOptions, JsonCallOptions } from './json/JsonRequest.js'
 export { hasFiles, objectToFormData, formDataToObject, parseFieldName } from './http/formData.js'
 export { readFormElement, writeFormElement, fileFieldNames } from './forms/dom.js'
 export { PageStore, readMergeKeys, appendProp } from './pages/PageStore.js'
-export type { PageState, PageListener, SetPageOptions } from './pages/PageStore.js'
+export type {
+  PageState,
+  PageListener,
+  SetPageOptions,
+  OptimisticSettle,
+  OptimisticTarget,
+} from './pages/PageStore.js'
 export { requireResolver } from './pages/resolver.js'
 export type { PagesOption } from './pages/resolver.js'
 export { mergeValue, setDeep, getDeep, hasDeep, isPlainObject } from './pages/merge.js'
@@ -53,7 +59,7 @@ export {
   SCROLL_REGION_ATTRIBUTE,
 } from './router/Scroll.js'
 export { Router } from './router/Router.js'
-export type { RouterDependencies, ReloadOptions } from './router/Router.js'
+export type { RouterDependencies, ReloadOptions, OptimisticVisits } from './router/Router.js'
 export { isSameOrigin, relativeUrl, mergeQuery, toUrl, stripHash } from './router/url.js'
 export type { QueryStringArrayFormat } from './router/url.js'
 export type { Method } from './router/url.js'
@@ -77,6 +83,7 @@ export type {
   FormData_,
   FormTransport,
   FormValidateOptions,
+  FormOptimisticUpdate,
   SubmitResetOptions,
 } from './forms/FormState.js'
 export { readEmbeddedPage, readBuild, readMeta } from './dom.js'

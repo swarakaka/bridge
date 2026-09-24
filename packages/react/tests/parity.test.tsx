@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { act, createContext, createElement, useContext, useEffect } from 'react'
-import { createBridge, getBridge, PageCache } from '@swarakaka/bridge-core'
+import { createBridge, getBridge, PageCache, router } from '@swarakaka/bridge-core'
 import type { BridgePage } from '@swarakaka/bridge-protocol'
 import {
   BridgeForm,
@@ -12,6 +12,7 @@ import {
   useJsonForm,
   useRemember,
   useFormContext,
+  usePage,
   useStream,
 } from '../src/index.js'
 import type { BridgeApp, BridgeFormInstance, PageComponent } from '../src/index.js'
@@ -656,5 +657,47 @@ describe('BridgeForm', () => {
     expect(document.querySelector('form')!.hasAttribute('inert')).toBe(false)
     expect(field('password').value).toBe('')
     expect(field('email').value).toBe('ada@example.com')
+  })
+})
+
+describe('optimistic updates', () => {
+  it('renders the optimistic value at once and rolls back when the server refuses', async () => {
+    let release: (r: Response) => void = () => undefined
+    const http = mockFetch(() => new Promise<Response>((resolve) => (release = resolve)))
+    const Post: PageComponent = () => {
+      const { props } = usePage<{ likes: number }>()
+      return (
+        <div>
+          <span id="likes">{props.likes}</span>
+          <button
+            id="like"
+            onClick={() =>
+              void router
+                .optimistic((p) => ({ likes: (p.likes as number) + 1 }))
+                .post('/posts/1/like')
+            }
+          />
+        </div>
+      )
+    }
+    await mount({ Post }, page({ component: 'Post', url: '/posts/1', props: { likes: 1 } }), http)
+
+    await act(async () => ($('#like') as HTMLButtonElement).click())
+    expect($('#likes')?.textContent).toBe('2')
+
+    await act(async () =>
+      release(
+        pageResponse(
+          {
+            protocol: 1,
+            type: 'error',
+            error: { status: 422, kind: 'validation', message: 'No', errors: { likes: ['No'] } },
+          },
+          422,
+        ),
+      ),
+    )
+    await flush()
+    expect($('#likes')?.textContent).toBe('1')
   })
 })

@@ -1,4 +1,5 @@
 import type { BridgePage } from '@swarakaka/bridge-protocol'
+import type { FormOptions } from './forms/FormState.js'
 
 export interface BridgeConfig {
   /** Initial page (from the embedded #bridge-page element by default). */
@@ -13,6 +14,11 @@ export interface BridgeConfig {
   hardReloadOnError?: boolean | undefined
   /** Allow `navigate` control events and redirects to other origins to be followed. */
   allowExternalNavigate?: boolean | undefined
+  /**
+   * Defaults for every form (`useForm`, `useJsonForm`, `<BridgeForm>`), for example
+   * `{ recentlySuccessfulFor: 3000 }`; a form's own options win.
+   */
+  forms?: FormOptions | undefined
   /** Called with a page before it is applied (adapters load the component here). */
   prepare?: ((page: BridgePage) => Promise<void> | void) | undefined
   fetch?: typeof fetch | undefined

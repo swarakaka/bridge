@@ -3,6 +3,7 @@ import {
   readFormElement,
   writeFormElement,
   type Form,
+  type FormOptimisticUpdate,
   type FormState,
   type FormTransport,
   type JsonForm,
@@ -84,6 +85,8 @@ export interface BridgeFormProps
   validationTimeout?: number
   validateFiles?: boolean
   remember?: string
+  /** Page props to show while each submission is in flight, `(props, data) => patch` (PLAN §14.3). */
+  optimistic?: FormOptimisticUpdate<BridgeFormFields>
   children?: ReactNode | ((form: BridgeFormInstance) => ReactNode)
 }
 
@@ -121,6 +124,7 @@ export const BridgeForm = forwardRef<BridgeFormInstance, BridgeFormProps>(
       validationTimeout,
       validateFiles = false,
       remember,
+      optimistic: _optimistic,
       children,
       ...rest
     } = props // the `_` props are read at submit time through `latest`
@@ -150,6 +154,7 @@ export const BridgeForm = forwardRef<BridgeFormInstance, BridgeFormProps>(
         own?: unknown,
       ) => {
         if (element.current) instance.data = readFormElement(element.current)
+        if (latest.current.optimistic) instance.optimistic(latest.current.optimistic)
         return typeof first === 'string' && url !== undefined
           ? submit.call(instance, first, url, submitOptions(latest.current, own))
           : submit.call(instance, submitOptions(latest.current, first))

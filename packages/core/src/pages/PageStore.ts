@@ -48,12 +48,39 @@ export interface SetPageOptions {
 }
 
 /**
+ * How a settled optimistic update leaves a prop it was the last to hold:
+ * `server` shows the latest server value (failures, and successes that
+ * brought a page), `keep` leaves the optimistic value (a success without a
+ * page, such as a JSON mutation or a 204).
+ */
+export type OptimisticSettle = 'server' | 'keep'
+
+/** What forms need to show optimistic updates on the page (PLAN §14.3). */
+export interface OptimisticTarget {
+  readonly page: BridgePage | null
+  applyOptimistic(patch: Record<string, unknown>): number | null
+  settleOptimistic(token: number, mode: OptimisticSettle): void
+}
+
+/**
  * Holds the current page and notifies subscribers. Framework adapters wrap
  * this in their reactivity system.
+ *
+ * Optimistic updates (PLAN §14.3) own the top-level props they change until
+ * their request settles. Server data for an owned prop (a page, a partial
+ * reload, a stream `prop` event, `patchProps`) replaces its snapshot, not the
+ * displayed value; `serverPage` is the page with snapshots, which is what
+ * history stores. Owners belong to one page instance (`key`).
  */
-export class PageStore {
+export class PageStore implements OptimisticTarget {
   private state: PageState = { page: null, key: 0, loading: new Set(), error: null }
   private listeners = new Set<PageListener>()
+  private optimistic = {
+    pageKey: 0,
+    next: 1,
+    owners: new Map<string, Set<number>>(),
+    snapshots: new Map<string, unknown>(),
+  }
 
   constructor(initial: BridgePage | null = null) {
     if (initial) this.state.page = initial
@@ -67,6 +94,64 @@ export class PageStore {
     return this.state
   }
 
+  /** The page with pending optimistic props replaced by the server values they hide. */
+  get serverPage(): BridgePage | null {
+    const page = this.state.page
+    if (!page || this.optimistic.owners.size === 0) return page
+    const props: Record<string, unknown> = { ...(page.props as Record<string, unknown>) }
+    for (const [key, value] of this.optimistic.snapshots) props[key] = value
+    return { ...page, props }
+  }
+
+  /** Shows `patch` over the current props until `settleOptimistic(token)`; null without a page. */
+  applyOptimistic(patch: Record<string, unknown>): number | null {
+    const page = this.state.page
+    if (!page) return null
+    this.scopeOptimistic()
+    const token = this.optimistic.next++
+    const props: Record<string, unknown> = { ...(page.props as Record<string, unknown>) }
+    for (const [key, value] of Object.entries(patch)) {
+      const owners = this.optimistic.owners.get(key) ?? new Set<number>()
+      if (owners.size === 0) this.optimistic.snapshots.set(key, props[key])
+      owners.add(token)
+      this.optimistic.owners.set(key, owners)
+      props[key] = value
+    }
+    this.state = { ...this.state, page: { ...page, props } }
+    this.notify()
+    return token
+  }
+
+  /**
+   * Gives up the token's props. A prop still held by another pending update
+   * keeps showing that update; the last holder releases it (see `OptimisticSettle`).
+   */
+  settleOptimistic(token: number, mode: OptimisticSettle): void {
+    const page = this.state.page
+    if (!page || this.optimistic.pageKey !== this.state.key) return
+    const props: Record<string, unknown> = { ...(page.props as Record<string, unknown>) }
+    let changed = false
+    for (const [key, owners] of Array.from(this.optimistic.owners)) {
+      if (!owners.delete(token) || owners.size > 0) continue
+      this.optimistic.owners.delete(key)
+      if (mode === 'server') {
+        props[key] = this.optimistic.snapshots.get(key)
+        changed = true
+      }
+      this.optimistic.snapshots.delete(key)
+    }
+    if (!changed) return
+    this.state = { ...this.state, page: { ...page, props } }
+    this.notify()
+  }
+
+  /** Server values for some props (e.g. after a JSON mutation), without a request. */
+  patchProps(patch: Record<string, unknown>): void {
+    const page = this.serverPage
+    if (!page) return
+    this.commitServerProps({ ...(page.props as Record<string, unknown>), ...patch })
+  }
+
   subscribe(listener: PageListener): () => void {
     this.listeners.add(listener)
     return () => this.listeners.delete(listener)
@@ -76,13 +161,15 @@ export class PageStore {
     const previous = this.state.page
 
     if (options.partial && previous && previous.component === page.component) {
+      const server = this.serverPage!
       const mergeKeys = new Set(options.merge ? readMergeKeys(page) : [])
-      const props: Record<string, unknown> = { ...previous.props }
+      const merged: Record<string, unknown> = { ...(server.props as Record<string, unknown>) }
       for (const [key, value] of Object.entries(page.props as Record<string, unknown>)) {
-        props[key] = mergeKeys.has(key)
-          ? appendProp((previous.props as Record<string, unknown>)[key], value)
+        merged[key] = mergeKeys.has(key)
+          ? appendProp((server.props as Record<string, unknown>)[key], value)
           : value
       }
+      const props = this.holdOptimistic(merged)
       this.state = {
         ...this.state,
         page: {
@@ -100,6 +187,11 @@ export class PageStore {
 
     const sameComponent = previous?.component === page.component
     const preserve = options.preserveState === true && sameComponent
+    if (preserve) {
+      page = { ...page, props: this.holdOptimistic(page.props as Record<string, unknown>) }
+    } else {
+      this.clearOptimistic(this.state.key + 1)
+    }
 
     this.state = {
       ...this.state,
@@ -114,16 +206,14 @@ export class PageStore {
   /** Replace props wholesale (used by history restore). */
   replaceProps(props: Record<string, unknown>): void {
     if (!this.state.page) return
-    this.state = { ...this.state, page: { ...this.state.page, props } }
-    this.notify()
+    this.commitServerProps(props)
   }
 
   setProp(key: string, value: unknown, mode: MergeMode = 'replace'): void {
-    if (!this.state.page) return
-    const current = getDeep(this.state.page.props, key)
-    const props = setDeep(this.state.page.props, key, mergeValue(current, value, mode))
-    this.state = { ...this.state, page: { ...this.state.page, props } }
-    this.notify()
+    const server = this.serverPage
+    if (!server) return
+    const current = getDeep(server.props, key)
+    this.commitServerProps(setDeep(server.props, key, mergeValue(current, value, mode)))
   }
 
   hasProp(key: string): boolean {
@@ -156,6 +246,36 @@ export class PageStore {
       return true
     }
     return false
+  }
+
+  private commitServerProps(props: Record<string, unknown>): void {
+    if (!this.state.page) return
+    this.state = { ...this.state, page: { ...this.state.page, props: this.holdOptimistic(props) } }
+    this.notify()
+  }
+
+  /** Server props with owned keys routed to their snapshots and the optimistic values kept. */
+  private holdOptimistic(server: Record<string, unknown>): Record<string, unknown> {
+    if (this.optimistic.owners.size === 0) return server
+    const shown = (this.state.page?.props ?? {}) as Record<string, unknown>
+    const props = { ...server }
+    for (const key of this.optimistic.owners.keys()) {
+      this.optimistic.snapshots.set(key, server[key])
+      props[key] = shown[key]
+    }
+    return props
+  }
+
+  /** Pending updates belong to one page instance; a new one starts clean. */
+  private scopeOptimistic(): void {
+    if (this.optimistic.pageKey !== this.state.key) this.clearOptimistic(this.state.key)
+  }
+
+  /** Drops pending updates; `pageKey` is the page instance new ones will belong to. */
+  private clearOptimistic(pageKey: number): void {
+    this.optimistic.owners.clear()
+    this.optimistic.snapshots.clear()
+    this.optimistic.pageKey = pageKey
   }
 
   private notify(): void {

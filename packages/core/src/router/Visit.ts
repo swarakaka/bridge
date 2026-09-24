@@ -24,6 +24,11 @@ export interface VisitOptions {
   preserveUrl?: boolean | undefined
   /** Arrays in the query string of a GET visit: `a[0]=x` (default) or `a[]=x`. */
   queryStringArrayFormat?: QueryStringArrayFormat | undefined
+  /**
+   * Shown at once over the current page props and undone if the visit fails:
+   * return the top-level props to change (PLAN §14.3).
+   */
+  optimistic?: ((props: Record<string, unknown>) => Record<string, unknown>) | undefined
   /** Cache tags to flush from the page cache when the visit succeeds (see `router.prefetch`). */
   invalidateCacheTags?: string | string[] | undefined
   onBefore?: ((visit: Visit) => void | boolean) | undefined

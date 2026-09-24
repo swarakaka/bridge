@@ -1,3 +1,4 @@
+import type { OptimisticSettle, OptimisticTarget } from '../pages/PageStore.js'
 import type { Method } from '../router/url.js'
 import type { ValidationErrors } from '../router/Visit.js'
 import {
@@ -27,6 +28,8 @@ export type JsonSubmitOptions<R = unknown> = Omit<
   SubmitResetOptions & {
     /** Return `false` to skip the request. */
     onBefore?: (() => boolean | void) | undefined
+    /** Page props to show until the server answers (PLAN §14.3); kept on success. */
+    optimistic?: ((props: Record<string, unknown>) => Record<string, unknown>) | undefined
     onStart?: (() => void) | undefined
     onSuccess?: ((result: R | null, meta: JsonMeta) => void) | undefined
     onInvalid?: ((errors: ValidationErrors, message: string) => void) | undefined
@@ -63,10 +66,12 @@ export class JsonForm<T extends FormData_, R = unknown> extends FormState<T, Jso
 
   private controller: AbortController | null = null
 
+  /** `page`: where optimistic updates are shown (the bridge's page store). */
   constructor(
     private readonly client: JsonClient,
     initial: T,
     options: JsonFormOptions = {},
+    private readonly page: OptimisticTarget | null = null,
   ) {
     super(initial, options)
   }
@@ -89,11 +94,24 @@ export class JsonForm<T extends FormData_, R = unknown> extends FormState<T, Jso
       onException,
       onCancel,
       onFinish,
+      optimistic,
       ...request
     } = options
+    // Consumed even when onBefore refuses, as for page forms: it belonged to this submission.
+    const update = this.takeOptimistic() ?? optimistic
     if (onBefore?.() === false) return { status: 'cancelled' }
 
     this.cancel()
+    const token =
+      update && this.page?.page
+        ? this.page.applyOptimistic(
+            update({ ...(this.page.page.props as Record<string, unknown>) }),
+          )
+        : null
+    // A JSON response carries no page: a success keeps the optimistic values (PLAN §14.3).
+    const settle = (mode: OptimisticSettle): void => {
+      if (token !== null) this.page?.settleOptimistic(token, mode)
+    }
     const controller = (this.controller = new AbortController())
     this.beginSubmit()
     this.message = null
@@ -112,6 +130,7 @@ export class JsonForm<T extends FormData_, R = unknown> extends FormState<T, Jso
 
     // Cancelled or superseded: the newer state is not ours to touch.
     if (controller !== this.controller) {
+      settle('server')
       const cancelled: JsonOutcome<R> = { status: 'cancelled' }
       onCancel?.()
       onFinish?.(cancelled)
@@ -120,6 +139,7 @@ export class JsonForm<T extends FormData_, R = unknown> extends FormState<T, Jso
 
     this.controller = null
     this.endSubmit()
+    settle(outcome.status === 'success' ? 'keep' : 'server')
 
     switch (outcome.status) {
       case 'success':

@@ -98,6 +98,7 @@ export default defineConfig({
           { text: 'Asset versioning', link: '/advanced/asset-versioning' },
           { text: 'Error handling', link: '/advanced/error-handling' },
           { text: 'Events', link: '/advanced/events' },
+          { text: 'Optimistic updates', link: '/advanced/optimistic-updates' },
           { text: 'Progress indicators', link: '/advanced/progress-indicators' },
           { text: 'Remembering state', link: '/advanced/remembering-state' },
           { text: 'Scroll management', link: '/advanced/scroll-management' },

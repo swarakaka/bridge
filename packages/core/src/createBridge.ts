@@ -93,9 +93,10 @@ export function createBridge(config: BridgeConfig = {}): Bridge {
     config,
     build,
     on: events.on.bind(events),
-    form: (initial, options) => new Form(router, initial, options),
+    form: (initial, options) => new Form(router, initial, { ...config.forms, ...options }),
     jsonRequest: (options) => new JsonRequest(json, options),
-    jsonForm: (initial, options) => new JsonForm(json, initial, options),
+    jsonForm: (initial, options) =>
+      new JsonForm(json, initial, { ...config.forms, ...options }, store),
     stream: (url, options = {}) =>
       new StreamClient(url, { fetch: config.fetch, ...options }, { store, router, window: win }),
     bootstrap: async () => {

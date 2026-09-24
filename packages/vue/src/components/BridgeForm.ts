@@ -3,6 +3,7 @@ import {
   readFormElement,
   writeFormElement,
   type Form,
+  type FormOptimisticUpdate,
   type FormState,
   type FormTransport,
   type JsonForm,
@@ -91,6 +92,11 @@ export const BridgeForm = defineComponent({
     validationTimeout: { type: Number, default: undefined },
     validateFiles: { type: Boolean, default: false },
     remember: { type: String, default: undefined },
+    /** Page props to show while each submission is in flight, `(props, data) => patch` (PLAN §14.3). */
+    optimistic: {
+      type: Function as PropType<FormOptimisticUpdate<BridgeFormFields>>,
+      default: undefined,
+    },
   },
   emits: EVENTS.map(([event]) => event),
   slots: Object as SlotsType<{ default: BridgeFormInstance }>,
@@ -120,6 +126,7 @@ export const BridgeForm = defineComponent({
       rest?: unknown,
     ) => {
       sync()
+      if (props.optimistic) form.optimistic(props.optimistic)
       return typeof first === 'string' && url !== undefined
         ? submit.call(form, first, url, submitOptions(rest))
         : submit.call(form, submitOptions(first))

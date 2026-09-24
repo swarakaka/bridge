@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h, nextTick, ref } from 'vue'
-import { BridgeForm, createBridgeApp, useFormContext } from '../src/index.js'
+import { BridgeForm, createBridgeApp, router, usePage, useFormContext } from '../src/index.js'
 import type { BridgeApp, BridgeFormInstance } from '../src/index.js'
 import { embed, flush, mockFetch, page, pageResponse } from './helpers.js'
 
@@ -278,5 +278,59 @@ describe('BridgeForm', () => {
     await flush()
 
     expect(aborted).toBe(true)
+  })
+})
+
+describe('optimistic updates', () => {
+  it('renders the optimistic value at once and rolls back when the server refuses', async () => {
+    let release: (r: Response) => void = () => undefined
+    window.history.replaceState(null, '', '/posts/1')
+    embed(page({ component: 'Post', url: '/posts/1', props: { likes: 1, comments: ['a'] } }))
+    const Post = defineComponent({
+      setup() {
+        const { props } = usePage<{ likes: number; comments: string[] }>()
+        return () =>
+          h('div', [
+            h('span', { id: 'likes' }, String(props.value.likes)),
+            h('span', { id: 'comments' }, props.value.comments.join(',')),
+            h('button', {
+              id: 'like',
+              onClick: () =>
+                void router
+                  .optimistic((p) => ({ likes: (p.likes as number) + 1 }))
+                  .post('/posts/1/like'),
+            }),
+            h(
+              BridgeForm,
+              {
+                action: '/posts/1/comments',
+                optimistic: (p: Record<string, unknown>, data: Record<string, unknown>) => ({
+                  comments: [...(p.comments as string[]), data.body],
+                }),
+                onInvalid: () => undefined,
+              },
+              { default: () => [h('input', { name: 'body', value: 'b' })] },
+            ),
+          ])
+      },
+    })
+    app = await createBridgeApp({
+      resolve: () => Post,
+      fetch: mockFetch(() => new Promise<Response>((resolve) => (release = resolve))),
+    })
+
+    document.getElementById('like')!.click()
+    await nextTick()
+    expect(text('likes')).toBe('2')
+    release(invalid({ likes: ['No'] }))
+    await flush()
+    expect(text('likes')).toBe('1')
+
+    document.querySelector('form')!.requestSubmit()
+    await nextTick()
+    expect(text('comments')).toBe('a,b')
+    release(invalid({ body: ['Too short'] }))
+    await flush()
+    expect(text('comments')).toBe('a')
   })
 })

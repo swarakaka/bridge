@@ -23,6 +23,7 @@ class CustomerResource extends JsonResource
             'company' => $this->company,
             'status' => $this->status,
             'locked' => (bool) $this->locked,
+            'starred' => (bool) $this->starred,
             'avatar_url' => $this->avatar_path ? url('/storage/'.$this->avatar_path) : null,
             'notes' => $this->when($request->routeIs('customers.show', 'customers.edit'), $this->notes),
             'created_at' => $this->created_at?->toIso8601String(),

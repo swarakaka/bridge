@@ -46,6 +46,7 @@ Every method returns a promise of the outcome: `success`, `invalid` (validation 
 | `showProgress`                                                                                                  | `false` marks a background visit; the visit's `showProgress` flag tells [progress indicators](/advanced/progress-indicators) to skip it (default `true`).               |
 | `queryStringArrayFormat`                                                                                        | Arrays in GET data: `indices` (default, `tags[0]=a&tags[1]=b`) or `brackets` (`tags[]=a&tags[]=b`). Laravel reads both.                                                 |
 | `invalidateCacheTags`                                                                                           | [Cache tags](/data/prefetching#cache-tags) to flush when the visit succeeds.                                                                                            |
+| `optimistic`                                                                                                    | `(props) => patch`: top-level props to show until the server answers, undone on failure. See [Optimistic updates](/advanced/optimistic-updates).                        |
 | `onBefore`, `onStart`, `onProgress`, `onSuccess`, `onInvalid`, `onError`, `onException`, `onCancel`, `onFinish` | Per-visit callbacks; `onBefore` may return `false` to cancel.                                                                                                           |
 
 ## Concurrency

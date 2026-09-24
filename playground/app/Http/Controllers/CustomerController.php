@@ -9,6 +9,7 @@ use App\Models\Customer;
 use Bridge\Bridge;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 /**
  * One controller, three representations. There is no mode-specific code here:
@@ -75,6 +76,23 @@ class CustomerController extends Controller
             'customer' => CustomerResource::make($customer),
             'statuses' => ['active', 'inactive'],
         ]);
+    }
+
+    /**
+     * Toggles the star. The client shows the change before this answers (an
+     * optimistic update) and undoes it when this refuses a locked customer.
+     */
+    public function star(Customer $customer)
+    {
+        if ($customer->locked) {
+            throw ValidationException::withMessages(['starred' => 'Locked customers cannot be starred.']);
+        }
+
+        $customer->update(['starred' => ! $customer->starred]);
+
+        return Bridge::redirect()
+            ->route('customers.show', $customer)
+            ->with('customer', CustomerResource::make($customer));
     }
 
     public function update(StoreCustomerRequest $request, Customer $customer)

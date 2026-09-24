@@ -40,6 +40,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('/logout', [AuthController::class, 'destroy'])->name('logout');
     // `precognitive` lets forms validate single fields live through Laravel Precognition.
     Route::resource('customers', CustomerController::class)->middleware('precognitive');
+    Route::post('/customers/{customer}/star', [CustomerController::class, 'star'])->name('customers.star');
     Route::get('/realtime', [RealtimeController::class, 'page'])->name('realtime');
     Route::get('/realtime/export', [RealtimeController::class, 'export'])->name('realtime.export');
     Route::post('/realtime/ticket', [RealtimeController::class, 'ticket'])->name('realtime.ticket');

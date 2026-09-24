@@ -162,15 +162,16 @@ Layouts are rendered once and persist across navigations; the page component ins
 
 ## Options
 
-| Option                  | Purpose                                                                                                 |
-| ----------------------- | ------------------------------------------------------------------------------------------------------- |
-| `resolve`               | Component resolver. Generated from `./Pages` by `@swarakaka/bridge-vite` when omitted.                  |
-| `pages`                 | Pages directory, or `{ path, extension, lazy, transform }`, compiled into `resolve` by the Vite plugin. |
-| `withApp`               | `(app, { ssr, page })`: customise the app before it mounts (Vue) or wrap it (React).                    |
-| `resolveError`          | Component rendered in place for non-validation errors. See [Error handling](/advanced/error-handling).  |
-| `setup`                 | Vue: custom mounting; receives `{ el, App, props, plugin, bridge }` and returns the Vue app.            |
-| `id`                    | Root element id (default `app`).                                                                        |
-| `page`                  | Start from this page instead of the embedded one.                                                       |
-| `cache`                 | Prefetch cache TTLs. See [Prefetching](/data/prefetching).                                              |
-| `hardReloadOnError`     | Full document load instead of an in-place error page.                                                   |
-| `allowExternalNavigate` | Follow `navigate` stream events to other origins.                                                       |
+| Option                  | Purpose                                                                                                                                       |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `resolve`               | Component resolver. Generated from `./Pages` by `@swarakaka/bridge-vite` when omitted.                                                        |
+| `pages`                 | Pages directory, or `{ path, extension, lazy, transform }`, compiled into `resolve` by the Vite plugin.                                       |
+| `withApp`               | `(app, { ssr, page })`: customise the app before it mounts (Vue) or wrap it (React).                                                          |
+| `resolveError`          | Component rendered in place for non-validation errors. See [Error handling](/advanced/error-handling).                                        |
+| `setup`                 | Vue: custom mounting; receives `{ el, App, props, plugin, bridge }` and returns the Vue app.                                                  |
+| `id`                    | Root element id (default `app`).                                                                                                              |
+| `page`                  | Start from this page instead of the embedded one.                                                                                             |
+| `cache`                 | Prefetch cache TTLs. See [Prefetching](/data/prefetching).                                                                                    |
+| `hardReloadOnError`     | Full document load instead of an in-place error page.                                                                                         |
+| `forms`                 | Defaults for every form: `recentlySuccessfulFor`, `resetOnSuccess`, `resetOnError`, `setDefaultsOnSuccess`. See [Forms](/basics/forms#state). |
+| `allowExternalNavigate` | Follow `navigate` stream events to other origins.                                                                                             |

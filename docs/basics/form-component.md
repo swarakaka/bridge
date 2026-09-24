@@ -74,6 +74,7 @@ Give checkboxes a `value` (`value="1"`): an unchecked checkbox sends nothing, an
 | `cancelOnUnmount`                    | Default `true`: abort an in-flight submission when the form unmounts.                                                                                                              |
 | `validationTimeout`, `validateFiles` | Precognition debounce (default 1500 ms) and whether files are sent with validation requests.                                                                                       |
 | `remember`                           | Keep the values in history state under this key.                                                                                                                                   |
+| `optimistic`                         | `(props, data) => patch` shown while each submission is in flight. See [Optimistic updates](/advanced/optimistic-updates).                                                         |
 
 Events (`@success`, `@invalid`, … in Vue; `onSuccess`, `onInvalid`, … in React) are the [visit callbacks](/basics/manual-visits), or the [`useJsonForm` callbacks](/beyond/json-mode#forms-over-json-usejsonform) with `json`: `before`, `start`, `progress`, `success`, `invalid`, `error`, `exception`, `cancel`, `finish`. Other attributes go to the `<form>` element.
 

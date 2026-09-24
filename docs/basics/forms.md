@@ -53,14 +53,14 @@ A field cannot share a name with a form member: `data`, `defaults`, `errors`, `a
 
 ## State
 
-| Property                              | Meaning                                                                               |
-| ------------------------------------- | ------------------------------------------------------------------------------------- |
-| `data`                                | The values (in Vue also available as `form.<field>`).                                 |
-| `errors`                              | First message per field. `allErrors` holds every message.                             |
-| `processing`                          | A submission is in flight.                                                            |
-| `progress`                            | Upload progress `{ loaded, total, percentage }` while a multipart request is sending. |
-| `wasSuccessful`, `recentlySuccessful` | Set after a success; `recentlySuccessful` resets after 2 s.                           |
-| `isDirty`, `hasErrors`, `validating`  | Derived state.                                                                        |
+| Property                              | Meaning                                                                                                                                                                   |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `data`                                | The values (in Vue also available as `form.<field>`).                                                                                                                     |
+| `errors`                              | First message per field. `allErrors` holds every message.                                                                                                                 |
+| `processing`                          | A submission is in flight.                                                                                                                                                |
+| `progress`                            | Upload progress `{ loaded, total, percentage }` while a multipart request is sending.                                                                                     |
+| `wasSuccessful`, `recentlySuccessful` | Set after a success; `recentlySuccessful` resets after 2 s (`recentlySuccessfulFor` per form, or `createBridgeApp({ forms: { recentlySuccessfulFor } })` for every form). |
+| `isDirty`, `hasErrors`, `validating`  | Derived state.                                                                                                                                                            |
 
 ## Methods
 

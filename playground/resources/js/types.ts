@@ -5,6 +5,7 @@ export interface Customer {
     company: string | null
     status: 'active' | 'inactive'
     locked: boolean
+    starred: boolean
     avatar_url: string | null
     notes?: string | null
     created_at: string | null

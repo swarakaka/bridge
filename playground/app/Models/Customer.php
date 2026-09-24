@@ -12,11 +12,11 @@ class Customer extends Model
     /** @use HasFactory<CustomerFactory> */
     use HasFactory;
 
-    protected $fillable = ['name', 'email', 'company', 'status', 'locked', 'avatar_path', 'notes'];
+    protected $fillable = ['name', 'email', 'company', 'status', 'locked', 'starred', 'avatar_path', 'notes'];
 
     protected function casts(): array
     {
-        return ['locked' => 'boolean'];
+        return ['locked' => 'boolean', 'starred' => 'boolean'];
     }
 
     /**

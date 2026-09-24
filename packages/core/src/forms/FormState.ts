@@ -20,6 +20,12 @@ export interface FormOptions extends SubmitResetOptions {
   recentlySuccessfulFor?: number | undefined
 }
 
+/** `form.optimistic(fn)`: the page props to show while the submission is in flight. */
+export type FormOptimisticUpdate<T> = (
+  props: Record<string, unknown>,
+  data: T,
+) => Record<string, unknown>
+
 /** The types a transport plugs into `FormState` (PLAN §14.1). */
 export interface FormTransport {
   /** Options of `submit` and the verb helpers. */
@@ -77,6 +83,7 @@ export abstract class FormState<T extends FormData_, K extends FormTransport> {
   private recentlyTimer: ReturnType<typeof setTimeout> | null = null
   private readonly unremembered = new Set<string>()
   private validation: AbortController | null = null
+  private optimisticUpdate: FormOptimisticUpdate<T> | null = null
   /** Precognition state, in one member so it reserves one Vue field name (§15). */
   private readonly precog: PrecognitionState<K> = {
     endpoint: null,
@@ -136,6 +143,26 @@ export abstract class FormState<T extends FormData_, K extends FormTransport> {
     }
     const endpoint = this.endpoint('submit')
     return this.submitTo(endpoint.method, endpoint.url, methodOrOptions as K['submitOptions'])
+  }
+
+  /**
+   * An optimistic update for the next submission only: `fn(props, data)`
+   * returns the top-level page props to show until the server answers, undone
+   * if it refuses (PLAN §14.3).
+   */
+  optimistic(update: FormOptimisticUpdate<T>): this {
+    this.optimisticUpdate = update
+    return this
+  }
+
+  /** The pending `optimistic()` update as a visit-style `(props) => patch`, consumed. */
+  protected takeOptimistic():
+    ((props: Record<string, unknown>) => Record<string, unknown>) | undefined {
+    const update = this.optimisticUpdate
+    if (!update) return undefined
+    this.optimisticUpdate = null
+    const data = this.data
+    return (props) => update(props, data)
   }
 
   /** Bind the endpoint used by `validate(field)` and `submit()` without a method and URL. */

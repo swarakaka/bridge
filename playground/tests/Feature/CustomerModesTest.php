@@ -121,6 +121,25 @@ class CustomerModesTest extends TestCase
             ->assertSessionHasErrors('email');
     }
 
+    public function test_starring_toggles_and_refuses_locked_customers_per_mode(): void
+    {
+        $customer = Customer::where('locked', false)->firstOrFail();
+        $locked = Customer::where('email', 'hello@acme.test')->firstOrFail();
+
+        $this->withHeaders(['Accept' => self::PAGE])->post("/customers/{$customer->id}/star")->assertStatus(303);
+        $this->assertTrue($customer->refresh()->starred);
+
+        $this->withHeaders(['Accept' => 'application/json'])->post("/customers/{$customer->id}/star")
+            ->assertOk()
+            ->assertJsonPath('data.customer.starred', false);
+
+        $this->withHeaders(['Accept' => self::PAGE])->post("/customers/{$locked->id}/star")
+            ->assertBridgeError(422, 'validation')
+            ->assertJsonPath('error.errors.starred.0', 'Locked customers cannot be starred.');
+        $this->withHeaders(['Accept' => 'application/json'])->post("/customers/{$locked->id}/star")->assertStatus(422);
+        $this->assertFalse($locked->refresh()->starred);
+    }
+
     public function test_store_is_represented_per_mode(): void
     {
         $this->withHeaders(['Accept' => 'application/json'])

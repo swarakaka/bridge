@@ -3,7 +3,7 @@ import { PageCache } from '../cache/PageCache.js'
 import type { Emitter } from '../events/Emitter.js'
 import type { RequestManager } from '../http/RequestManager.js'
 import { parseResponse, type ParsedResponse } from '../http/responseParser.js'
-import type { PageStore } from '../pages/PageStore.js'
+import type { OptimisticSettle, PageStore } from '../pages/PageStore.js'
 import type { History, HistoryState } from './History.js'
 import { captureScroll, resetScroll, restoreScroll } from './Scroll.js'
 import { isSameOrigin, relativeUrl, toUrl } from './url.js'
@@ -59,6 +59,8 @@ export class Router {
   private activeIsReload = false
   private deferredControllers = new Set<AbortController>()
   private visitId = 0
+  /** Optimistic tokens of visits that have not settled yet (PLAN §14.3). */
+  private optimisticVisits = new Map<Visit, number>()
   private pendingReload: PendingReload | null = null
   private reloadTimer: ReturnType<typeof setTimeout> | null = null
   private unlistenHistory: (() => void) | null = null
@@ -222,6 +224,35 @@ export class Router {
     return this.d.history.restore<T>(key)
   }
 
+  /**
+   * Visits with an optimistic update: `router.optimistic((props) => ({ likes: props.likes + 1 })).post(url)`.
+   * The patch shows at once and is undone if the visit fails (PLAN §14.3).
+   */
+  optimistic(update: NonNullable<VisitOptions['optimistic']>): OptimisticVisits {
+    const withUpdate = (options: VisitOptions = {}): VisitOptions => ({
+      ...options,
+      optimistic: update,
+    })
+    return {
+      visit: (url, options) => this.visit(url, withUpdate(options)),
+      get: (url, data, options) => this.get(url, data, withUpdate(options)),
+      post: (url, data, options) => this.post(url, data, withUpdate(options)),
+      put: (url, data, options) => this.put(url, data, withUpdate(options)),
+      patch: (url, data, options) => this.patch(url, data, withUpdate(options)),
+      delete: (url, options) => this.delete(url, withUpdate(options)),
+    }
+  }
+
+  /**
+   * Replaces top-level props with server values without a request, for
+   * example from a JSON-mode response. Props held by a pending optimistic
+   * update change once it settles. History stores the new values.
+   */
+  patchProps(patch: Record<string, unknown>): void {
+    this.d.store.patchProps(patch)
+    if (this.d.window && this.d.store.serverPage) this.d.history.updatePage(this.d.store.serverPage)
+  }
+
   clearCache(): void {
     this.d.cache.clear()
   }
@@ -335,7 +366,17 @@ export class Router {
     isReload: boolean,
   ): Promise<VisitOutcome> {
     const visit = this.buildVisit(url, options)
+    const outcome = await this.sendVisit(visit, options, isReload)
+    // Every way a visit can end without applying a page shows the server values again.
+    this.settleOptimistic(visit, 'server')
+    return outcome
+  }
 
+  private async sendVisit(
+    visit: Visit,
+    options: VisitOptions,
+    isReload: boolean,
+  ): Promise<VisitOutcome> {
     if (!isSameOrigin(visit.url)) {
       this.hardNavigate(visit.url.href)
       return { status: 'redirected' }
@@ -349,6 +390,12 @@ export class Router {
     if (!isReload) this.cancelDeferred()
     this.activeVisit = visit
     this.activeIsReload = isReload
+
+    if (options.optimistic && this.d.store.page) {
+      const patch = options.optimistic({ ...(this.d.store.page.props as Record<string, unknown>) })
+      const token = this.d.store.applyOptimistic(patch)
+      if (token !== null) this.optimisticVisits.set(visit, token)
+    }
 
     const isGet = visit.method === 'get'
     const cacheable =
@@ -367,6 +414,7 @@ export class Router {
           return { status: 'cancelled' }
         }
         this.applyPage(lookup.entry.page, visit)
+        this.settleOptimistic(visit, 'server')
         this.flushInvalidated(options)
         this.finish(visit, options)
         options.onSuccess?.(lookup.entry.page)
@@ -452,6 +500,7 @@ export class Router {
         await this.prepare(parsed.page)
         if (visit.cancelled) return { status: 'cancelled' }
         this.applyPage(parsed.page, visit)
+        this.settleOptimistic(visit, 'server')
         this.flushInvalidated(options)
         this.d.events.emit('success', { visit, page: parsed.page })
         options.onSuccess?.(parsed.page)
@@ -462,7 +511,8 @@ export class Router {
         return this.handleError(parsed.error, visit, options)
 
       case 'empty':
-        // 204/304: nothing to apply (Precognition success, not modified).
+        // 204/304: nothing to apply (Precognition success, not modified); optimistic values stay.
+        this.settleOptimistic(visit, 'keep')
         this.flushInvalidated(options)
         options.onSuccess?.(this.d.store.page as BridgePage)
         return { status: 'success', page: this.d.store.page as BridgePage }
@@ -544,6 +594,13 @@ export class Router {
     return exception
   }
 
+  private settleOptimistic(visit: Visit, mode: OptimisticSettle): void {
+    const token = this.optimisticVisits.get(visit)
+    if (token === undefined) return
+    this.optimisticVisits.delete(visit)
+    this.d.store.settleOptimistic(token, mode)
+  }
+
   /** `invalidateCacheTags` of a visit that succeeded. */
   private flushInvalidated(options: VisitOptions): void {
     if (options.invalidateCacheTags) this.d.cache.flushTags(tagList(options.invalidateCacheTags))
@@ -563,7 +620,7 @@ export class Router {
 
     if (partial) {
       this.d.store.setPage(page, { partial: true, merge: visit.merge })
-      this.d.history.updatePage(this.d.store.page!)
+      this.d.history.updatePage(this.d.store.serverPage!)
       this.d.events.emit('navigate', { page: this.d.store.page!, visit })
       return
     }
@@ -612,7 +669,7 @@ export class Router {
           const current = this.d.store.page
           if (parsed.kind === 'page' && current && current.component === parsed.page.component) {
             this.d.store.setPage(parsed.page, { partial: true })
-            this.d.history.updatePage(this.d.store.page!)
+            this.d.history.updatePage(this.d.store.serverPage!)
           } else if (parsed.kind === 'invalid') {
             console.warn(
               `[bridge] deferred props ${keys.join(', ')} were not loaded: the server answered ${parsed.status} with ${parsed.contentType ?? 'no content type'} instead of a Bridge page. Output printed before the response (PHP notices, debug output) breaks JSON responses.`,
@@ -715,3 +772,6 @@ export class Router {
 function tagList(tags: string | string[] | undefined): string[] {
   return tags === undefined ? [] : Array.isArray(tags) ? tags : [tags]
 }
+
+/** The verb helpers of `router.optimistic(update)`. */
+export type OptimisticVisits = Pick<Router, 'visit' | 'get' | 'post' | 'put' | 'patch' | 'delete'>

@@ -47,12 +47,14 @@ export class Form<T extends FormData_> extends FormState<T, PageFormTransport> {
     options: SubmitOptions = {},
   ): Promise<VisitOutcome> {
     const data = this.transformer(this.data)
+    const optimistic = this.takeOptimistic() ?? options.optimistic
     this.beginSubmit()
 
     const outcome = await this.router.visit(url, {
       ...options,
       method,
       data,
+      optimistic,
       forceFormData: options.forceFormData,
       onBefore: (visit) => {
         this.cancelFn = () => this.router.cancel()

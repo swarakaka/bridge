@@ -1,10 +1,30 @@
 <script setup lang="ts">
 import { BridgeHead, BridgeLink, router } from '@swarakaka/bridge-vue'
+import { ref } from 'vue'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import type { Customer } from '@/types'
 
 defineOptions({ layout: AppLayout })
 const props = defineProps<{ customer: Customer }>()
+
+// Optimistic: the star flips at once and flips back if the server refuses (locked customers).
+const starError = ref<string | null>(null)
+const toggleStar = (): void => {
+    starError.value = null
+    void router
+        .optimistic((current) => ({
+            customer: { ...(current.customer as Customer), starred: !props.customer.starred },
+        }))
+        .post(
+            `/customers/${props.customer.id}/star`,
+            {},
+            {
+                preserveState: true,
+                preserveScroll: true,
+                onInvalid: (errors) => (starError.value = errors.starred?.[0] ?? null),
+            },
+        )
+}
 
 const destroy = (): void => {
     if (!window.confirm(`Delete ${props.customer.name}?`)) return
@@ -31,9 +51,20 @@ const destroy = (): void => {
                 <p v-if="customer.locked" class="mt-1 text-sm text-amber-600" data-testid="locked">
                     Locked: editing and deleting return 403 in every mode.
                 </p>
+                <p v-if="starError" class="mt-1 text-sm text-rose-600" data-testid="star-error">
+                    {{ starError }}
+                </p>
             </div>
         </div>
         <div class="flex gap-2 text-sm">
+            <button
+                class="rounded border border-amber-300 px-3 py-1 text-amber-700"
+                :aria-pressed="customer.starred"
+                data-testid="star"
+                @click="toggleStar"
+            >
+                {{ customer.starred ? '★ Starred' : '☆ Star' }}
+            </button>
             <BridgeLink
                 :href="`/customers/${customer.id}/edit`"
                 class="rounded border border-slate-300 px-3 py-1"
