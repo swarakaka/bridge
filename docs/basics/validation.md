@@ -23,7 +23,7 @@ Route::resource('customers', CustomerController::class)->middleware('precognitiv
 ```
 
 ```vue
-<input v-model="form.data.email" @blur="form.validate('post', '/customers', 'email')" />
+<input v-model="form.email" @blur="form.validate('post', '/customers', 'email')" />
 ```
 
 Only that field's rules run. A `422` sets the field's error, a `204` clears it, and other fields' errors are untouched. `form.validating` is true while the request is in flight.

@@ -43,6 +43,7 @@ export class Form<T extends FormData_> {
   private recentlyTimer: ReturnType<typeof setTimeout> | null = null
   private cancelFn: (() => void) | null = null
   private readonly options: FormOptions
+  private readonly unremembered = new Set<string>()
 
   constructor(
     private readonly router: Router,
@@ -88,6 +89,31 @@ export class Form<T extends FormData_> {
         (this.data as Record<string, unknown>)[field] = clone(this.defaults[field])
     }
     return this
+  }
+
+  /** `reset(...fields)` and `clearErrors(...fields)` together. */
+  resetAndClearErrors(...fields: Array<keyof T & string>): this {
+    this.reset(...fields)
+    return this.clearErrors(...fields)
+  }
+
+  /**
+   * Keep these top-level fields (passwords, tokens) out of remembered history
+   * state. Chainable after the adapter's `useForm`; idempotent.
+   */
+  dontRemember(...fields: Array<keyof T & string>): this {
+    for (const field of fields) this.unremembered.add(field)
+    return this
+  }
+
+  /** `values` (default: the current data) without the fields passed to `dontRemember`. */
+  rememberable(values: Partial<T> = this.data): Partial<T> {
+    if (this.unremembered.size === 0) return values
+    const out: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(values)) {
+      if (!this.unremembered.has(key)) out[key] = value
+    }
+    return out as Partial<T>
   }
 
   setError(field: keyof T & string, message: string): this

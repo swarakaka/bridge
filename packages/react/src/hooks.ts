@@ -50,33 +50,41 @@ export function useDeferred<T = unknown>(key: string): { loading: boolean; value
  * changes: every method call re-renders now (flags such as `processing` flip
  * synchronously) and again when a returned promise settles; property writes
  * re-render too. `refresh()` forces a render after changing nested data.
+ * Methods in `quiet` change nothing visible (or are safe to call during
+ * render) and do not re-render.
  */
-function useHandle<H extends object>(create: () => H): H & { refresh(): void } {
+function useHandle<H extends object>(
+  create: () => H,
+  quiet: ReadonlySet<PropertyKey> = new Set(),
+): H & { refresh(): void } {
   const [, rerender] = useReducer((n: number) => n + 1, 0)
   const handle = useMemo(create, [])
   const refresh = useCallback(() => rerender(), [])
 
-  return useMemo(
-    () =>
-      new Proxy(handle as H & { refresh(): void }, {
-        get(target, prop, receiver) {
-          if (prop === 'refresh') return refresh
-          const value = Reflect.get(target, prop, receiver)
-          if (typeof value !== 'function') return value
-          return (...args: unknown[]) => {
-            const result = (value as (...a: unknown[]) => unknown).apply(target, args)
-            refresh()
-            return result instanceof Promise ? result.finally(refresh) : result
-          }
-        },
-        set(target, prop, value) {
-          Reflect.set(target, prop, value)
+  return useMemo(() => {
+    // A method returning the handle itself (chaining) returns the proxy, so
+    // `form.setData(...).post(url)` still re-renders.
+    const proxy: H & { refresh(): void } = new Proxy(handle as H & { refresh(): void }, {
+      get(target, prop, receiver) {
+        if (prop === 'refresh') return refresh
+        const value = Reflect.get(target, prop, receiver)
+        if (typeof value !== 'function') return value
+        return (...args: unknown[]) => {
+          const result = (value as (...a: unknown[]) => unknown).apply(target, args)
+          if (quiet.has(prop)) return result === target ? proxy : result
           refresh()
-          return true
-        },
-      }),
-    [handle, refresh],
-  )
+          if (result === target) return proxy
+          return result instanceof Promise ? result.finally(refresh) : result
+        }
+      },
+      set(target, prop, value) {
+        Reflect.set(target, prop, value)
+        refresh()
+        return true
+      },
+    })
+    return proxy
+  }, [handle, refresh])
 }
 
 /** Writes a JSON-cloneable value to history state only when it changed. */
@@ -97,16 +105,31 @@ export interface UseFormOptions extends FormOptions {
   remember?: string | undefined
 }
 
+/** Form methods that do not re-render: safe to chain during render (`useForm(...).dontRemember('password')`). */
+const QUIET_FORM_METHODS: ReadonlySet<PropertyKey> = new Set(['dontRemember', 'rememberable'])
+
 /**
  * A core Form re-rendered on every change. Mutations go through the returned
  * proxy so React sees them (`form.setData('name', v)` or `form.data.name = v` followed by `form.refresh()`).
+ * `useForm('key', data)` is `useForm(data, { remember: 'key' })`.
  */
 export function useForm<T extends Record<string, unknown>>(
   initial: T,
-  options: UseFormOptions = {},
+  options?: UseFormOptions,
+): Form<T> & { refresh(): void }
+export function useForm<T extends Record<string, unknown>>(
+  rememberKey: string,
+  initial: T,
+  options?: Omit<UseFormOptions, 'remember'>,
+): Form<T> & { refresh(): void }
+export function useForm<T extends Record<string, unknown>>(
+  first: T | string,
+  second?: T | UseFormOptions,
+  third?: Omit<UseFormOptions, 'remember'>,
 ): Form<T> & { refresh(): void } {
+  const [initial, options] = formArguments<T>(first, second, third)
   const bridge = useBridge()
-  const form = useHandle(() => bridge.form(initial, options))
+  const form = useHandle(() => bridge.form(initial, options), QUIET_FORM_METHODS)
   const key = options.remember ? `form:${options.remember}` : undefined
   const [restored, setRestored] = useState(false)
 
@@ -114,13 +137,23 @@ export function useForm<T extends Record<string, unknown>>(
   useEffect(() => {
     if (key) {
       const value = bridge.router.restore<Partial<T>>(key)
-      if (value) form.setData(value)
+      if (value) form.setData(form.rememberable(value))
     }
     setRestored(true)
   }, [])
-  useRememberWriter(key, form.data, restored)
+  useRememberWriter(key, form.rememberable(), restored)
 
   return form
+}
+
+/** Normalises `(data, options)` and `(rememberKey, data, options)`. */
+function formArguments<T extends Record<string, unknown>>(
+  first: T | string,
+  second?: T | UseFormOptions,
+  third?: Omit<UseFormOptions, 'remember'>,
+): [T, UseFormOptions] {
+  if (typeof first === 'string') return [second as T, { ...third, remember: first }]
+  return [first, (second as UseFormOptions | undefined) ?? {}]
 }
 
 /** Local state that survives back/forward navigation via history state. */

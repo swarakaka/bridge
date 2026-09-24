@@ -21,7 +21,7 @@ const form = useForm({
 
 const onFile = (event: Event): void => {
     const input = event.target as HTMLInputElement
-    form.data.avatar = input.files?.[0] ?? null
+    form.avatar = input.files?.[0] ?? null
 }
 
 const submit = (): void => {
@@ -40,7 +40,7 @@ const validateField = (field: string): void => {
             <label :for="field" class="block text-sm font-medium capitalize">{{ field }}</label>
             <input
                 :id="field"
-                v-model="form.data[field]"
+                v-model="form[field]"
                 :name="field"
                 type="text"
                 @blur="validateField(field)"
@@ -60,7 +60,7 @@ const validateField = (field: string): void => {
             <label for="status" class="block text-sm font-medium">Status</label>
             <select
                 id="status"
-                v-model="form.data.status"
+                v-model="form.status"
                 name="status"
                 class="mt-1 rounded border border-slate-300 px-3 py-2"
             >
@@ -74,7 +74,7 @@ const validateField = (field: string): void => {
             <label for="notes" class="block text-sm font-medium">Notes</label>
             <textarea
                 id="notes"
-                v-model="form.data.notes"
+                v-model="form.notes"
                 name="notes"
                 rows="3"
                 class="mt-1 w-full rounded border border-slate-300 px-3 py-2"

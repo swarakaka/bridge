@@ -6,7 +6,7 @@ Put a `File` (or `Blob` or `FileList`) in the form data and Bridge switches the 
 <script setup lang="ts">
 const form = useForm({ name: '', avatar: null as File | null })
 const onFile = (event: Event) =>
-  (form.data.avatar = (event.target as HTMLInputElement).files?.[0] ?? null)
+  (form.avatar = (event.target as HTMLInputElement).files?.[0] ?? null)
 </script>
 
 <template>

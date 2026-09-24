@@ -32,7 +32,7 @@ const form = useForm({ name: '', email: '' })
   <BridgeLink href="/customers/create" prefetch="hover">New</BridgeLink>
   <Deferred data="stats"><template #fallback>Loading…</template>{{ stats.total }}</Deferred>
   <form @submit.prevent="form.post('/customers')">
-    <input v-model="form.data.name" />
+    <input v-model="form.name" />
     <p v-if="form.errors.name">{{ form.errors.name }}</p>
     <button :disabled="form.processing">Save</button>
   </form>

@@ -26,10 +26,18 @@ The value is written to the current history entry on every change and restored a
 
 ## Forms
 
-`useForm` (Vue and React) remembers its values with the `remember` option:
+`useForm` (Vue and React) remembers its values when you give it a key, either first or as the `remember` option:
 
 ```ts
+const form = useForm('customer-create', { name: '', email: '' })
+// same as
 const form = useForm({ name: '', email: '' }, { remember: 'customer-create' })
+```
+
+History state is stored by the browser, so keep secrets out of it with `dontRemember`. It takes top-level field names and applies to both writing and restoring:
+
+```ts
+const login = useForm('login', { email: '', password: '' }).dontRemember('password')
 ```
 
 ## Scroll positions

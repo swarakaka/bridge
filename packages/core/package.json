@@ -1,6 +1,6 @@
 {
   "name": "@swarakaka/bridge-core",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Framework-agnostic Bridge client runtime: HTTP, router, page store, forms, SSE client",
   "license": "MIT",
   "repository": {

@@ -4,24 +4,24 @@ Bridge borrows Inertia's developer experience: controllers return pages, page co
 
 ## What maps directly
 
-| Inertia                                                                        | Bridge                                                                         |
-| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
-| `Inertia::render()`                                                            | `Bridge::render()`                                                             |
-| `Inertia\Inertia` (facade), `Inertia\ResponseFactory` (service)                | `Bridge\Bridge` (facade), `Bridge\BridgeManager` (service)                     |
-| `Inertia::share()`                                                             | `Bridge::share()`                                                              |
-| `HandleInertiaRequests::share()` (`inertia:middleware`)                        | `HandleBridgeRequests::share()` (`bridge:middleware`), optional                |
-| `Inertia::lazy()`, `Inertia::defer()`, `Inertia::always()`, `Inertia::merge()` | `Bridge::lazy()`, `Bridge::defer()`, `Bridge::always()`, `Bridge::merge()`     |
-| `@inertia`, `@inertiaHead`                                                     | `@bridge`, `@bridgeHead`, or `<x-bridge::app />`, `<x-bridge::head />`         |
-| `createInertiaApp`                                                             | `createBridgeApp`                                                              |
-| `<Link>`                                                                       | `<BridgeLink>`                                                                 |
-| `router.visit()` and friends                                                   | `router.visit()` and friends                                                   |
-| `useForm()`                                                                    | `useForm()` (values live under `form.data`)                                    |
-| `usePage()`, `useRemember()`                                                   | `usePage()`, `useRemember()`                                                   |
-| `useHttp()`                                                                    | `useJson()` (JSON mode on the same routes, see [JSON mode](/beyond/json-mode)) |
-| `<Deferred>`                                                                   | `<Deferred>`                                                                   |
-| `<Head>`                                                                       | `<BridgeHead>`                                                                 |
-| `X-Inertia-Version`                                                            | `X-Bridge-Build`                                                               |
-| `X-Inertia-Partial-Data`, `X-Inertia-Partial-Component`                        | `X-Bridge-Only`, `X-Bridge-Except`, `X-Bridge-Component`                       |
+| Inertia                                                                        | Bridge                                                                          |
+| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- |
+| `Inertia::render()`                                                            | `Bridge::render()`                                                              |
+| `Inertia\Inertia` (facade), `Inertia\ResponseFactory` (service)                | `Bridge\Bridge` (facade), `Bridge\BridgeManager` (service)                      |
+| `Inertia::share()`                                                             | `Bridge::share()`                                                               |
+| `HandleInertiaRequests::share()` (`inertia:middleware`)                        | `HandleBridgeRequests::share()` (`bridge:middleware`), optional                 |
+| `Inertia::lazy()`, `Inertia::defer()`, `Inertia::always()`, `Inertia::merge()` | `Bridge::lazy()`, `Bridge::defer()`, `Bridge::always()`, `Bridge::merge()`      |
+| `@inertia`, `@inertiaHead`                                                     | `@bridge`, `@bridgeHead`, or `<x-bridge::app />`, `<x-bridge::head />`          |
+| `createInertiaApp`                                                             | `createBridgeApp`                                                               |
+| `<Link>`                                                                       | `<BridgeLink>`                                                                  |
+| `router.visit()` and friends                                                   | `router.visit()` and friends                                                    |
+| `useForm()`                                                                    | `useForm()` (`form.name` or `form.data.name` in Vue, `form.data.name` in React) |
+| `usePage()`, `useRemember()`                                                   | `usePage()`, `useRemember()`                                                    |
+| `useHttp()`                                                                    | `useJson()` (JSON mode on the same routes, see [JSON mode](/beyond/json-mode))  |
+| `<Deferred>`                                                                   | `<Deferred>`                                                                    |
+| `<Head>`                                                                       | `<BridgeHead>`                                                                  |
+| `X-Inertia-Version`                                                            | `X-Bridge-Build`                                                                |
+| `X-Inertia-Partial-Data`, `X-Inertia-Partial-Component`                        | `X-Bridge-Only`, `X-Bridge-Except`, `X-Bridge-Component`                        |
 
 ## What is different, and why
 
@@ -35,7 +35,9 @@ Bridge borrows Inertia's developer experience: controllers return pages, page co
 
 **The client runtime is framework-agnostic.** `@swarakaka/bridge-core` holds the router, forms, cache and stream client; `@swarakaka/bridge-vue` is bindings only, and a React adapter needs no server changes. See [Writing an adapter](/reference/adapters).
 
-**Form values live under `form.data`.** Inertia flattens fields onto the form object; Bridge keeps them under `data` so field names can never collide with form methods.
+**Form fields are also available under `form.data`.** As in Inertia, Vue forms expose each field on the form object (`v-model="form.name"`), and `form.data.name` is the same value. A field named like a form member (`errors`, `processing`, `data`, `reset`, `transform`, `progress`, ...) makes `useForm` throw instead of silently shadowing it; see [Reserved field names](/basics/forms#reserved-field-names). React forms use `form.data` and `setData`.
+
+**A few form names differ.** `useForm('key', data)`, `resetAndClearErrors` and `dontRemember` work as in Inertia. `form.defaults` is the stored default values, not a method: call `form.setDefaults()` (no argument, or an object of values). Validation errors go to `onInvalid`, and `onError` only fires for other errors (403, 500, ...), so move an Inertia `onError` validation handler to `onInvalid`. After a successful submit the current values become the new defaults unless `resetOnSuccess` is set.
 
 **Merge props are opt-in per visit.** A "load more" visit passes `merge: true`; invalidations and searches replace. See [Merging props](/data/merging-props).
 

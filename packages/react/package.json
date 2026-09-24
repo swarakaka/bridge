@@ -1,6 +1,6 @@
 {
   "name": "@swarakaka/bridge-react",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "React adapter for Bridge (experimental): createBridgeApp, hooks for pages, forms, JSON mode and streams, BridgeLink, BridgeHead, and server rendering",
   "license": "MIT",
   "repository": {

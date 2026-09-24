@@ -86,3 +86,29 @@ describe('Form', () => {
     expect(form.processing).toBe(false)
   })
 })
+
+describe('Form helpers', () => {
+  it('resets and clears errors together, for all or some fields', () => {
+    bridge = bridgeWith(mockFetch(() => pageResponse(page())))
+    const form = bridge.form({ name: '', email: '' })
+    form.setData({ name: 'x', email: 'y' }).setError({ name: 'Bad', email: 'Worse' })
+
+    form.resetAndClearErrors('name')
+    expect(form.data).toEqual({ name: '', email: 'y' })
+    expect(form.errors).toEqual({ email: 'Worse' })
+
+    form.resetAndClearErrors()
+    expect(form.data).toEqual({ name: '', email: '' })
+    expect(form.hasErrors).toBe(false)
+  })
+
+  it('leaves dontRemember fields out of rememberable values', () => {
+    bridge = bridgeWith(mockFetch(() => pageResponse(page())))
+    const form = bridge.form({ email: 'a@b.c', password: 'secret' })
+
+    expect(form.rememberable()).toEqual({ email: 'a@b.c', password: 'secret' })
+    expect(form.dontRemember('password')).toBe(form)
+    expect(form.rememberable()).toEqual({ email: 'a@b.c' })
+    expect(form.rememberable({ email: 'x', password: 'old' })).toEqual({ email: 'x' })
+  })
+})

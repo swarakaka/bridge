@@ -177,6 +177,40 @@ describe('remembered state', () => {
   })
 })
 
+describe('useForm remember key and dontRemember', () => {
+  it('takes the remember key first and keeps dontRemember fields out of history', async () => {
+    const Login: PageComponent = () => {
+      const form = useForm('login', { email: '', password: '' }).dontRemember('password')
+      return (
+        <div>
+          <span id="email">{form.data.email}</span>
+          <span id="password">{form.data.password}</span>
+          <button
+            id="fill"
+            onClick={() => form.setData({ email: 'ada@example.com', password: 'secret' })}
+          />
+        </div>
+      )
+    }
+    const Other: PageComponent = () => <div id="other" />
+    const http = mockFetch(() => pageResponse(page({ component: 'Other', url: '/other' })))
+    await mount({ Login, Other }, page({ component: 'Login', url: '/login' }), http)
+
+    await act(async () => ($('#fill') as HTMLButtonElement).click())
+    await flush()
+    expect(JSON.stringify(window.history.state)).toContain('ada@example.com')
+    expect(JSON.stringify(window.history.state)).not.toContain('secret')
+    await act(async () => void (await app!.bridge.router.visit('/other')))
+    await flush()
+
+    await act(async () => window.history.back())
+    await flush()
+    await flush()
+    expect($('#email')?.textContent).toBe('ada@example.com')
+    expect($('#password')?.textContent).toBe('')
+  })
+})
+
 describe('BridgeHead', () => {
   it('owns its meta tags, replaces server-rendered ones and restores the title', async () => {
     document.head.innerHTML = '<meta name="description" content="Old" data-bridge-head="ssr">'
