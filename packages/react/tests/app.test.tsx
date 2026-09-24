@@ -1,6 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { act } from 'react'
-import { createBridgeApp, useForm, useProp, BridgeLink } from '../src/index.js'
+import {
+  createBridgeApp,
+  useForm,
+  useProp,
+  useDeferred,
+  BridgeLink,
+  Deferred,
+} from '../src/index.js'
 import type { BridgeApp, PageComponent } from '../src/index.js'
 import type { BridgePage } from '@swarakaka/bridge-protocol'
 
@@ -70,7 +77,19 @@ const Create: PageComponent = () => {
     </form>
   )
 }
+const Dashboard: PageComponent = () => {
+  const { loading } = useDeferred('stats')
+  return (
+    <div id="dash">
+      <span id="loading">{String(loading)}</span>
+      <Deferred data="stats" fallback={<span id="fallback">loading</span>}>
+        <span id="stats">ready</span>
+      </Deferred>
+    </div>
+  )
+}
 const components: Record<string, PageComponent> = {
+  Dashboard,
   'Customers/Index': Index,
   'Customers/Show': Show,
   'Customers/Create': Create,
@@ -166,5 +185,36 @@ describe('React adapter', () => {
     )
     await flush()
     expect(document.querySelector('#show')?.textContent).toBe('2')
+  })
+
+  it('loads deferred props after the first render, showing the fallback meanwhile', async () => {
+    let release: (r: Response) => void = () => undefined
+    const fetch = vi.fn(
+      (input: RequestInfo | URL) =>
+        new Promise<Response>((resolve) => {
+          release = (r) => {
+            Object.defineProperty(r, 'url', { value: String(input) })
+            resolve(r)
+          }
+        }),
+    ) as unknown as typeof globalThis.fetch
+    await mount(
+      fetch,
+      page({ component: 'Dashboard', url: '/', props: {}, deferred: { default: ['stats'] } }),
+    )
+    await flush()
+
+    expect(document.querySelector('#fallback')).not.toBeNull()
+    expect(document.querySelector('#loading')?.textContent).toBe('true')
+    const headers = (fetch as unknown as { mock: { calls: Array<[unknown, RequestInit]> } }).mock
+      .calls[0]![1].headers as Record<string, string>
+    expect(headers['X-Bridge-Only']).toBe('stats')
+
+    await act(async () =>
+      release(pageResponse(page({ component: 'Dashboard', url: '/', props: { stats: { n: 1 } } }))),
+    )
+    await flush()
+    expect(document.querySelector('#stats')?.textContent).toBe('ready')
+    expect(document.querySelector('#loading')?.textContent).toBe('false')
   })
 })

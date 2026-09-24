@@ -1,6 +1,6 @@
 # Release readiness (Definition of Done, PLAN §38)
 
-Status as of 2026-09-22.
+Status as of 2026-09-24.
 
 | Criterion                                                                                                                              | Status                                                                                                                                                  |
 | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -17,13 +17,13 @@ Status as of 2026-09-22.
 
 ## Coverage
 
-Measured on 2026-09-22 with `vitest run --coverage` (line coverage):
+Measured on 2026-09-24 (line coverage): `vitest run --coverage` for the npm packages, `pest --coverage` with pcov (Homebrew PHP 8.4) for the Laravel package, Redis tests skipped:
 
-| Package                    |                                                                                                             Lines | Target |
-| -------------------------- | ----------------------------------------------------------------------------------------------------------------: | -----: |
-| `@swarakaka/bridge-core`   |                                                                                                            91.7 % |   90 % |
-| `@swarakaka/bridge-vue`    |                                                                                                            89.9 % |   80 % |
-| `swarakaka/bridge-laravel` | enforced in CI with pcov (`pest --coverage --min=90`); not measurable on the development machine (no pcov/Xdebug) |   90 % |
+| Package                    |                                           Lines | Target |
+| -------------------------- | ----------------------------------------------: | -----: |
+| `@swarakaka/bridge-core`   |                                          92.7 % |   90 % |
+| `@swarakaka/bridge-vue`    |                                          91.0 % |   80 % |
+| `swarakaka/bridge-laravel` | 90.5 % (CI enforces `pest --coverage --min=90`) |   90 % |
 
 ## Not in 1.0
 
@@ -34,10 +34,13 @@ Measured on 2026-09-22 with `vitest run --coverage` (line coverage):
 
 ## Cutting 1.0
 
-Done in the working tree: `pnpm changeset version` bumped `@swarakaka/bridge-protocol`, `@swarakaka/bridge-core` and `@swarakaka/bridge-vue` to 1.0.0 (`@swarakaka/bridge-react` to 0.2.0) and wrote their changelogs; `CHANGELOG.md` has the `1.0.0` section for the Laravel package.
+- npm: done. `@swarakaka/bridge-protocol`, `-core` and `-vue` 1.0.0 and `@swarakaka/bridge-react` 0.2.0 are tagged. Pending changesets (`.changeset/*.md`) describe the next release; `release.yml` versions or publishes them after CI passes on `main`.
+
+npm trusted publishing: each package's trusted publisher must name `swarakaka` / `bridge` (lowercase, as GitHub reports the repository) / `release.yml`, with "Allow npm publish" ticked. `release.yml` requests an OIDC token (`id-token: write`); pnpm exchanges it for a publish token and falls back to `NPM_TOKEN` when the exchange fails ("Skipped OIDC" in the log). Once every package publishes through OIDC, the `NPM_TOKEN` secret can be removed; tokens that bypass 2FA lose direct publishing in January 2027.
+
+- Laravel package: not published yet. `CHANGELOG.md` has the `1.0.0` section and an `[Unreleased]` section for the hardening since. Packagist reads a repository's root `composer.json`, and this repository's root is the private monorepo manifest, so publishing needs a read-only split of `packages/laravel`.
 
 Remaining, by the maintainer:
 
-1. Commit: `git add -A && git commit -m "chore(repo): release 1.0.0"`.
-2. Tag the Laravel package: `git tag laravel-v1.0.0 && git push --tags`.
-3. Push `main`; the release workflow publishes the npm packages from the versioned manifests (requires `NPM_TOKEN`).
+1. Create the split repository (for example `swarakaka/bridge-laravel`) and push `packages/laravel` to it with `git subtree split --prefix=packages/laravel` (or a split action on each push to `main`).
+2. Register the split repository on Packagist and tag it (`v1.0.0`, then the next release from `[Unreleased]`).

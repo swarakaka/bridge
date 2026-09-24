@@ -7,7 +7,15 @@
  *   BENCH_URL=http://127.0.0.1:8000 BENCH_TOKEN=... pnpm --filter bridge-benchmarks bench
  */
 import { execSync, spawn } from 'node:child_process'
-import { appendFileSync, existsSync, mkdirSync, openSync, writeFileSync } from 'node:fs'
+import {
+  appendFileSync,
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  openSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -49,13 +57,19 @@ let token = process.env.BENCH_TOKEN ?? ''
 async function boot() {
   if (process.env.BENCH_URL) return
   mkdirSync(path.join(here, '..', 'results'), { recursive: true })
-  if (!existsSync(path.join(playground, '.env.e2e'))) {
-    throw new Error(
-      'playground/.env.e2e is missing: run the E2E suite once (cd e2e && pnpm test) to generate it.',
-    )
+  // APP_ENV=e2e reads playground/.env.e2e; everything else comes from `env` above, so
+  // the file only needs an app key (the E2E suite writes a fuller one).
+  const envFile = path.join(playground, '.env.e2e')
+  if (!existsSync(envFile)) {
+    copyFileSync(path.join(playground, '.env.example'), envFile)
+    execSync('php artisan key:generate --force', { cwd: playground, env, stdio: 'ignore' })
   }
-  if (!existsSync(env.DB_DATABASE)) writeFileSync(env.DB_DATABASE, '')
-  execSync('php artisan migrate:fresh --seed --force', { cwd: playground, env, stdio: 'ignore' })
+  // New files each run: `migrate:fresh` truncates a SQLite file, and a leftover WAL
+  // from an interrupted run would then corrupt it.
+  for (const file of [env.DB_DATABASE, `${env.DB_DATABASE}-wal`, `${env.DB_DATABASE}-shm`])
+    rmSync(file, { force: true })
+  writeFileSync(env.DB_DATABASE, '')
+  execSync('php artisan migrate --seed --force', { cwd: playground, env, stdio: 'ignore' })
   execSync('php artisan db:seed --class=BenchmarkSeeder --force', {
     cwd: playground,
     env,

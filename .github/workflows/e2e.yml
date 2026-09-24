@@ -18,7 +18,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # `serve` is PHP's built-in server (one worker). FrankenPHP is added in Phase 3 with the stream tests.
+        # `serve`: artisan serve with PHP_CLI_SERVER_WORKERS=12 (see playwright.config.ts).
+        # FrankenPHP and PHP-FPM runs are not part of 1.0 (PLAN deviations).
         runtime: [serve]
     steps:
       - uses: actions/checkout@v4

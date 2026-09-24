@@ -1,20 +1,31 @@
 name: Release
 
+# Runs after CI finished on main, and only if it passed, on exactly the commit CI tested.
+# Kept as its own file: npm trusted publishing is configured for `release.yml`.
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
 
 permissions:
   contents: write
   pull-requests: write
-  id-token: write
+  id-token: write # npm trusted publishing (OIDC) and provenance
+
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
   changesets:
     name: Version or publish npm packages
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -30,4 +41,7 @@ jobs:
           title: 'chore(repo): version packages'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # pnpm publishes through npm trusted publishing (OIDC) when it is configured and
+          # falls back to this token otherwise ("Skipped OIDC" in the log).
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: 'true'

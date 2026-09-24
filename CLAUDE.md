@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current state of the repository
 
-**Phases 0 to 5 are complete** (2026-09-22). Phase 0: pnpm monorepo, tooling, CI, protocol package (spec, schemas, fixtures, generated TS types). Phase 1: the Laravel package serves HTML, page and JSON from one controller with negotiation, props, errors, redirects, caching, CSRF variant, testing helpers and a conformance suite. Phase 2: `@swarakaka/bridge-core` (request manager, router, history, page store, forms, cache), `@swarakaka/bridge-vue` (`createBridgeApp`, composables, `BridgeLink`, `Deferred`, `BridgeHead`), the playground's Vue UI (Dashboard, Customers CRUD with uploads, JSON demo, login, Sanctum tokens, error pages). Phase 3: SSE end to end: event bus (`sync`, `database`, `redis`), `Bridge::stream()`/`Bridge::to()`, `ShouldStream`, tickets, `bridge:doctor`; the core `StreamClient` (fetch and EventSource transports, backoff, `Last-Event-ID`, watchdog, control dispatch); `useStream`; the playground Realtime page with one shared stream per user; 30 Playwright specs including a two-browser realtime test and raw-protocol checks over Node fetch. Phase 4: merge props ("load more"), `jsonRoot`, Precognition live validation, the `throttle:bridge-stream` limiter and channel caps, a real-Redis bus test, the security review, the benchmark harness with recorded results, the VitePress docs site, and playground accessibility. Phase 5: SSR gateway and `@swarakaka/bridge-vue/server` renderer with hydration (E2E runs the whole suite under SSR), the experimental `@swarakaka/bridge-react` skeleton, the mobile SDK guide, the relay design and `development/release-readiness.md`. Cutting 1.0 (changeset version, tag) is the maintainer's call.
+**Phases 0 to 5 are complete** (2026-09-22). Phase 0: pnpm monorepo, tooling, CI, protocol package (spec, schemas, fixtures, generated TS types). Phase 1: the Laravel package serves HTML, page and JSON from one controller with negotiation, props, errors, redirects, caching, CSRF variant, testing helpers and a conformance suite. Phase 2: `@swarakaka/bridge-core` (request manager, router, history, page store, forms, cache), `@swarakaka/bridge-vue` (`createBridgeApp`, composables, `BridgeLink`, `Deferred`, `BridgeHead`), the playground's Vue UI (Dashboard, Customers CRUD with uploads, JSON demo, login, Sanctum tokens, error pages). Phase 3: SSE end to end: event bus (`sync`, `database`, `redis`), `Bridge::stream()`/`Bridge::to()`, `ShouldStream`, tickets, `bridge:doctor`; the core `StreamClient` (fetch and EventSource transports, backoff, `Last-Event-ID`, watchdog, control dispatch); `useStream`; the playground Realtime page with one shared stream per user; Playwright specs including a two-browser realtime test and raw-protocol checks over Node fetch. Phase 4: merge props ("load more"), `jsonRoot`, Precognition live validation, the `throttle:bridge-stream` limiter and channel caps, a real-Redis bus test, the security review, the benchmark harness with recorded results, the VitePress docs site, and playground accessibility. Phase 5: SSR gateway and `@swarakaka/bridge-vue/server` renderer with hydration (E2E runs the whole suite under SSR), the experimental `@swarakaka/bridge-react` skeleton, the mobile SDK guide, the relay design and `development/release-readiness.md`. The npm packages are released at 1.0.0 (react 0.2.0); the Laravel package awaits a split repository for Packagist (`development/release-readiness.md`). A hardening pass (2026-09-24) followed; its changes are in the PLAN deviations section ("Hardening").
 
 One document in `development/` governs all work (the `docs/` directory is the user-facing VitePress site only):
 
@@ -19,24 +19,24 @@ Requirements: Node 22.13+ (pnpm 11 needs `node:sqlite`), pnpm 9+ (repo pins pnpm
 ```bash
 pnpm install                 # workspace deps
 pnpm generate                # regenerate packages/protocol/src/generated from schemas (commit the output)
-pnpm build                   # tsc for protocol → core → vue
+pnpm build                   # tsc for protocol → core → vue and react
 pnpm typecheck               # tsc --noEmit per package
 pnpm test                    # Vitest per package (protocol has the TS conformance suite)
 pnpm lint                    # eslint + prettier --check   (pnpm lint:fix to write)
 pnpm docs:dev                # VitePress site from docs/ (docs:build to verify)
 cd playground && pnpm build && php artisan bridge:ssr   # SSR server for local use (BRIDGE_SSR_ENABLED=true in .env)
-pnpm --filter bridge-benchmarks bench   # benchmarks; appends to benchmarks/RESULTS.md (needs playground/.env.e2e from one E2E run; Redis optional via BRIDGE_STREAM_DRIVER=redis)
+pnpm --filter bridge-benchmarks bench   # benchmarks; appends to benchmarks/RESULTS.md (needs the root and playground builds; writes playground/.env.e2e if missing; Redis optional via BRIDGE_STREAM_DRIVER=redis)
 
 cd packages/laravel
 composer install
-vendor/bin/pest              # unit + feature + conformance (90 tests)
+vendor/bin/pest              # unit + feature + conformance (BRIDGE_TEST_REDIS=1 with a local Redis runs the Redis bus tests)
 vendor/bin/pint --test       # style (preset laravel, strict types)
 vendor/bin/phpstan analyse   # level 8
 
 cd playground
 composer install && cp .env.example .env && php artisan key:generate
 touch database/database.sqlite && php artisan migrate --seed && php artisan storage:link
-php artisan test             # feature tests across modes (11)
+php artisan test             # feature tests across modes
 pnpm typecheck && pnpm build # vue-tsc + vite (needs `pnpm build` at the root first: the playground consumes packages/*/dist)
 pnpm serve                   # ./serve.sh: built-in server from public/ with workers; then open http://127.0.0.1:8000 (ada@example.com / password) or run the curl checks in playground/CHECKLIST.md
 
@@ -47,9 +47,9 @@ pnpm test                    # Playwright; boots `php artisan serve --no-reload`
 
 Client packages consume each other's `dist`, so after changing `packages/core` or `packages/vue` run `pnpm build` before testing the playground or E2E.
 
-Conventions enforced by tooling: Conventional Commits with scopes `laravel|core|vue|protocol|playground|e2e|benchmarks|docs|ci|repo` (commitlint), Prettier (no semicolons, single quotes, width 100; `development/PLAN.md` and `composer.json` files are excluded), ESLint with `consistent-type-imports`, Pint `laravel` preset with `declare_strict_types`, PHPStan level 8 (no baseline, no ignores).
+Conventions enforced by tooling: Conventional Commits with scopes `laravel|core|vue|react|protocol|playground|e2e|benchmarks|docs|ci|repo|development|deps` (commitlint), Prettier (no semicolons, single quotes, width 100; `development/PLAN.md` and `composer.json` files are excluded), ESLint with `consistent-type-imports`, Pint `laravel` preset with `declare_strict_types`, PHPStan level 8 (no baseline, no ignores).
 
-Git: the repository is initialized but has no commits yet. Do not commit unless asked.
+Git: the maintainer commits and pushes; do not commit unless asked.
 
 ## Package layout notes (Laravel)
 
@@ -87,6 +87,13 @@ Git: the repository is initialized but has no commits yet. Do not commit unless 
 - `v-html` on a Vue component is dropped by SSR; use it on a native element inside the slot. Pages must not touch `window`/timers during setup; `useStream` skips connecting on the server.
 - E2E runs with SSR on: `playwright.config.ts` starts `node bootstrap/ssr/ssr.js` on :13715 and the `page.goto` wrapper waits for `#app[data-bridge-hydrated]`.
 - Playground `pnpm build` builds the client and the SSR bundle (`bootstrap/ssr`, gitignored).
+
+## Hardening notes (2026-09-24)
+
+- Never use `migrate:fresh` on a SQLite file in WAL mode that other processes may have used: Laravel truncates the file and a leftover `-wal` corrupts it. E2E setup and the benchmark harness delete the file with its `-wal`/`-shm` and run `migrate`.
+- The Redis bus sends raw commands (no connection key prefix). Tests that inspect or delete its keys must use `executeRaw`, not `Redis::connection()->del()`/`keys()`.
+- A queued `router.reload()` waits for an in-flight visit instead of cancelling it; `form.validate()` uses `router.request()`, outside the visit pipeline. Keep background requests out of `performVisit`.
+- New regression tests should fail on the old code; for Vue component-update bugs pass slots as `{ default, $stable: true }` or Vue re-renders the child anyway and hides the bug.
 
 ## Phase 4 notes
 

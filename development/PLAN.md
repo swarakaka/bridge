@@ -1096,17 +1096,20 @@ Standard Laravel skeleton plus: `app/Http/Controllers/{Dashboard,Customer,Realti
 
 ## 31. CI/CD
 
-`ci.yml` (push, PR):
+`ci.yml` (push, PR; superseded runs are cancelled):
 
-- `php`: matrix PHP 8.4 × Laravel 13; services Redis, MySQL; Pint check, PHPStan, Pest with coverage; conformance tests.
-- `js`: Node 22/24 (pnpm 11 requires Node 22.13+ for `node:sqlite`); pnpm install (frozen), build protocol → core → vue, ESLint, `vue-tsc`, Vitest with coverage.
-- `playground`: composer + pnpm install, migrate, `vite build`, integration stream tests (database + redis drivers).
+- `js`: Node 22/24 (pnpm 11 requires Node 22.13+ for `node:sqlite`); pnpm install (frozen), ESLint + Prettier, a drift check that `pnpm generate` leaves `packages/protocol/src/generated` unchanged, build, typecheck, Vitest; the docs site builds on Node 22.
+- `php`: PHP 8.4 × Laravel 13 with a Redis service; Pint, PHPStan, Pest with coverage (min 90 %) including the conformance suite and the real-Redis bus tests.
+- `playground`: composer + pnpm install, migrate, typecheck and `vite build`, feature tests, and a curl smoke test of the three modes.
+- `commitlint` on pull requests.
 
-`e2e.yml` (PR label `e2e` and nightly): Playwright against the playground under PHP-FPM/Nginx docker image and under FrankenPHP.
+`release.yml` (`workflow_run` after CI completes on `main`, only when it succeeded, checking out the commit CI tested): changesets versions or publishes `@swarakaka/*` through npm trusted publishing (OIDC, configured for `release.yml`) with provenance, falling back to `NPM_TOKEN`.
 
-`benchmarks.yml` (manual dispatch): runs `benchmarks/run.sh`, uploads `RESULTS.json` as artifact, comments a summary on the PR if any.
+`e2e.yml` (PR label `e2e`, nightly, manual): Playwright against the playground on `artisan serve` with 12 workers and the SSR server.
 
-`release.yml`: changesets → npm publish for `@swarakaka/*`; Laravel package tagged separately (`laravel-v1.x`) and published via Packagist webhook. Protocol version and package versions are documented in `docs/versioning.md`.
+`benchmarks.yml` (manual): runs `benchmarks/run.sh` for a scenario and bus and uploads `benchmarks/results/` and `RESULTS.md` as an artifact.
+
+The Laravel package is published from a read-only split of `packages/laravel` (see `development/release-readiness.md`); Packagist cannot publish a package from a subdirectory of this repository. Protocol and package versions are documented in `docs/reference/versioning.md`.
 
 Branch protection: CI green, one review, conventional commits enforced by commitlint.
 
@@ -1279,6 +1282,7 @@ Recorded as phases ship. Each entry names the section it refines.
 - **§26 SSR and hydration.** `createBridge` takes `global` (default true); the SSR renderer passes false so `getBridge()`/`router` never point at another request's instance. `useStream` in a component connects in `onMounted` rather than during setup, so the first client render matches the server's `idle`. `BridgeHead` owns its `<meta>` tags on the client; server-rendered ones carry `data-bridge-head="ssr"` and are replaced on hydration. The E2E page fixture now fails a test on any hydration mismatch reported on the console and on a hydration wait that times out, instead of swallowing it. E2E setup deletes the SQLite file with its `-wal`/`-shm` and runs `migrate` instead of `migrate:fresh`, which truncates the file and let a leftover WAL corrupt it.
 - **§9.3 Negotiation failures on non-Bridge routes.** `HandleBridgeRequests` runs for the whole `web` group, so it no longer answers 406 for an `Accept` that matches no Bridge mode: the route runs, and a Bridge response for that request still fails with 406 when it negotiates (`ExceptionRenderer` leaves other exceptions to Laravel). An unsupported Bridge protocol version is still refused before the controller.
 - **§20 Streams, operations.** `ShouldStream` publishing listens on the interface instead of `'*'`. A stream refused for capacity sends `error{429,final:false}` and closes without `end` (spec §6), and the client resets its backoff only after a healthy connection, so throttled reconnects slow down. Redis stream keys expire `stream.drivers.redis.retain_minutes` after their last publish; replay from an id older than that is refused when the key is gone. `heartbeat_ms` is at least 100 and `poll_ms` at least 10. `bridge:doctor` deletes its roundtrip channel. Stream tickets work with token and request guards (provider + `setUser`), not only the session guard. The HTTP SSR gateway skips SSR for `ssr.cooldown_s` after a connection failure or timeout.
+- **§31 CI/CD.** Deviates from the original plan: no MySQL service, no playground stream tests per bus (the Pest bus tests cover database and Redis), no PHP-FPM/Nginx or FrankenPHP E2E, no benchmark PR comment (runner numbers are noisy; results are an artifact). Release stays in `release.yml` (npm trusted publishing is bound to that file name) but now runs through `workflow_run` only after CI succeeded, on the tested commit, with provenance; package `repository` URLs use the canonical lowercase `swarakaka/bridge` so provenance matches; the generated protocol types are drift-checked. Publishing the Laravel package needs a subtree split, since Packagist reads the repository root.
 - **§9, §30 Package requirements.** `swarakaka/bridge-laravel` requires `laravel/framework: ^13.0` instead of four `illuminate/*` split packages: the source also uses Foundation (no split package exists), Console, Database, Routing, Auth, Session, Validation, Pagination, Cache and Redis, which only resolved in CI because Testbench pulls in the framework. The built SSR bundle (`playground/bootstrap/ssr`) is ignored and untracked, and `.nvmrc` pins Node 22.13 to match `engines`.
 
 ### Phase 5 (2026-09-22)
@@ -1404,31 +1408,41 @@ Rejected: `application/vnd.bridge.page+json` / `.event+json` (unnecessary splitt
 
 ## Appendix C — Configuration reference (`config/bridge.php`)
 
+Kept in step with `packages/laravel/config/bridge.php`; `docs/reference/configuration.md` describes each key for users.
+
 ```php
 return [
     'protocol' => ['max_version' => 1],
-    'shell' => ['view' => 'app', 'embed' => true, 'root_id' => 'app'],
-    'build' => ['version' => null],                    // null → hash of public/build/manifest.json
+    'shell' => ['view' => 'bridge::app', 'embed' => true, 'root_id' => 'app'],
+    'build' => ['version' => env('BRIDGE_BUILD_VERSION'), 'manifest' => null], // null version → hash of the Vite manifest
     'negotiation' => ['default_mode' => 'html'],       // for */* requests; overridable per route
     'json' => ['resolve_deferred' => true],
     'auth' => ['login_url' => '/login'],
     'flash' => ['keys' => ['message', 'level']],
     'cache' => ['etag' => true],
     'csrf' => ['skip_for_bearer' => true],             // only when the Bridge CSRF middleware is used
+    'ssr' => [
+        'enabled' => false, 'url' => 'http://127.0.0.1:13714', 'timeout' => 2.0,
+        'cooldown_s' => 10,                            // skip SSR after a connection failure or timeout
+        'bundle' => 'bootstrap/ssr/ssr.js',            // started by `bridge:ssr`
+    ],
+    'middleware' => ['auto_register' => true],         // append HandleBridgeRequests to `web`
     'stream' => [
         'driver' => env('BRIDGE_STREAM_DRIVER', 'database'),
         'prefix' => env('BRIDGE_STREAM_PREFIX', env('APP_NAME', 'bridge')),
-        'heartbeat_ms' => 15000,
-        'max_duration_s' => env('BRIDGE_STREAM_MAX_DURATION', null), // null → 60 on FPM, 300 on Octane
+        'heartbeat_ms' => 15000,                       // at least 100
+        'max_duration_s' => env('BRIDGE_STREAM_MAX_DURATION'), // null → 60 on FPM, 300 on Octane
         'retry_ms' => 3000,
         'max_connections_per_user' => 3,
+        'connects_per_minute' => 30,                   // `throttle:bridge-stream`
+        'max_client_channels' => 20,                   // `?channels=` entries
         'ticket_ttl_s' => 60,
         'drivers' => [
             'sync' => [],
-            'redis' => ['connection' => 'default', 'maxlen' => 1000],
-            'database' => ['connection' => null, 'table' => 'bridge_stream_events', 'poll_ms' => 1000, 'retain_minutes' => 60],
+            'null' => [],
+            'redis' => ['connection' => 'default', 'maxlen' => 1000, 'retain_minutes' => 60],
+            'database' => ['connection' => null, 'table' => 'bridge_stream_events', 'poll_ms' => 1000, 'lookback' => 200, 'retain_minutes' => 60],
         ],
     ],
-    'ssr' => ['enabled' => false, 'url' => 'http://127.0.0.1:13714'],
 ];
 ```

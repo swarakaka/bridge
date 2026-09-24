@@ -24,7 +24,7 @@ public function index()
 
 Bridge is inspired by Inertia's developer experience but is designed as `Laravel → Bridge Protocol → Client`, so the Laravel package has no Vue-specific assumptions and React, mobile, and CLI clients can consume the same backend.
 
-> **Status: pre-alpha.** Phases 0–2 are in place: protocol spec and fixtures, the Laravel package (HTML, page and JSON modes), the client runtime and Vue adapter, and a playground with Playwright coverage. Phase 3 added streams (SSE) end to end; Phase 4 added merge props, Precognition, rate limiting, the security review, benchmarks and the docs site. Phase 5 added server-side rendering with hydration, the React adapter skeleton, the mobile SDK guide, the relay design and the release-readiness checklist. See `development/release-readiness.md` for what 1.0 includes. See [`development/PLAN.md`](development/PLAN.md) for the plan and phase breakdown.
+> **Status: 1.0.** The npm packages `@swarakaka/bridge-protocol`, `-core` and `-vue` are at 1.0.0; `@swarakaka/bridge-react` (0.2.0) is experimental. The Laravel package is versioned in [`CHANGELOG.md`](CHANGELOG.md); its Packagist release is still pending (see [`development/release-readiness.md`](development/release-readiness.md)). [`development/PLAN.md`](development/PLAN.md) holds the design, the phase breakdown and every deviation made since.
 
 ## Packages
 
@@ -37,7 +37,7 @@ Bridge is inspired by Inertia's developer experience but is designed as `Laravel
 | `@swarakaka/bridge-react`    | `packages/react`    | Experimental React adapter skeleton                                                                                  |
 | playground                   | `playground`        | Laravel + Vue app exercising every mode; integration test environment                                                |
 | e2e                          | `e2e`               | Playwright suite against the playground                                                                              |
-| benchmarks                   | `benchmarks`        | Reproducible benchmarks (k6, Lighthouse CI, phpbench)                                                                |
+| benchmarks                   | `benchmarks`        | Reproducible benchmarks (fetch-based load generator; results in `benchmarks/RESULTS.md`)                             |
 
 ## Development
 
@@ -45,16 +45,18 @@ Requirements: PHP 8.4+, Laravel 13, Composer 2, Node 22.13+, pnpm 9+ (the repo p
 
 ```bash
 pnpm install
-pnpm build          # builds protocol → core → vue
+pnpm build          # builds protocol → core → vue and react
 pnpm test           # Vitest across packages
 pnpm lint           # ESLint + Prettier
-composer install    # Laravel package (from Phase 1)
-composer test       # Pest
+
+cd packages/laravel
+composer install    # the Laravel package's own dependencies
+vendor/bin/pest     # Pest (or `composer test` from the repo root once these are installed)
 ```
 
 To run the playground locally, follow the setup in [`docs/getting-started/demo-application.md`](docs/getting-started/demo-application.md), then start it with `pnpm serve` (or `./serve.sh` from `playground/`). The script runs PHP's built-in server with several workers so open streams do not block other requests, refuses a busy port, and stops all workers on Ctrl+C; `PORT` and `WORKERS` override the defaults.
 
-Commits follow [Conventional Commits](https://www.conventionalcommits.org/) with scopes `laravel`, `core`, `vue`, `protocol`, `playground`, `e2e`, `benchmarks`, `docs`, `ci`, `repo`.
+Commits follow [Conventional Commits](https://www.conventionalcommits.org/) with scopes `laravel`, `core`, `vue`, `react`, `protocol`, `playground`, `e2e`, `benchmarks`, `docs`, `ci`, `repo`, `development`, `deps`.
 
 ## Documentation
 
@@ -65,5 +67,3 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/) with
 ## License
 
 MIT. See [LICENSE](LICENSE).
-
-# bridge

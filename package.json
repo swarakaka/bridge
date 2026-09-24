@@ -5,7 +5,7 @@
   "description": "Bridge: a server-driven application protocol for Laravel with Page, JSON and SSE modes",
   "license": "MIT",
   "type": "module",
-  "repository": "github:swarakaka/Bridge",
+  "repository": "github:swarakaka/bridge",
   "packageManager": "pnpm@11.24.0",
   "engines": {
     "node": ">=22.13",

@@ -1,16 +1,56 @@
 name: Benchmarks
 
+# Manual only: numbers from shared CI runners are noisy, so results are uploaded as an
+# artifact for inspection, not committed. Record runs in RESULTS.md from a quiet machine.
 on:
   workflow_dispatch:
     inputs:
       scenario:
-        description: Scenario to run (all, first-load, navigation, throughput, serialization, sse, partial)
+        description: Scenario (all, http, sse, serialization)
         default: all
+        type: choice
+        options: [all, http, sse, serialization]
+      driver:
+        description: Stream bus
+        default: database
+        type: choice
+        options: [database, redis]
 
 jobs:
   bench:
     runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7
+        ports: ['6379:6379']
+        options: --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 10
     steps:
       - uses: actions/checkout@v4
-      - name: Placeholder until Phase 4
-        run: echo "benchmarks/run.sh ${{ inputs.scenario }} is implemented in Phase 4."
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_sqlite, sqlite3, gd, redis
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Playground install and build
+        working-directory: playground
+        run: |
+          composer install --prefer-dist --no-interaction --no-scripts
+          php artisan package:discover
+          pnpm build
+      - name: Run
+        run: bash benchmarks/run.sh ${{ inputs.scenario }}
+        env:
+          BRIDGE_STREAM_DRIVER: ${{ inputs.driver }}
+          REDIS_HOST: 127.0.0.1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: benchmarks-${{ inputs.scenario }}-${{ inputs.driver }}
+          path: |
+            benchmarks/results/
+            benchmarks/RESULTS.md
