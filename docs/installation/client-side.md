@@ -1,6 +1,6 @@
 # Client-side setup
 
-Requirements: Node 22.13 or newer, Vite, and Vue 3.5 or newer (or React 18+ for the experimental adapter).
+Requirements: Node 22.13 or newer, Vite 8 or newer, and Vue 3.5 or newer (or React 19 or newer for the experimental adapter).
 
 ## Install
 
