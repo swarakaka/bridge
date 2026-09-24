@@ -1,6 +1,12 @@
-import { createBridge, type Bridge, type BridgeConfig } from '@swarakaka/bridge-core'
+import {
+  createBridge,
+  requireResolver,
+  type Bridge,
+  type BridgeConfig,
+  type PagesOption,
+} from '@swarakaka/bridge-core'
 import type { BridgePage } from '@swarakaka/bridge-protocol'
-import { createElement, useEffect, useState } from 'react'
+import { createElement, useEffect, useState, type ReactElement } from 'react'
 import { createRoot, hydrateRoot, type Root } from 'react-dom/client'
 import { BridgeContext, usePageState } from './context.js'
 import {
@@ -11,10 +17,25 @@ import {
   type PageComponent,
 } from './page.js'
 
-export type { ComponentResolver, PageComponent }
+export type { ComponentResolver, PageComponent, PagesOption }
+
+/**
+ * Wraps the application, e.g. in context providers, on the client and the
+ * server. Returns the element to render. The same function can be passed to
+ * `createSsrRenderer`.
+ */
+export type WithApp = (
+  app: ReactElement,
+  context: { ssr: boolean; page: BridgePage | null },
+) => ReactElement
 
 export interface CreateBridgeAppOptions extends Omit<BridgeConfig, 'initialPage'> {
-  resolve: ComponentResolver
+  /** Optional with the @swarakaka/bridge-vite plugin, which resolves from ./Pages. */
+  resolve?: ComponentResolver | undefined
+  /** Page directory shorthand, compiled into `resolve` by @swarakaka/bridge-vite. */
+  pages?: PagesOption | undefined
+  /** Wrap the application (providers) before it renders. */
+  withApp?: WithApp | undefined
   resolveError?: (
     status: number,
   ) => PageComponent | Promise<PageComponent | { default: PageComponent }> | null
@@ -28,13 +49,21 @@ export interface BridgeApp {
   el: Element
 }
 
-export async function createBridgeApp(options: CreateBridgeAppOptions): Promise<BridgeApp> {
+export async function createBridgeApp(options: CreateBridgeAppOptions = {}): Promise<BridgeApp> {
   const found = document.getElementById(options.id ?? 'app')
   if (!found) throw new Error(`Bridge root element #${options.id ?? 'app'} not found.`)
   const el: Element = found
-  const { resolve, resolveError, id: _id, page, ...config } = options
+  const {
+    resolve: _resolve,
+    pages: _pages,
+    resolveError,
+    withApp,
+    id: _id,
+    page,
+    ...config
+  } = options
 
-  const { cache, load } = createComponentLoader(resolve)
+  const { cache, load } = createComponentLoader(requireResolver(options, 'createBridgeApp'))
   const errorCache = new Map<number, PageComponent>()
   const loadError = async (status: number): Promise<PageComponent | null> => {
     if (!resolveError) return null
@@ -93,7 +122,12 @@ export async function createBridgeApp(options: CreateBridgeAppOptions): Promise<
     return renderPage(component, current, state.key)
   }
 
-  const tree = createElement(BridgeContext.Provider, { value: bridge }, createElement(App))
+  const app = createElement(App)
+  const tree = createElement(
+    BridgeContext.Provider,
+    { value: bridge },
+    withApp ? withApp(app, { ssr: false, page: initial }) : app,
+  )
   const root = el.hasAttribute('data-server-rendered') ? hydrateRoot(el, tree) : createRoot(el)
   if (!el.hasAttribute('data-server-rendered')) root.render(tree)
   bridge.init()

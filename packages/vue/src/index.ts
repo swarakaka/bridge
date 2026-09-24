@@ -7,6 +7,8 @@ export type {
   BridgeApp,
   ComponentResolver,
   ErrorPageProps,
+  PagesOption,
+  WithApp,
 } from './createBridgeApp.js'
 export { createBridgePlugin } from './plugin.js'
 export { BridgeKey, useBridge } from './injection.js'

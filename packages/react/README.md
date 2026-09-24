@@ -5,8 +5,9 @@
 ```tsx
 import { createBridgeApp } from '@swarakaka/bridge-react'
 
-const pages = import.meta.glob('./Pages/**/*.tsx')
-createBridgeApp({ resolve: (name) => pages[`./Pages/${name}.tsx`]!() })
+// Pages resolve from ./Pages through the @swarakaka/bridge-vite plugin;
+// without it, pass `resolve: (name) => ...`.
+createBridgeApp({ withApp: (app) => <Providers>{app}</Providers> })
 ```
 
 Page components receive props directly; a static `layout` property wraps them.

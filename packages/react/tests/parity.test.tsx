@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { act, useEffect } from 'react'
+import { act, createContext, createElement, useContext, useEffect } from 'react'
 import { createBridge, getBridge } from '@swarakaka/bridge-core'
 import type { BridgePage } from '@swarakaka/bridge-protocol'
 import {
@@ -271,6 +271,21 @@ describe('server rendering', () => {
     ])
     expect(getBridge()).toBe(own)
     own.destroy()
+  })
+
+  it('applies withApp on the server with ssr: true', async () => {
+    const Greeting = createContext('none')
+    const Page: PageComponent = () => <p>{useContext(Greeting)}</p>
+    const seen: boolean[] = []
+    const render = createSsrRenderer({
+      resolve: () => Page,
+      withApp: (tree, context) => {
+        seen.push(context.ssr)
+        return createElement(Greeting.Provider, { value: 'hello' }, tree)
+      },
+    })
+    expect((await render(page())).body).toBe('<p>hello</p>')
+    expect(seen).toEqual([true])
   })
 
   it('hydrates the server markup without mismatches and marks the root afterwards', async () => {

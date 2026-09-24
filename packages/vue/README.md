@@ -6,11 +6,11 @@ Vue 3 adapter for Bridge.
 // resources/js/app.ts
 import { createBridgeApp } from '@swarakaka/bridge-vue'
 
-const pages = import.meta.glob('./Pages/**/*.vue')
-
+// Pages resolve from ./Pages through the @swarakaka/bridge-vite plugin;
+// without it, pass `resolve: (name) => ...`.
 createBridgeApp({
-  resolve: (name) => pages[`./Pages/${name}.vue`]!(),
   resolveError: () => import('./Pages/Errors/Error.vue'), // optional in-place error page
+  withApp: (app) => app.use(i18n), // optional: plugins before mount (and in createSsrRenderer)
 })
 ```
 

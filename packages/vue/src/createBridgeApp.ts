@@ -1,8 +1,10 @@
 import {
   createBridge,
+  requireResolver,
   type Bridge,
   type BridgeConfig,
   type BridgePage,
+  type PagesOption,
 } from '@swarakaka/bridge-core'
 import {
   createApp,
@@ -17,20 +19,33 @@ import { createComponentLoader, renderPage, withLayouts, type ComponentResolver 
 import { createBridgePlugin } from './plugin.js'
 import { pageStateRef } from './state.js'
 
-export type { ComponentResolver }
+export type { ComponentResolver, PagesOption }
 export interface ErrorPageProps {
   status: number
   kind: string
   message: string
 }
 
+/**
+ * Customises the Vue app before it mounts (client) or renders (server), e.g.
+ * `app.use(i18n)`. The same function can be passed to `createSsrRenderer`.
+ */
+export type WithApp = (app: VueApp, context: { ssr: boolean; page: BridgePage | null }) => void
+
 export interface CreateBridgeAppOptions extends Omit<BridgeConfig, 'initialPage'> {
-  /** Resolve a page component by name, e.g. from import.meta.glob. */
-  resolve: ComponentResolver
+  /**
+   * Resolve a page component by name, e.g. from import.meta.glob. Optional with
+   * the @swarakaka/bridge-vite plugin, which resolves from ./Pages.
+   */
+  resolve?: ComponentResolver | undefined
+  /** Page directory shorthand, compiled into `resolve` by @swarakaka/bridge-vite. */
+  pages?: PagesOption | undefined
+  /** Customise the app (plugins, components) before it mounts. Not called with `setup`. */
+  withApp?: WithApp | undefined
   /** Optional: an error component rendered in place of the page for non-validation errors. */
   resolveError?:
     ((status: number) => Component | Promise<Component | { default: Component }> | null) | undefined
-  /** Custom mounting. Default: createApp(App).use(plugin).mount(el). */
+  /** Custom mounting instead of the default createApp(App).use(plugin).mount(el). */
   setup?:
     | ((context: {
         el: Element
@@ -56,13 +71,25 @@ export interface BridgeApp {
  * Mounts a Bridge-driven Vue application (PLAN §10.3). Supports a `layout`
  * static property on page components: a component, or an array (outermost first).
  */
-export async function createBridgeApp(options: CreateBridgeAppOptions): Promise<BridgeApp> {
+export async function createBridgeApp(options: CreateBridgeAppOptions = {}): Promise<BridgeApp> {
   const el = document.getElementById(options.id ?? 'app')
   if (!el) throw new Error(`Bridge root element #${options.id ?? 'app'} not found.`)
 
-  const { resolve, resolveError, setup, id: _id, page, ...config } = options
+  const {
+    resolve: _resolve,
+    pages: _pages,
+    resolveError,
+    setup,
+    withApp,
+    id: _id,
+    page,
+    ...config
+  } = options
+  if (setup && withApp) {
+    throw new Error('createBridgeApp: pass `setup` or `withApp`, not both.')
+  }
 
-  const { cache, load } = createComponentLoader(resolve)
+  const { cache, load } = createComponentLoader(requireResolver(options, 'createBridgeApp'))
 
   const bridge = createBridge({
     ...config,
@@ -164,6 +191,7 @@ export async function createBridgeApp(options: CreateBridgeAppOptions): Promise<
       ? createSSRApp({ render: () => h(App) })
       : createApp({ render: () => h(App) })
     app.use(plugin)
+    withApp?.(app, { ssr: false, page: initial })
     app.mount(el)
     // Signals interactivity to tests and progressive UI (server-rendered markup is visible earlier).
     el.setAttribute('data-bridge-hydrated', 'true')

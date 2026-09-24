@@ -35,6 +35,7 @@ Bridge is inspired by Inertia's developer experience but is designed as `Laravel
 | `@swarakaka/bridge-core`     | `packages/core`     | Framework-agnostic client runtime (router, page store, forms, SSE client)                                            |
 | `@swarakaka/bridge-vue`      | `packages/vue`      | Vue 3 bindings (`createBridgeApp`, `usePage`, `useForm`, `useStream`, `BridgeLink`) and the SSR renderer (`/server`) |
 | `@swarakaka/bridge-react`    | `packages/react`    | Experimental React adapter skeleton                                                                                  |
+| `@swarakaka/bridge-vite`     | `packages/vite`     | Vite plugin: resolves page components from `./Pages` so `createBridgeApp()` needs no `resolve`                       |
 | playground                   | `playground`        | Laravel + Vue app exercising every mode; integration test environment                                                |
 | e2e                          | `e2e`               | Playwright suite against the playground                                                                              |
 | benchmarks                   | `benchmarks`        | Reproducible benchmarks (fetch-based load generator; results in `benchmarks/RESULTS.md`)                             |

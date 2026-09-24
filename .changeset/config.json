@@ -7,7 +7,8 @@
       "@swarakaka/bridge-protocol",
       "@swarakaka/bridge-core",
       "@swarakaka/bridge-vue",
-      "@swarakaka/bridge-react"
+      "@swarakaka/bridge-react",
+      "@swarakaka/bridge-vite"
     ]
   ],
   "linked": [],

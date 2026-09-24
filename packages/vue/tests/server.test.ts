@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest'
-import { defineComponent, h } from 'vue'
+import { defineComponent, h, inject } from 'vue'
 import { createSsrRenderer, createSsrServer } from '../src/server/index.js'
 import { BridgeHead, usePage } from '../src/index.js'
 import { page } from './helpers.js'
@@ -61,5 +61,29 @@ describe('SSR renderer', () => {
     } finally {
       await server.close()
     }
+  })
+
+  it('applies withApp with ssr: true', async () => {
+    const Greeting = defineComponent({
+      setup() {
+        const greeting = inject<string>('greeting')
+        return () => h('p', greeting)
+      },
+    })
+    const seen: Array<{ ssr: boolean; component: string | undefined }> = []
+    const render = createSsrRenderer({
+      resolve: () => Greeting,
+      withApp: (app, context) => {
+        seen.push({ ssr: context.ssr, component: context.page?.component })
+        app.provide('greeting', 'hello')
+      },
+    })
+    const result = await render(page())
+    expect(result.body).toContain('>hello</p>')
+    expect(seen).toEqual([{ ssr: true, component: 'Customers/Index' }])
+  })
+
+  it('needs a resolver without the Vite plugin', () => {
+    expect(() => createSsrRenderer()).toThrow(/createSsrRenderer needs a `resolve` function/)
   })
 })

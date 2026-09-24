@@ -1,6 +1,8 @@
 # Code splitting
 
-Page components are loaded on demand when `resolve` returns a promise, which `import.meta.glob` does by default:
+With the [Vite plugin](/installation/client-side#vite), `createBridgeApp()` already loads each page as its own chunk. `pages: { lazy: false }` bundles them all instead (see [Eager loading](#eager-loading)).
+
+With your own `resolve`, pages are loaded on demand when it returns a promise, which `import.meta.glob` does by default:
 
 ::: code-group
 
@@ -29,6 +31,9 @@ The router loads the component before swapping the page (its `prepare` hook), so
 For small applications, or to avoid a chunk request on every navigation, bundle everything:
 
 ```ts
+createBridgeApp({ pages: { path: './Pages', lazy: false } }) // with the Vite plugin
+
+// or, with your own resolver:
 const pages = import.meta.glob('./Pages/**/*.vue', { eager: true })
 
 createBridgeApp({

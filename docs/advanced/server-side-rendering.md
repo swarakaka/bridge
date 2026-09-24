@@ -8,9 +8,22 @@ Bridge renders the first HTML on the server through a small Node process; the cl
 // resources/js/ssr.ts
 import { createSsrRenderer, createSsrServer } from '@swarakaka/bridge-vue/server'
 
-const pages = import.meta.glob('./Pages/**/*.vue')
-const render = createSsrRenderer({ resolve: (name) => pages[`./Pages/${name}.vue`]!() })
+const render = createSsrRenderer() // pages from ./Pages, through @swarakaka/bridge-vite
 void createSsrServer({ render }) // POST /render, GET /health, port from BRIDGE_SSR_URL (13714)
+```
+
+`createSsrRenderer` takes the same `resolve`, `pages` and `withApp` options as [`createBridgeApp`](/installation/client-side#initialise-the-app). Share `withApp` between the two entries so the server renders with the same plugins as the client:
+
+```ts
+// resources/js/withApp.ts
+import type { WithApp } from '@swarakaka/bridge-vue'
+
+export const withApp: WithApp = (app, { ssr }) => {
+  app.use(i18n)
+  if (!ssr) app.use(analytics) // client only
+}
+
+// app.ts: createBridgeApp({ withApp })      ssr.ts: createSsrRenderer({ withApp })
 ```
 
 ```bash
@@ -48,10 +61,7 @@ The Laravel gateway is adapter-agnostic: it only speaks `POST /render` and expec
 // React: bootstrap/ssr entry
 import { createSsrRenderer, createSsrServer } from '@swarakaka/bridge-react/server'
 
-const pages = import.meta.glob('./Pages/**/*.tsx')
-await createSsrServer({
-  render: createSsrRenderer({ resolve: (name) => pages[`./Pages/${name}.tsx`]!() as never }),
-})
+await createSsrServer({ render: createSsrRenderer() })
 ```
 
-`createSsrRenderer` takes an optional `wrap(page, { page })` to put application providers around the page.
+`createSsrRenderer` takes the same `withApp(app, { ssr, page })` as the React `createBridgeApp`, which returns the tree wrapped in application providers (`wrap(page, { page })` still works).

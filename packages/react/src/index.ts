@@ -8,6 +8,8 @@ export type {
   BridgeApp,
   ComponentResolver,
   PageComponent,
+  PagesOption,
+  WithApp,
 } from './createBridgeApp.js'
 export { BridgeContext, useBridge } from './context.js'
 export { usePage, useProp, useDeferred, useForm, useRemember, useJson, useStream } from './hooks.js'

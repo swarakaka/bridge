@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { act } from 'react'
+import { act, createContext, createElement, useContext } from 'react'
 import {
   createBridgeApp,
   useForm,
@@ -216,5 +216,32 @@ describe('React adapter', () => {
     await flush()
     expect(document.querySelector('#stats')?.textContent).toBe('ready')
     expect(document.querySelector('#loading')?.textContent).toBe('false')
+  })
+})
+
+describe('createBridgeApp without resolve, and withApp', () => {
+  it('explains how to get a resolver when none is given', async () => {
+    document.body.innerHTML = '<div id="app"></div>'
+    await expect(createBridgeApp()).rejects.toThrow(/@swarakaka\/bridge-vite/)
+  })
+
+  it('wraps the application in what withApp returns', async () => {
+    const Greeting = createContext('none')
+    const Page: PageComponent = () => <p id="greeting">{useContext(Greeting)}</p>
+    const initial = page({ component: 'Greeting' })
+    window.history.replaceState(null, '', initial.url)
+    document.body.innerHTML = `<script type="application/json" id="bridge-page">${JSON.stringify(initial)}</script><div id="app"></div>`
+    const seen: Array<{ ssr: boolean; component: string | undefined }> = []
+    await act(async () => {
+      app = await createBridgeApp({
+        resolve: () => Page,
+        withApp: (tree, context) => {
+          seen.push({ ssr: context.ssr, component: context.page?.component })
+          return createElement(Greeting.Provider, { value: 'hello' }, tree)
+        },
+      })
+    })
+    expect(seen).toEqual([{ ssr: false, component: 'Greeting' }])
+    expect(document.querySelector('#greeting')?.textContent).toBe('hello')
   })
 })

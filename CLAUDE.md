@@ -47,7 +47,7 @@ pnpm test                    # Playwright; boots `php artisan serve --no-reload`
 
 Client packages consume each other's `dist`, so after changing `packages/core` or `packages/vue` run `pnpm build` before testing the playground or E2E.
 
-Conventions enforced by tooling: Conventional Commits with scopes `laravel|core|vue|react|protocol|playground|e2e|benchmarks|docs|ci|repo|development|deps` (commitlint), Prettier (no semicolons, single quotes, width 100; `development/PLAN.md` and `composer.json` files are excluded), ESLint with `consistent-type-imports`, Pint `laravel` preset with `declare_strict_types`, PHPStan level 8 (no baseline, no ignores).
+Conventions enforced by tooling: Conventional Commits with scopes `laravel|core|vue|react|vite|protocol|playground|e2e|benchmarks|docs|ci|repo|development|deps` (commitlint), Prettier (no semicolons, single quotes, width 100; `development/PLAN.md` and `composer.json` files are excluded), ESLint with `consistent-type-imports`, Pint `laravel` preset with `declare_strict_types`, PHPStan level 8 (no baseline, no ignores).
 
 Git: the maintainer commits and pushes; do not commit unless asked.
 
@@ -80,6 +80,7 @@ The Laravel package is developed only in `packages/laravel` here. `swarakaka/bri
 ## Post-1.0 notes
 
 - `<x-bridge::app />` / `<x-bridge::head />` (`Bridge\View\Components`) read the current response's shell data from the `bridge.shell` request attribute set by `HtmlRepresenter`; the directives keep reading view variables. Both must stay byte-identical (`BladeComponentsTest` checks). Named multiple roots were considered and deferred: two routers cannot both own history.
+- `@swarakaka/bridge-vite` (`packages/vite`) rewrites `createBridgeApp(...)`/`createSsrRenderer(...)` calls imported from the adapters: no `resolve` → a resolver over `import.meta.glob('./Pages/**/*.<ext>')` relative to the calling file; a `pages` option is compiled into the same resolver. It must stay a build-time transform (`import.meta.glob` needs literal patterns in app source). Adapters make `resolve` optional and throw via core `requireResolver` when it is missing. `withApp(app, { ssr, page })` is shared by `createBridgeApp` and `createSsrRenderer` (Vue: app instance, before mount; React: returns the wrapped tree). The playground uses the plugin, so E2E covers it.
 - `useJson` (Vue) wraps core `JsonRequest` over `JsonClient` (`bridge.json`): JSON mode from components without a visit. Deliberately not named `useHttp`; kinds come from the HTTP status because JSON errors are Laravel-native. `useJson` never reloads or redirects on `419`/`401`.
 
 ## Phase 5 notes

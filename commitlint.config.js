@@ -9,6 +9,7 @@ export default {
         'core',
         'vue',
         'react',
+        'vite',
         'protocol',
         'playground',
         'e2e',

@@ -27,14 +27,12 @@ HTML mode keeps Laravel's error pages. Page-mode errors never carry stack traces
 
 ```ts [Vue]
 createBridgeApp({
-  resolve: (name) => pages[`./Pages/${name}.vue`]!(),
   resolveError: (status) => import('./Pages/Error.vue'), // may pick a component per status
 })
 ```
 
 ```tsx [React]
 createBridgeApp({
-  resolve: (name) => pages[`./Pages/${name}.tsx`]!(),
   resolveError: (status) => import('./Pages/Error'),
 })
 ```

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { defineComponent, h, nextTick } from 'vue'
+import { defineComponent, h, inject, nextTick } from 'vue'
 import {
   createBridgeApp,
   useForm,
@@ -244,5 +244,44 @@ describe('createBridgeApp', () => {
     await bridge.router.visit('/customers')
     await nextTick()
     expect(document.querySelector('#index')).not.toBeNull()
+  })
+})
+
+describe('createBridgeApp without resolve, and withApp', () => {
+  it('explains how to get a resolver when none is given', async () => {
+    embed(page())
+    await expect(createBridgeApp()).rejects.toThrow(/@swarakaka\/bridge-vite/)
+    await expect(createBridgeApp({ pages: './Pages' })).rejects.toThrow(
+      /`pages` option is compiled by the @swarakaka\/bridge-vite plugin/,
+    )
+  })
+
+  it('refuses setup and withApp together', async () => {
+    embed(page())
+    await expect(
+      createBridgeApp({ resolve: () => Index, setup: () => undefined, withApp: () => undefined }),
+    ).rejects.toThrow('pass `setup` or `withApp`, not both')
+  })
+
+  it('customises the app before it mounts', async () => {
+    const Greeting = defineComponent({
+      setup() {
+        const greeting = inject<string>('greeting')
+        return () => h('p', { id: 'greeting' }, greeting)
+      },
+    })
+    const calls: Array<{ ssr: boolean; component: string | undefined; mounted: boolean }> = []
+    const initial = page({ component: 'Greeting' })
+    window.history.replaceState(null, '', initial.url)
+    embed(initial)
+    app = await createBridgeApp({
+      resolve: () => Greeting,
+      withApp: (vueApp, { ssr, page: current }) => {
+        calls.push({ ssr, component: current?.component, mounted: vueApp._container !== null })
+        vueApp.provide('greeting', 'hello')
+      },
+    })
+    expect(calls).toEqual([{ ssr: false, component: 'Greeting', mounted: false }])
+    expect(document.querySelector('#greeting')?.textContent).toBe('hello')
   })
 })

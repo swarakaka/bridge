@@ -133,6 +133,28 @@ importers:
         specifier: ^3.2.0
         version: 3.2.7(@types/node@22.20.4)(jiti@2.7.0)(jsdom@26.1.0(supports-color@10.2.2))(lightningcss@1.33.0)(supports-color@10.2.2)
 
+  packages/vite:
+    dependencies:
+      magic-string:
+        specifier: ^0.30.0
+        version: 0.30.21
+    devDependencies:
+      '@types/estree':
+        specifier: ^1.0.0
+        version: 1.0.9
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.20.4
+      typescript:
+        specifier: ^5.8.0
+        version: 5.9.3
+      vite:
+        specifier: ^7.0.0
+        version: 7.3.6(@types/node@22.20.4)(jiti@2.7.0)(lightningcss@1.33.0)
+      vitest:
+        specifier: ^3.2.0
+        version: 3.2.7(@types/node@22.20.4)(jiti@2.7.0)(jsdom@26.1.0(supports-color@10.2.2))(lightningcss@1.33.0)(supports-color@10.2.2)
+
   packages/vue:
     dependencies:
       '@swarakaka/bridge-core':
@@ -170,6 +192,9 @@ importers:
         specifier: ^3.5.0
         version: 3.5.43(typescript@5.9.3)
     devDependencies:
+      '@swarakaka/bridge-vite':
+        specifier: workspace:*
+        version: link:../packages/vite
       '@tailwindcss/vite':
         specifier: ^4.0.0
         version: 4.3.3(vite@8.3.0(@types/node@26.6.2)(esbuild@0.28.2)(jiti@2.7.0))
