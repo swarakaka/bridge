@@ -44,7 +44,7 @@ const login = useForm('login', { email: '', password: '' }).dontRemember('passwo
 
 Scroll positions are remembered automatically. See [Scroll management](/advanced/scroll-management).
 
-On pages stored with [history encryption](/security/history-encryption), remembered state is encrypted together with the page.
+On pages stored with [history encryption](/security/history-encryption), remembered state is encrypted together with the page. After a full reload it is decrypted asynchronously and applied a moment after the page appears, unless the user already changed the value.
 
 ## What is not remembered
 

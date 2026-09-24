@@ -222,14 +222,29 @@ export function useFormRemember<T extends Record<string, unknown>>(
   const bridge = useBridge()
   const key = remember ? `form:${remember}` : undefined
   const [restored, setRestored] = useState(false)
+  // The data last taken from history (or the data at mount): anything else is the user's.
+  // Set at mount, after chained setters such as dontRemember() applied.
+  const baseline = useRef('')
 
   // After mount, so the first client render matches the server markup.
   useEffect(() => {
-    if (key) {
-      const value = bridge.router.restore<Partial<T>>(key)
-      if (value) form.setData(form.rememberable(value))
+    if (!key) {
+      setRestored(true)
+      return
     }
+    baseline.current = JSON.stringify(form.rememberable())
+    const apply = (value: Partial<T> | undefined): void => {
+      if (!value) return
+      form.setData(form.rememberable(value))
+      baseline.current = JSON.stringify(form.rememberable())
+    }
+    apply(bridge.router.restore<Partial<T>>(key))
     setRestored(true)
+    // Encrypted pages: after a full reload the data arrives once decrypted (PLAN §23.1).
+    return bridge.on('restore', ({ values }) => {
+      if (key in values && JSON.stringify(form.rememberable()) === baseline.current)
+        apply(values[key] as Partial<T>)
+    })
   }, [])
   useRememberWriter(key, form.rememberable(), restored)
 }
@@ -274,12 +289,25 @@ export function useRemember<T>(
   const bridge = useBridge()
   const [value, setValue] = useState<T>(initial)
   const [restored, setRestored] = useState(false)
+  // The value last taken from history (or the initial one): anything else is the user's.
+  const baseline = useRef(JSON.stringify(initial))
+  const current = useRef(value)
+  current.current = value
 
   // After mount, so the first client render matches the server markup.
   useEffect(() => {
-    const previous = bridge.router.restore<T>(key)
-    if (previous !== undefined) setValue(previous)
+    const apply = (previous: T | undefined): void => {
+      if (previous === undefined) return
+      baseline.current = JSON.stringify(previous)
+      setValue(previous)
+    }
+    apply(bridge.router.restore<T>(key))
     setRestored(true)
+    // Encrypted pages: after a full reload the value arrives once decrypted (PLAN §23.1).
+    return bridge.on('restore', ({ values }) => {
+      if (key in values && JSON.stringify(current.current) === baseline.current)
+        apply(values[key] as T)
+    })
   }, [key])
   useRememberWriter(key, value, restored)
 

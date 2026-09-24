@@ -44,6 +44,38 @@ test.describe('infinite scroll', () => {
     expect(box!.y).toBeLessThan(viewport.height)
   })
 
+  test('a stream invalidation refreshes every loaded page', async ({ page, login }) => {
+    await login()
+    await page.goto('/customers')
+    await expect(page.locator('html')).toHaveAttribute('data-bridge-stream', 'open')
+    const rows = page.getByTestId('customer-row')
+    await page.locator('[data-bridge-scroll-edge="after"]').scrollIntoViewIfNeeded()
+    await expect(rows).toHaveCount(40)
+    await expect(page).toHaveURL(/\/customers\?page=2$/)
+
+    // Another user creates a customer; the `customers` channel invalidates the list.
+    const name = `Streamed ${Date.now()}`
+    const status = await page.evaluate(async (name) => {
+      const token = decodeURIComponent(document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] ?? '')
+      const response = await fetch('/customers', {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          'X-XSRF-TOKEN': token,
+        },
+        body: JSON.stringify({ name, email: `${Date.now()}@stream.example.com` }),
+      })
+      return response.status
+    }, name)
+    expect(status).toBe(201)
+
+    // Pages 1 and 2 are fetched again: the new customer is on top and both pages stay loaded.
+    await expect(rows.first()).toContainText(name)
+    await expect(rows).toHaveCount(40)
+    await expect(page).toHaveURL(/\/customers\?page=2$/)
+  })
+
   test('a search replaces the loaded pages and starts over', async ({ page, login }) => {
     await login()
     await page.goto('/customers')

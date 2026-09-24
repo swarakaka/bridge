@@ -203,6 +203,68 @@ describe('SSR renderer', () => {
 })
 
 describe('remembered state', () => {
+  it('restores remembered state after a full reload of an encrypted page, unless changed meanwhile', async () => {
+    const { useRemember, useForm } = await import('../src/index.js')
+    const Create = defineComponent({
+      setup() {
+        const tab = useRemember('tab', 'general')
+        const note = useRemember('note', '')
+        // dontRemember() is chained after useForm(): the restore must still apply.
+        const form = useForm({ name: '', password: '' }, { remember: 'create' }).dontRemember(
+          'password',
+        )
+        return () =>
+          h('div', [
+            h('span', { id: 'tab' }, tab.value),
+            h('span', { id: 'note' }, note.value),
+            h('span', { id: 'name' }, form.data.name),
+            h('button', {
+              id: 'fill',
+              onClick: () => {
+                tab.value = 'billing'
+                note.value = 'draft'
+                form.data.name = 'Initech'
+              },
+            }),
+            h('button', { id: 'type', onClick: () => (note.value = 'typed after reload') }),
+          ])
+      },
+    })
+    window.history.replaceState(null, '', '/customers/create')
+    const secret = page({
+      component: 'Create',
+      url: '/customers/create',
+      props: {},
+      meta: { encryptHistory: true },
+    })
+    embed(secret)
+    app = await createBridgeApp({
+      resolve: () => Create,
+      fetch: mockFetch(() => pageResponse(secret)),
+    })
+    document.getElementById('fill')!.click()
+    await flush()
+    await new Promise((r) => setTimeout(r, 20))
+    expect(window.history.state.sealed).toBeDefined()
+    app.bridge.destroy()
+    app.app!.unmount()
+
+    // The reload: a new app boots the same page over the sealed entry.
+    embed(secret)
+    app = await createBridgeApp({
+      resolve: () => Create,
+      fetch: mockFetch(() => pageResponse(secret)),
+    })
+    document.getElementById('type')!.click()
+    await flush()
+    await new Promise((r) => setTimeout(r, 30))
+
+    expect(document.getElementById('tab')!.textContent).toBe('billing')
+    expect(document.getElementById('name')!.textContent).toBe('Initech')
+    // Changed before the decrypted state arrived: the user's value stays.
+    expect(document.getElementById('note')!.textContent).toBe('typed after reload')
+  })
+
   it.each([
     ['plain', false],
     ['encrypted', true],

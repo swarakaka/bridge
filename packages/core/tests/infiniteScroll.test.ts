@@ -322,6 +322,96 @@ describe('InfiniteScroll', () => {
     expect(s.state).toMatchObject({ hasNext: false, announcement: 'Loaded more items' })
   })
 
+  it('re-fetches every loaded page on an invalidation instead of dropping to one', async () => {
+    let version = 1
+    const fetch = mockFetch((url, init) => {
+      if (header(init, 'X-Bridge-Only') === 'stats')
+        return pageResponse(
+          page({
+            component: 'Customers/Index',
+            url: new URL(url).pathname + new URL(url).search,
+            props: { stats: version },
+          }),
+        )
+      const n = Number(new URL(url).searchParams.get('page') ?? 1)
+      const fresh = listPage(n)
+      const data = (fresh.props as { customers: { data: Array<{ id: number }> } }).customers.data
+      data.forEach((item) => Object.assign(item, { v: version }))
+      return pageResponse(fresh)
+    })
+    const initial = listPage(2)
+    Object.assign(initial.props, { stats: 1 })
+    bridge = bridgeWith(fetch, { initialPage: initial })
+    const s = create()
+    s.start(before, after)
+    await s.loadNext()
+    expect(ids(bridge)).toEqual([3, 2, 1, 0])
+
+    version = 2
+    const calls = fetch.calls().length
+    await bridge.router.invalidate(['customers', 'stats'])
+    await tick()
+
+    const refreshed = fetch.calls().slice(calls)
+    expect(refreshed.map((c) => header(c.init, 'X-Bridge-Only'))).toEqual(
+      expect.arrayContaining(['customers', 'customers', 'stats']),
+    )
+    expect(
+      refreshed
+        .filter((c) => header(c.init, 'X-Bridge-Only') === 'customers')
+        .map((c) => new URL(c.url).search),
+    ).toEqual(['?page=2', '?page=3'])
+    const customers = (
+      bridge.store.page?.props as {
+        customers: { data: Array<{ id: number; v: number }> }
+      }
+    ).customers.data
+    expect(customers.map((c) => [c.id, c.v])).toEqual([
+      [3, 2],
+      [2, 2],
+      [1, 2],
+      [0, 2],
+    ])
+    expect(s.state).toMatchObject({ hasPrevious: true, hasNext: false })
+    expect(window.location.search).toBe('?page=3')
+  })
+
+  it('refreshes with invalidate("*") and reloads the other props without it', async () => {
+    // The server honours X-Bridge-Except: the '*' reload does not send the list.
+    const fetch = mockFetch((url, init) => {
+      const n = Number(new URL(url).searchParams.get('page') ?? 1)
+      const response = listPage(n)
+      if (header(init, 'X-Bridge-Except') === 'customers') response.props = {}
+      return pageResponse(response)
+    })
+    bridge = bridgeWith(fetch, { initialPage: listPage(2) })
+    const s = create()
+    s.start(before, after)
+    await s.loadNext()
+    const calls = fetch.calls().length
+
+    await bridge.router.invalidate('*')
+    await tick()
+
+    const later = fetch.calls().slice(calls)
+    expect(later.filter((c) => header(c.init, 'X-Bridge-Except') === 'customers')).toHaveLength(1)
+    expect(later.filter((c) => header(c.init, 'X-Bridge-Only') === 'customers')).toHaveLength(2)
+    expect(ids(bridge)).toEqual([3, 2, 1, 0])
+  })
+
+  it('reloads the prop normally once the list is gone', async () => {
+    const fetch = server()
+    bridge = bridgeWith(fetch, { initialPage: listPage(2) })
+    const s = create()
+    s.start(before, after)
+    await s.loadNext()
+    s.stop()
+
+    await bridge.router.invalidate(['customers'])
+    expect(header(fetch.calls().at(-1)!.init, 'X-Bridge-Only')).toBe('customers')
+    expect(ids(bridge)).toEqual([1, 0])
+  })
+
   it('stays manual without IntersectionObserver', () => {
     delete (window as { IntersectionObserver?: unknown }).IntersectionObserver
     bridge = bridgeWith(server(), { initialPage: listPage(2) })

@@ -80,6 +80,7 @@ export class Router {
   private unlistenHistory: (() => void) | null = null
   private unlistenScroll: (() => void) | null = null
   private unlistenPageShow: (() => void) | null = null
+  private readonly invalidationHandlers = new Map<string, () => Promise<void> | void>()
   private restoreId = 0
   private readonly d: RouterDependencies
 
@@ -95,9 +96,13 @@ export class Router {
       // An embedded page always carries its once values: remember them.
       this.d.once.complete(page)
     }
+    // After a full reload of an encrypted page the entry is sealed: its remembered
+    // state can only be read asynchronously, once the entry below replaced it.
+    const previous = this.d.window ? this.d.history.raw() : null
     // Always record the page we booted with: after a full reload the entry still
     // holds the page from before it, which back/forward would otherwise restore.
     if (page && this.d.window) this.d.history.push(page, this.d.store.current.key, true)
+    if (previous?.sealed) void this.restoreSealedRemember(previous)
     this.unlistenHistory = this.d.history.listen((state) => this.onPopState(state))
     this.unlistenScroll = this.trackScroll()
     this.unlistenPageShow = this.trackPageShow()
@@ -211,16 +216,41 @@ export class Router {
     )
   }
 
-  /** Reload the given prop keys ("*" reloads everything present on the page). */
+  /**
+   * Reload the given prop keys ("*" reloads everything present on the page).
+   * Props with an invalidation handler (`handleInvalidation`) are passed to it
+   * instead of being reloaded.
+   */
   invalidate(keys: string[] | '*'): Promise<VisitOutcome> | null {
     const page = this.d.store.page
     if (!page) return null
     // Cached pages may hold the data that just changed.
     this.d.cache.clear()
-    if (keys === '*') return this.reload()
-    const present = keys.filter((key) => this.d.store.hasProp(key.split('.')[0]!))
+    const named = (prop: string): boolean =>
+      keys === '*' || keys.some((key) => key.split('.')[0] === prop)
+    const handled = Array.from(this.invalidationHandlers.keys()).filter(
+      (prop) => named(prop) && this.d.store.hasProp(prop),
+    )
+    for (const prop of handled) void this.invalidationHandlers.get(prop)!()
+    if (keys === '*') return this.reload(handled.length > 0 ? { except: handled } : {})
+    const present = keys.filter((key) => {
+      const prop = key.split('.')[0]!
+      return this.d.store.hasProp(prop) && !handled.includes(prop)
+    })
     if (present.length === 0) return null
     return this.reload({ only: present })
+  }
+
+  /**
+   * Takes over invalidation of one prop: `invalidate()` (and stream
+   * `invalidate` events) call `handler` instead of reloading it. Infinite
+   * scroll uses this to re-fetch every loaded page. Returns an unregister function.
+   */
+  handleInvalidation(prop: string, handler: () => Promise<void> | void): () => void {
+    this.invalidationHandlers.set(prop, handler)
+    return () => {
+      if (this.invalidationHandlers.get(prop) === handler) this.invalidationHandlers.delete(prop)
+    }
   }
 
   /** Server-initiated navigation (stream `navigate` control event). */
@@ -326,6 +356,8 @@ export class Router {
       method?: VisitOptions['method']
       data?: VisitOptions['data']
       headers?: Record<string, string> | undefined
+      /** Partial selection, sent with `X-Bridge-Component` for the current page. */
+      only?: string[] | undefined
       signal?: AbortSignal | undefined
     } = {},
   ): Promise<ParsedResponse> {
@@ -334,6 +366,7 @@ export class Router {
       url: toUrl(url),
       data: options.data,
       headers: options.headers,
+      only: options.only,
       component: this.d.store.page?.component,
       build: this.d.build(),
       signal: options.signal,
@@ -776,6 +809,23 @@ export class Router {
 
     if (this.d.window)
       void this.visit(this.d.window.location.href, { replace: true, useCache: false })
+  }
+
+  /**
+   * Restores the remembered state of the sealed entry a full reload replaced
+   * (PLAN §23.1): keys written since boot win, and `restore` tells components.
+   */
+  private async restoreSealedRemember(previous: StoredHistoryState): Promise<void> {
+    const entry = this.d.history.raw()?.entry
+    const opened = await this.d.history.open(previous)
+    // The user moved on (a visit, back/forward) while the entry was decrypted.
+    if (!opened || this.d.history.raw()?.entry !== entry) return
+    const current = this.d.history.current()?.remember ?? {}
+    // Keys written since boot may be the user's: components decide for those.
+    for (const [key, value] of Object.entries(opened.remember))
+      if (!(key in current)) this.d.history.remember(key, value)
+    if (Object.keys(opened.remember).length > 0)
+      this.d.events.emit('restore', { values: opened.remember })
   }
 
   /**

@@ -11,14 +11,21 @@ const props = defineProps<{
 }>()
 
 // Bound to the endpoint, so `validate(field)` and `submit()` need no method and URL.
-const form = useForm(props.method, props.action, {
-    name: props.customer?.name ?? '',
-    email: props.customer?.email ?? '',
-    company: props.customer?.company ?? '',
-    status: props.customer?.status ?? 'active',
-    notes: props.customer?.notes ?? '',
-    avatar: null as File | null,
-})
+// `remember`: a half-filled form survives back/forward and, on these encrypted pages,
+// a full reload (the draft is decrypted and restored after the page loads).
+const form = useForm(
+    props.method,
+    props.action,
+    {
+        name: props.customer?.name ?? '',
+        email: props.customer?.email ?? '',
+        company: props.customer?.company ?? '',
+        status: props.customer?.status ?? 'active',
+        notes: props.customer?.notes ?? '',
+        avatar: null as File | null,
+    },
+    { remember: `customer-form:${props.action}` },
+).dontRemember('avatar')
 
 const onFile = (event: Event): void => {
     const input = event.target as HTMLInputElement

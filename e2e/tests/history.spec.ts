@@ -32,6 +32,27 @@ test.describe('history encryption', () => {
     await expect(page.getByTestId('customer-name')).toHaveCount(0)
   })
 
+  test('a draft on an encrypted page survives a full reload', async ({ page, login }) => {
+    await login()
+    await page.goto('/customers/create')
+    const sealedIv = () =>
+      page.evaluate(() => {
+        const state = window.history.state as { sealed?: { iv: Uint8Array } }
+        return state.sealed ? Array.from(state.sealed.iv).join(',') : null
+      })
+    await expect.poll(sealedIv).not.toBeNull()
+    const before = await sealedIv()
+    await page.getByLabel('Name').fill('Draft Customer')
+    // Wait for the entry to be sealed again, now holding the draft.
+    await expect.poll(sealedIv).not.toBe(before)
+    expect(await page.evaluate(() => JSON.stringify(window.history.state))).not.toContain('Draft')
+
+    await page.reload()
+    await page.locator('#app[data-bridge-hydrated]').waitFor()
+    // Restored after the page loaded, once the sealed entry was decrypted.
+    await expect(page.getByLabel('Name')).toHaveValue('Draft Customer')
+  })
+
   test('back restores a sealed page without a request while signed in', async ({ page, login }) => {
     await login()
     await page.goto('/customers')

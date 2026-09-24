@@ -287,6 +287,53 @@ describe('useJsonForm', () => {
 })
 
 describe('remembered state', () => {
+  it('restores remembered state after a full reload of an encrypted page', async () => {
+    const Create: PageComponent = () => {
+      const [tab, setTab] = useRemember('tab', 'general')
+      const form = useForm({ name: '', password: '' }, { remember: 'create' }).dontRemember(
+        'password',
+      )
+      return (
+        <div>
+          <span id="tab">{tab}</span>
+          <span id="name">{form.data.name}</span>
+          <button
+            id="fill"
+            onClick={() => {
+              setTab('billing')
+              form.setData('name', 'Initech')
+            }}
+          />
+        </div>
+      )
+    }
+    const secret = page({ component: 'Create', url: '/create', meta: { encryptHistory: true } })
+    await mount(
+      { Create },
+      secret,
+      mockFetch(() => pageResponse(secret)),
+    )
+    await act(async () => ($('#fill') as HTMLButtonElement).click())
+    await flush()
+    await act(async () => new Promise((r) => setTimeout(r, 20)))
+    expect(window.history.state.sealed).toBeDefined()
+    app!.bridge.destroy()
+    act(() => app!.root.unmount())
+
+    // The reload: a new app boots the same page over the sealed entry (mount keeps history.state).
+    document.body.innerHTML = `<script type="application/json" id="bridge-page">${JSON.stringify(secret)}</script><div id="app"></div>`
+    await act(async () => {
+      app = await createBridgeApp({
+        resolve: () => Create,
+        fetch: mockFetch(() => pageResponse(secret)),
+      })
+    })
+    await act(async () => new Promise((r) => setTimeout(r, 30)))
+
+    expect($('#tab')?.textContent).toBe('billing')
+    expect($('#name')?.textContent).toBe('Initech')
+  })
+
   it.each([
     ['plain', false],
     ['encrypted', true],

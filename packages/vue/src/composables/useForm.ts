@@ -6,7 +6,7 @@ import type {
   FormTransport,
   Method,
 } from '@swarakaka/bridge-core'
-import { onMounted, reactive, watch } from 'vue'
+import { onBeforeUnmount, onMounted, reactive, watch } from 'vue'
 import { useBridge } from '../injection.js'
 
 /**
@@ -105,10 +105,24 @@ export function rememberForm<T extends Record<string, unknown>>(
 ): void {
   if (!remember) return
   const key = `form:${remember}`
+  // The data last taken from history (or the data at mount): anything else is the user's.
+  // Set at mount, after chained setters such as dontRemember() applied.
+  let baseline = ''
+  let off: (() => void) | null = null
+  const apply = (restored: T | undefined): void => {
+    if (!restored) return
+    form.setData(form.rememberable(restored))
+    baseline = JSON.stringify(form.rememberable())
+  }
   onMounted(() => {
-    const restored = bridge.router.restore<T>(key)
-    if (restored) form.setData(form.rememberable(restored))
+    baseline = JSON.stringify(form.rememberable())
+    apply(bridge.router.restore<T>(key))
+    // Encrypted pages: after a full reload the data arrives once decrypted (PLAN §23.1).
+    off = bridge.on('restore', ({ values }) => {
+      if (key in values && JSON.stringify(form.rememberable()) === baseline) apply(values[key] as T)
+    })
   })
+  onBeforeUnmount(() => off?.())
   watch(
     () => form.data,
     () => bridge.router.remember(key, JSON.parse(JSON.stringify(form.rememberable()))),

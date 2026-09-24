@@ -46,7 +46,8 @@ The component renders two invisible edges, before and after its content, and obs
 - **The address follows the list.** After each load the address is replaced (no new history entry) with the page just loaded, so reloading or sharing it opens the list there, and scrolling up loads the earlier pages. `preserve-url` keeps the address unchanged instead.
 - **Back and forward** restore the whole loaded list from history, and loading continues from its ends.
 - **One load at a time.** A short page that leaves the edge in view loads the following page right after.
-- **Searches and filters start over.** A visit that replaces the prop (without `merge`), including a stream invalidation, resets both ends from the new page.
+- **Invalidations refresh what is loaded.** A stream `invalidate` naming the prop (or `router.invalidate()`) fetches every loaded page again, from the first, and replaces the list once with the result, so a long scrolled list stays long and new or changed rows appear in place. The address stays. Other invalidated props reload as usual.
+- **Searches and filters start over.** A visit that replaces the prop (without `merge`) resets both ends from the new page.
 
 ## Options
 
@@ -70,6 +71,8 @@ The controls appear when loading is manual: with `manual`, after `manual-after` 
 Keep ordinary pagination links next to the list if you want direct access to a page: following one replaces the list with that page.
 
 ## Custom markup
+
+The refresh uses `router.handleInvalidation(prop, handler)`, which other components can use to take over invalidation of a prop they manage.
 
 `useInfiniteScroll('customers', options)` returns the same state, `loadNext`/`loadPrevious`, and two refs, `before` and `after`, to attach to your own edge elements. Core exposes the controller as `InfiniteScroll` for other view layers.
 

@@ -1,5 +1,5 @@
 import type { BridgePage } from '@swarakaka/bridge-protocol'
-import type { PageStore } from './PageStore.js'
+import { combineProp, readMergeModes, type PageStore } from './PageStore.js'
 import { getDeep, isPlainObject } from './merge.js'
 import type { Router } from '../router/Router.js'
 
@@ -57,9 +57,12 @@ export interface InfiniteScrollState {
   announcement: string
 }
 
+/** The loaded range: the pages just outside it, its first page and how many pages it holds. */
 interface Ends {
   previous: ScrollPage
   next: ScrollPage
+  first: ScrollPage
+  pages: number
 }
 
 /**
@@ -79,7 +82,10 @@ export class InfiniteScroll {
    * defence for pages whose `meta` was replaced some other way.
    */
   private meta: ScrollMeta | null
-  private busy: ScrollDirection | null = null
+  private busy: ScrollDirection | 'refresh' | null = null
+  /** An invalidation arrived during a load: refresh when it ends. */
+  private refreshPending = false
+  private unregisterInvalidation: (() => void) | null = null
   private autoLoads = 0
   private announcement = ''
   private lastValue: unknown
@@ -119,6 +125,10 @@ export class InfiniteScroll {
     this.stop()
     this.sentinels = { before, after }
     this.unsubscribeStore = this.bridge.store.subscribe(() => this.onStoreChange())
+    // An invalidation re-fetches every loaded page instead of dropping back to one.
+    this.unregisterInvalidation = this.bridge.router.handleInvalidation(this.options.prop, () =>
+      this.refresh(),
+    )
     const Observer = (this.win as (Window & typeof globalThis) | null)?.IntersectionObserver
     if (typeof Observer === 'function' && !this.options.manual) {
       const observer = new Observer((entries) => this.onIntersect(entries), {
@@ -138,6 +148,8 @@ export class InfiniteScroll {
     this.observing = false
     this.unsubscribeStore?.()
     this.unsubscribeStore = null
+    this.unregisterInvalidation?.()
+    this.unregisterInvalidation = null
   }
 
   loadNext(): Promise<void> {
@@ -179,7 +191,11 @@ export class InfiniteScroll {
       const loaded = readScrollMeta(outcome.page, this.options.prop)
       if (loaded) {
         if (direction === 'next') this.ends.next = loaded.nextPage
-        else this.ends.previous = loaded.previousPage
+        else {
+          this.ends.previous = loaded.previousPage
+          this.ends.first = loaded.currentPage
+        }
+        this.ends.pages++
         this.announcement =
           typeof loaded.currentPage === 'number'
             ? `Loaded page ${loaded.currentPage}`
@@ -191,11 +207,71 @@ export class InfiniteScroll {
 
     this.busy = null
     this.emit()
+    this.flushRefresh()
 
     if (outcome.status !== 'success') return
     await (this.options.afterRender ?? (() => this.frames()))()
     if (anchored && this.win) this.win.scrollBy(0, this.scrollHeight() - heightBefore)
     this.recheck()
+  }
+
+  /**
+   * Re-fetches every loaded page, from the first, following each response's
+   * next page, and replaces the list once with the combined result (matched
+   * like any merge). The address and the upper end stay; the lower end and
+   * the page count follow what the server returned.
+   */
+  private async refresh(): Promise<void> {
+    if (this.busy) {
+      this.refreshPending = true
+      return
+    }
+    const { router, store } = this.bridge
+    const page = store.page
+    const meta = this.currentMeta()
+    if (!page || !meta) return
+
+    this.busy = 'refresh'
+    const prop = this.options.prop
+    const matchOn = readMergeModes(page)[prop]?.matchOn ?? []
+    let target = this.ends.first
+    let combined: unknown = undefined
+    let last: ScrollMeta | null = null
+    let fetched = 0
+    try {
+      while (fetched < this.ends.pages) {
+        const url = new URL(page.url, this.win?.location.href ?? 'http://localhost')
+        if (target === null) url.searchParams.delete(meta.pageName)
+        else url.searchParams.set(meta.pageName, String(target))
+        const parsed = await router.request(url, { only: [prop] })
+        // A navigation, a redirect or an error: keep the list as it is.
+        if (parsed.kind !== 'page' || store.page?.component !== page.component) return
+        const value = (parsed.page.props as Record<string, unknown>)[prop]
+        combined = fetched === 0 ? value : combineProp(combined, value, 'append', matchOn)
+        last = readScrollMeta(parsed.page, prop)
+        fetched++
+        target = last?.nextPage ?? null
+        if (target === null) break
+      }
+      if (fetched === 0) return
+      router.patchProps({ [prop]: combined })
+      this.ends.next = last?.nextPage ?? null
+      this.ends.pages = fetched
+      this.lastValue = this.value()
+      this.remember()
+    } catch {
+      // A failed request leaves the list as it is.
+    } finally {
+      this.busy = null
+      this.emit()
+      this.flushRefresh()
+    }
+  }
+
+  private flushRefresh(): void {
+    if (!this.refreshPending) return
+    this.refreshPending = false
+    void this.refresh()
   }
 
   private onIntersect(entries: IntersectionObserverEntry[]): void {
@@ -267,7 +343,12 @@ export class InfiniteScroll {
 
   private endsFromMeta(): Ends {
     const meta = this.currentMeta()
-    return { previous: meta?.previousPage ?? null, next: meta?.nextPage ?? null }
+    return {
+      previous: meta?.previousPage ?? null,
+      next: meta?.nextPage ?? null,
+      first: meta?.currentPage ?? null,
+      pages: 1,
+    }
   }
 
   private rememberKey(): string {
@@ -277,8 +358,19 @@ export class InfiniteScroll {
   /** Ends kept in history, if they belong to the list now shown (same length). */
   private restoredEnds(): Ends | null {
     const saved = this.bridge.router.restore<Ends & { length: number }>(this.rememberKey())
-    if (!saved || typeof saved.length !== 'number' || saved.length !== this.length()) return null
-    return { previous: saved.previous, next: saved.next }
+    if (
+      !saved ||
+      typeof saved.length !== 'number' ||
+      typeof saved.pages !== 'number' ||
+      saved.length !== this.length()
+    )
+      return null
+    return {
+      previous: saved.previous,
+      next: saved.next,
+      first: saved.first ?? null,
+      pages: saved.pages,
+    }
   }
 
   private remember(): void {

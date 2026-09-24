@@ -98,4 +98,12 @@ export interface RouterEvents extends Record<string, unknown> {
   finish: Visit
   navigate: { page: BridgePage; visit: Visit | null }
   cancel: Visit
+  /**
+   * Remembered state arrived late: after a full reload of an encrypted page it
+   * is decrypted asynchronously (PLAN §23.1). `values` holds every decrypted
+   * key; the router already wrote the ones history did not have yet.
+   * `useRemember` and form `remember` apply theirs when the user has not
+   * changed the value since mount.
+   */
+  restore: { values: Record<string, unknown> }
 }

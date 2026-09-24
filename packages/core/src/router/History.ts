@@ -216,6 +216,11 @@ export class History {
       })
   }
 
+  /** The current entry as stored (sealed entries stay sealed). */
+  raw(): StoredHistoryState | null {
+    return this.stored()
+  }
+
   private stored(): StoredHistoryState | null {
     const state = this.win?.history.state
     return isStoredHistoryState(state) ? state : null

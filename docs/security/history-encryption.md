@@ -58,7 +58,7 @@ You rarely need to call it yourself: with `history.clear_on_logout` (default `tr
 ## Requirements and limits
 
 - Web Crypto works only in a secure context: HTTPS, or `localhost`/`127.0.0.1` during development. Without it, encrypted pages are stored without their page and remembered state, never in clear, and back/forward requests them again. The console shows one warning.
-- Remembered state of an encrypted page does not survive a full page reload: after the reload the entry can only be decrypted asynchronously, and components read remembered state while they are set up.
+- After a full reload, remembered state of an encrypted page (`useRemember`, form `remember`) is restored a moment after the page appears, once the entry is decrypted. A value the user changed in the meantime is kept. Code that reads `router.restore()` itself can listen for the `restore` [event](/advanced/events).
 - This protects Bridge's own copies. The browser's HTTP cache is covered by `Cache-Control: private, no-store` on authenticated HTML shells (see [Caching and private data](/security/caching)); data your application writes elsewhere (its own `localStorage`, a service worker cache) is yours to clear.
 
 The wire format (`meta.encryptHistory`, `meta.clearHistory`) is defined in `packages/protocol/spec/page.md` §10.

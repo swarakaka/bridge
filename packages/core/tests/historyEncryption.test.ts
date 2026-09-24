@@ -145,6 +145,51 @@ describe('encrypted history entries', () => {
     expect(opened).toMatchObject({ page: { url: '/customers/1?page=2' }, remember: { note: 1 } })
   })
 
+  it('restores remembered state of an encrypted page after a full reload', async () => {
+    bridge = bridgeWith(
+      mockFetch(() => pageResponse(secret())),
+      { initialPage: secret() },
+    )
+    bridge.router.remember('note', { text: 'draft' })
+    bridge.router.remember('tab', 'billing')
+    await settle()
+    expect(stored().sealed).toBeDefined()
+    bridge.destroy()
+
+    // The reload: a new document boots the same page over the sealed entry.
+    bridge = bridgeWith(
+      mockFetch(() => pageResponse(secret())),
+      { initialPage: secret() },
+    )
+    const restored: Array<Record<string, unknown>> = []
+    bridge.on('restore', ({ values }) => void restored.push(values))
+    // Written since boot: wins over the decrypted value.
+    bridge.router.remember('tab', 'general')
+    expect(bridge.router.restore('note')).toBeUndefined()
+    await settle()
+
+    // Every decrypted value is offered; history only took the key it did not have.
+    expect(restored).toEqual([{ note: { text: 'draft' }, tab: 'billing' }])
+    expect(bridge.router.restore('note')).toEqual({ text: 'draft' })
+    expect(bridge.router.restore('tab')).toBe('general')
+  })
+
+  it('drops the late restore when the user already left the page', async () => {
+    const fetch = mockFetch(() => pageResponse(page({ url: '/customers/2' })))
+    bridge = bridgeWith(fetch, { initialPage: secret() })
+    bridge.router.remember('note', 1)
+    await settle()
+    bridge.destroy()
+
+    bridge = bridgeWith(fetch, { initialPage: secret() })
+    const restored = vi.fn()
+    bridge.on('restore', restored)
+    await bridge.router.visit('/customers/2')
+    await settle()
+    expect(restored).not.toHaveBeenCalled()
+    expect(bridge.router.restore('note')).toBeUndefined()
+  })
+
   it('keeps the latest of several quick writes', async () => {
     bridge = bridgeWith(mockFetch(() => pageResponse(secret())))
     await bridge.router.visit('/customers/1')
