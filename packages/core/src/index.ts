@@ -42,6 +42,7 @@ export {
   readMergeModes,
   appendProp,
   combineProp,
+  mergePartialMeta,
 } from './pages/PageStore.js'
 export type {
   PageState,

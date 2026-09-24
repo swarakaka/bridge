@@ -1,6 +1,50 @@
 import type { BridgePage, BridgeStreamControl } from '@swarakaka/bridge-protocol'
 import { getDeep, hasDeep, isPlainObject, mergeValue, setDeep, type MergeMode } from './merge.js'
 
+/** `meta` members that describe individual props: lists of keys, and maps keyed by prop. */
+const PROP_LISTS = ['merge', 'prepend', 'deepMerge'] as const
+const PROP_MAPS = ['matchOn', 'once', 'scroll'] as const
+
+/**
+ * The `meta` of a page after merging a partial response (spec/page.md §3). A
+ * partial response only describes the props it carries, so members about
+ * props are updated per prop: entries for props in the response come from it,
+ * entries for other props are kept. Page-level members (`encryptHistory`,
+ * application meta) come from the response, like a full page's.
+ */
+export function mergePartialMeta(
+  previous: BridgePage['meta'],
+  response: BridgePage,
+): BridgePage['meta'] {
+  const incoming = (response.meta ?? {}) as Record<string, unknown>
+  const before = (previous ?? {}) as Record<string, unknown>
+  const onceIn = isPlainObject(incoming.once) ? incoming.once : {}
+  const covered = new Set([...Object.keys(response.props as object), ...Object.keys(onceIn)])
+  const scoped = new Set<string>([...PROP_LISTS, ...PROP_MAPS])
+
+  const out: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(incoming)) if (!scoped.has(key)) out[key] = value
+
+  for (const member of PROP_LISTS) {
+    const kept = Array.isArray(before[member])
+      ? (before[member] as unknown[]).filter((k) => typeof k === 'string' && !covered.has(k))
+      : []
+    const added = Array.isArray(incoming[member]) ? (incoming[member] as unknown[]) : []
+    const list = [...kept, ...added.filter((k) => !kept.includes(k))]
+    if (list.length > 0) out[member] = list
+  }
+
+  for (const member of PROP_MAPS) {
+    const kept = isPlainObject(before[member])
+      ? Object.fromEntries(Object.entries(before[member]).filter(([k]) => !covered.has(k)))
+      : {}
+    const map = { ...kept, ...(isPlainObject(incoming[member]) ? incoming[member] : {}) }
+    if (Object.keys(map).length > 0) out[member] = map
+  }
+
+  return Object.keys(out).length > 0 ? (out as BridgePage['meta']) : undefined
+}
+
 /** A visit's merge opt-in: each key's own mode, or one direction for all merge keys. */
 export type MergeOption = boolean | 'append' | 'prepend'
 
@@ -270,14 +314,16 @@ export class PageStore implements OptimisticTarget {
           : value
       }
       const props = this.holdOptimistic(merged)
+      const { meta: _previousMeta, ...rest } = previous
+      const meta = mergePartialMeta(previous.meta, page)
       this.state = {
         ...this.state,
         page: {
-          ...previous,
+          ...rest,
           url: page.url,
           build: page.build,
           props,
-          ...(page.meta ? { meta: page.meta } : {}),
+          ...(meta ? { meta } : {}),
         },
         // A background merge (deferred or lazy props, an invalidation) must not
         // dismiss an error shown in place of the page; a full page swap does.

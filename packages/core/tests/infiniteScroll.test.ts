@@ -158,7 +158,7 @@ describe('InfiniteScroll', () => {
     expect(scrollBy).toHaveBeenCalledWith(0, 400)
   })
 
-  it('keeps loading after a partial response for another prop dropped meta.scroll', async () => {
+  it('keeps meta.scroll and loading after a partial response for another prop', async () => {
     const fetch = mockFetch((url, init) =>
       pageResponse(
         header(init, 'X-Bridge-Only') === 'stats'
@@ -175,9 +175,10 @@ describe('InfiniteScroll', () => {
     bridge = bridgeWith(fetch, { initialPage: listPage(2) })
     const s = create()
     s.start(before, after)
-    // A deferred group or another reload: its page has no meta.scroll.
+    // A deferred group or another reload: its page does not mention the scroll prop.
     await bridge.router.reload({ only: ['stats'] })
-    expect(bridge.store.page?.meta?.scroll).toBeUndefined()
+    expect(bridge.store.page?.meta?.scroll?.customers?.nextPage).toBe(3)
+    expect(bridge.store.page?.meta?.encryptHistory).toBe(false)
 
     FakeObserver.instances[0]!.fire(after)
     await tick()

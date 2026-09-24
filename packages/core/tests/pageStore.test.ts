@@ -71,6 +71,66 @@ describe('PageStore', () => {
     expect(store.current.error).toBeNull()
   })
 
+  it('updates per-prop meta members only for the props a partial response carries', () => {
+    const store = new PageStore(
+      page({
+        props: { customers: [1], stats: 1, plans: ['a'] },
+        meta: {
+          title: 'Old',
+          encryptHistory: true,
+          merge: ['customers', 'stats'],
+          matchOn: { customers: ['id'], stats: ['id'] },
+          once: { plans: { key: 'plans', expiresAt: null } },
+          scroll: {
+            customers: {
+              pageName: 'page',
+              dataPath: 'data',
+              currentPage: 1,
+              previousPage: null,
+              nextPage: 2,
+            },
+          },
+        },
+      }),
+    )
+    store.setPage(
+      page({
+        props: { stats: 2 },
+        meta: { title: 'New', prepend: ['stats'] },
+      }),
+      { partial: true },
+    )
+    expect(store.page?.meta).toEqual({
+      // Page-level members come from the response, as for a full page.
+      title: 'New',
+      // `stats` moved from merge to prepend and lost its match path; `customers` and `plans` kept theirs.
+      merge: ['customers'],
+      prepend: ['stats'],
+      matchOn: { customers: ['id'] },
+      once: { plans: { key: 'plans', expiresAt: null } },
+      scroll: {
+        customers: {
+          pageName: 'page',
+          dataPath: 'data',
+          currentPage: 1,
+          previousPage: null,
+          nextPage: 2,
+        },
+      },
+    })
+  })
+
+  it('counts held once props as carried by the response', () => {
+    const store = new PageStore(
+      page({ props: { plans: ['a'] }, meta: { once: { plans: { key: 'old', expiresAt: 1 } } } }),
+    )
+    store.setPage(
+      page({ props: {}, meta: { once: { plans: { key: 'plans', expiresAt: null } } } }),
+      { partial: true },
+    )
+    expect(store.page?.meta?.once).toEqual({ plans: { key: 'plans', expiresAt: null } })
+  })
+
   it('keeps an error shown in place through partial merges, not through a page swap', () => {
     const store = new PageStore(page())
     store.setError({ status: 403, kind: 'forbidden', message: 'no' })

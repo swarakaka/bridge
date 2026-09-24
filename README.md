@@ -24,7 +24,7 @@ public function index()
 
 Bridge is designed as `Laravel → Bridge Protocol → Client`, so the Laravel package has no Vue-specific assumptions and React, mobile, and CLI clients can consume the same backend.
 
-> **Status: 1.0.1, the first public release.** All packages share one version: `swarakaka/bridge-laravel` on Packagist and `@swarakaka/bridge-protocol`, `-core`, `-vue` and `-react` on npm (the React adapter is experimental). Release steps are in [`CONTRIBUTING.md`](CONTRIBUTING.md#releasing-maintainers). [`development/PLAN.md`](development/PLAN.md) holds the design, the phase breakdown and every deviation made since.
+> **Status: 1.x (packages at 1.0.4; 1.0.1 was the first public release). 2.0.0 is next:** it changes the facade layout (see [`packages/laravel/UPGRADE.md`](packages/laravel/UPGRADE.md)) and adds the post-1.0 features in the docs (history encryption, polling, load when visible, once props, merge modes, infinite scroll, forms and optimistic updates). All packages share one version: `swarakaka/bridge-laravel` on Packagist and `@swarakaka/bridge-protocol`, `-core`, `-vue` and `-react` on npm (the React adapter has the same features as Vue and is still labelled experimental). Release steps are in [`CONTRIBUTING.md`](CONTRIBUTING.md#releasing-maintainers). [`development/PLAN.md`](development/PLAN.md) holds the design, the phase breakdown and every deviation made since.
 
 ## Packages
 

@@ -44,4 +44,4 @@ What happens for each client:
 
 ## Status
 
-Bridge is at 1.0 for the Laravel package and the Vue client. The React adapter is an experimental skeleton. See [Versioning](/reference/versioning).
+Bridge is at 1.x for the Laravel package and the Vue client. The React adapter has the same features as the Vue client and is still labelled experimental: its API may change in a minor release. See [Versioning](/reference/versioning).

@@ -56,6 +56,7 @@ Rules:
 
 - The server MUST evaluate `X-Bridge-Component`; on mismatch it MUST ignore the selection and return a full page.
 - The client MUST merge a partial response into the current page only when `component` equals the current component; otherwise it MUST treat the response as a full page swap.
+- A partial response's `meta` describes only the props it carries. When merging, the client MUST update the per-prop members (`merge`, `prepend`, `deepMerge`, `matchOn`, `once`, `scroll`) only for those props, including once props listed in the response's `meta.once`, and keep the entries of other props. Other `meta` members are taken from the response, as for a full page.
 - Merging replaces each returned key wholesale. Keys listed in a merge member (below) MAY instead be combined with the current value when the client opted in for that request, e.g. "load more". Requests that did not opt in, including invalidation reloads, replace the key.
 
 Merge members of `meta`, each listing a key at most once across the three lists:

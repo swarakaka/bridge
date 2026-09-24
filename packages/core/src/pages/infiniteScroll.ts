@@ -74,8 +74,9 @@ interface Ends {
 export class InfiniteScroll {
   private ends: Ends
   /**
-   * The last `meta.scroll` entry seen: a partial response for another prop
-   * (a deferred group) replaces the page's `meta` and drops it.
+   * The last `meta.scroll` entry seen. Partial responses keep the entries of
+   * props they do not carry (`mergePartialMeta`); this is a second line of
+   * defence for pages whose `meta` was replaced some other way.
    */
   private meta: ScrollMeta | null
   private busy: ScrollDirection | null = null
