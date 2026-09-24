@@ -199,3 +199,73 @@ describe('once props in the router', () => {
     expect(header(fetch.calls()[0]!.init, 'X-Bridge-Once')).toBeUndefined()
   })
 })
+
+describe('combined hints', () => {
+  const dashboard = (props: Record<string, unknown>, extra: Partial<BridgePage> = {}): BridgePage =>
+    page({ component: 'Dashboard', url: '/dashboard', props, ...extra })
+
+  it('sends no deferred request for a held deferred-once prop, and fills it', async () => {
+    // The server's answer to a client holding `signups`: neither sent nor deferred.
+    const held = dashboard(
+      { recent: [1] },
+      {
+        deferred: { default: ['stats'] },
+        meta: { once: { signups: { key: 'signups', expiresAt: null } } },
+      },
+    )
+    const fetch = mockFetch((url, init) =>
+      pageResponse(
+        url.endsWith('/customers')
+          ? page()
+          : header(init, 'X-Bridge-Only') === 'stats'
+            ? dashboard({ stats: { n: 1 } })
+            : header(init, 'X-Bridge-Only') === 'signups'
+              ? dashboard(
+                  { signups: [3] },
+                  { meta: { once: { signups: { key: 'signups', expiresAt: null } } } },
+                )
+              : held,
+      ),
+    )
+    bridge = bridgeWith(fetch, {
+      initialPage: dashboard(
+        { recent: [1] },
+        { deferred: { default: ['stats'], charts: ['signups'] } },
+      ),
+    })
+    await tick()
+    // First visit: the deferred request delivered the value and the store kept it.
+    expect(bridge.store.page?.props).toMatchObject({ signups: [3], stats: { n: 1 } })
+
+    await bridge.router.visit('/customers')
+    await bridge.router.visit('/dashboard')
+    await tick()
+
+    const only = fetch.calls().map((c) => header(c.init, 'X-Bridge-Only'))
+    expect(only.filter((o) => o === 'signups')).toHaveLength(1)
+    expect(header(fetch.calls().at(-2)!.init, 'X-Bridge-Once')).toBe('signups')
+    expect(bridge.store.page?.props).toMatchObject({ signups: [3], stats: { n: 1 } })
+  })
+
+  it('appends a deferred-merge prop on a later merging reload', async () => {
+    const withFeed = (ids: number[]) =>
+      dashboard(
+        { feed: ids.map((id) => ({ id })) },
+        { meta: { merge: ['feed'], matchOn: { feed: ['id'] } } },
+      )
+    let next = [1]
+    const fetch = mockFetch(() => pageResponse(withFeed(next)))
+    bridge = bridgeWith(fetch, {
+      initialPage: dashboard({}, { deferred: { default: ['feed'] } }),
+    })
+    await tick()
+    expect((bridge.store.page?.props as Record<string, unknown>).feed).toEqual([{ id: 1 }])
+
+    next = [1, 2]
+    await bridge.router.reload({ only: ['feed'], merge: true })
+    expect((bridge.store.page?.props as Record<string, unknown>).feed).toEqual([
+      { id: 1 },
+      { id: 2 },
+    ])
+  })
+})

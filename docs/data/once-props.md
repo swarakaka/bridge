@@ -64,7 +64,7 @@ Mutations and ordinary reloads keep them. If the client lost a value while a res
 
 ## Rules
 
-- `Bridge::once()` cannot wrap another hint (`lazy`, `defer`, `always`, `merge`), and a hint cannot resolve to one.
+- To keep a deferred or lazy prop once, chain the modifier instead of wrapping: `Bridge::defer(fn () => ...)->once()` (see [Combining hints](/data/deferred-props#combining-hints)). `Bridge::once()` cannot wrap another hint, a hint cannot resolve to one, `always()` takes no modifier, and a prop cannot be both `once` and `merge`.
 - A partial reload lists only the once props it selected.
 - JSON mode resolves once props like plain props and ignores `X-Bridge-Once`: JSON clients have no page store to fill from.
 - Page responses carry `X-Bridge-Once` in `Vary`.

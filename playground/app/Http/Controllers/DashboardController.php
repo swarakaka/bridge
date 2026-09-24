@@ -26,7 +26,10 @@ class DashboardController extends Controller
                 ->limit(30)
                 ->get()
                 ->map(fn ($row) => ['day' => $row->day, 'count' => (int) $row->count])
-                ->all(), 'charts'),
+                ->all(), 'charts')
+                // Deferred and once: loaded after the first render, then reused by this tab for
+                // five minutes, so returning to the dashboard sends no `charts` request.
+                ->once(ttl: 300),
         ]);
     }
 }

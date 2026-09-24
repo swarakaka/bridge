@@ -29,6 +29,33 @@ test.describe('partial reloads and deferred props', () => {
     await expect(page.getByTestId('stats-skeleton')).toHaveCount(0)
   })
 
+  test('a deferred-once chart loads on the first visit only', async ({ page, login }) => {
+    await login()
+    const charts: string[] = []
+    const onceHeaders: string[] = []
+    page.on('request', (request) => {
+      const only = request.headers()['x-bridge-only']
+      if (only?.includes('signups')) charts.push(only)
+      const held = request.headers()['x-bridge-once']
+      if (held) onceHeaders.push(held)
+    })
+
+    await page.goto('/')
+    await expect(page.getByTestId('signups')).toBeVisible()
+    expect(charts).toEqual(['signups'])
+
+    // Back to the dashboard inside the app: the tab holds the chart, so it is filled in.
+    await page.getByRole('link', { name: 'Customers', exact: true }).click()
+    await expect(page).toHaveURL(/\/customers$/)
+    await page.getByRole('link', { name: 'Dashboard', exact: true }).click()
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
+    await expect(page.getByTestId('signups')).toBeVisible()
+    await expect(page.getByTestId('stat-customers')).toHaveText(/\d+/)
+
+    expect(charts).toEqual(['signups'])
+    expect(onceHeaders.some((held) => held.split(',').includes('signups'))).toBe(true)
+  })
+
   test('pagination links reload only the customers prop and preserve scroll', async ({
     page,
     login,

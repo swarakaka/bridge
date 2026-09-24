@@ -86,6 +86,19 @@ Servers may mark props with delivery hints. The hints are not visible on the wir
 
 After rendering a page with a non-empty `deferred`, the client SHOULD issue one partial request per group with `X-Bridge-Only: <keys of group>` and `X-Bridge-Component: <component>`, in parallel, and abort them if the user navigates away.
 
+### 4.1 Combinations
+
+A prop has one delivery (plain, lazy, deferred or always) and may add merge (§3) and once (§11); always takes neither, and a prop is never both merge and once. The server applies selection, then the delivery, then once, then merge:
+
+| Prop             | Full page request, value not held          | Full page request, key held (§11)                     | Partial request naming the key       |
+| ---------------- | ------------------------------------------ | ----------------------------------------------------- | ------------------------------------ |
+| deferred + once  | listed in `deferred`; no `meta.once` entry | absent from `props` and `deferred`; `meta.once` entry | included; `meta.once` entry          |
+| lazy + once      | absent; no `meta.once` entry               | absent; `meta.once` entry                             | included; `meta.once` entry          |
+| deferred + merge | listed in `deferred`; no merge member      | —                                                     | included; listed in its merge member |
+| lazy + merge     | absent                                     | —                                                     | included; listed in its merge member |
+
+A `meta.once` entry for an absent value tells the client to fill it from its store, so a held deferred-once prop causes no deferred request. A once prop marked fresh by the application is treated as not held.
+
 ## 5. Build conflicts
 
 If a **GET** page request carries `X-Bridge-Build` and it differs from the server's current build, the server MUST respond:

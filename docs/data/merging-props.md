@@ -92,6 +92,10 @@ router.get(
 )
 ```
 
+## Deferred and lazy merge props
+
+`->merge()`, `->prepend()`, `->deep()` and `->matchOn()` also chain onto deferred and lazy props, for a list loaded after render and extended later: `Bridge::defer(fn () => $posts->paginate(20))->merge()->matchOn('data.id')`. See [Combining hints](/data/deferred-props#combining-hints).
+
 ## On the wire
 
 The page lists merge props in `meta.merge` (append), `meta.prepend` and `meta.deepMerge`, and match paths in `meta.matchOn`. JSON mode leaves these out; API clients get the plain value. See `packages/protocol/spec/page.md` §3.

@@ -1,0 +1,15 @@
+{
+  "protocol": 1,
+  "type": "page",
+  "component": "Dashboard",
+  "url": "/dashboard",
+  "props": {
+    "auth": { "user": { "id": 1, "name": "Ada" } },
+    "recentCustomers": [{ "id": 22, "name": "Globex" }]
+  },
+  "build": "3f9c1a",
+  "deferred": { "default": ["stats"] },
+  "meta": {
+    "once": { "signups": { "key": "signups", "expiresAt": null } }
+  }
+}
