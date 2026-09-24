@@ -1,0 +1,9 @@
+{
+  "protocol": 1,
+  "type": "page",
+  "component": "Auth/Login",
+  "url": "/login",
+  "props": {},
+  "build": "3f9c1a",
+  "meta": { "clearHistory": true }
+}

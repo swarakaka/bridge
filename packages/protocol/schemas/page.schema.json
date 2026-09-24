@@ -19,7 +19,26 @@
         "minItems": 1
       }
     },
-    "meta": { "type": "object" }
+    "meta": {
+      "type": "object",
+      "description": "Additive extensions (spec/page.md §1). Clients MUST ignore unknown members.",
+      "properties": {
+        "merge": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Prop keys clients may append on opted-in partial reloads (§3)."
+        },
+        "encryptHistory": {
+          "type": "boolean",
+          "description": "Store this page encrypted in the client's history (§10)."
+        },
+        "clearHistory": {
+          "type": "boolean",
+          "description": "Make earlier encrypted history entries unreadable before storing this page (§10)."
+        }
+      },
+      "additionalProperties": true
+    }
   },
   "required": ["protocol", "type", "component", "url", "props", "build"],
   "additionalProperties": false

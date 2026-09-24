@@ -28,6 +28,8 @@ return Bridge::render('Public/Post', [...])
 
 Prefetched pages live in a short in-memory cache (30 s fresh, 30 s stale-while-revalidate) that is cleared after mutations, after `401`, `403` and `409` responses and on build conflicts. It never persists beyond the tab.
 
+Pages kept in browser history for back/forward can be encrypted and cleared on logout; see [History encryption](/security/history-encryption).
+
 ## Other controls
 
 - `X-Bridge-Location` is emitted only for app-controlled redirects; the client follows other origins only with `allowExternalNavigate`.

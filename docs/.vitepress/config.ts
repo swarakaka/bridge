@@ -90,6 +90,7 @@ export default defineConfig({
           { text: 'Authorization', link: '/security/authorization' },
           { text: 'CSRF protection', link: '/security/csrf' },
           { text: 'Caching and private data', link: '/security/caching' },
+          { text: 'History encryption', link: '/security/history-encryption' },
         ],
       },
       {

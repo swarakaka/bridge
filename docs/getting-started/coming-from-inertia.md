@@ -48,4 +48,6 @@ Bridge borrows Inertia's developer experience: controllers return pages, page co
 
 **Merge props are opt-in per visit.** A "load more" visit passes `merge: true`; invalidations and searches replace. See [Merging props](/data/merging-props).
 
-**No history encryption, polling, "load when visible" or "once" props yet.** Streams cover most polling use cases; the others are candidates for later releases.
+**History encryption works the same way** (`bridge.history.encrypt`, the `bridge.encrypt-history` middleware, `Bridge::encryptHistory()`, `Bridge::clearHistory()`), with one difference: signing out clears history by default (`history.clear_on_logout`), so you do not call `clearHistory()` in your logout action. See [History encryption](/security/history-encryption).
+
+**No polling, "load when visible" or "once" props yet.** Streams cover most polling use cases; the others are candidates for later releases.

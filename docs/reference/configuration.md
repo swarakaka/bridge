@@ -16,6 +16,8 @@
 | `flash.keys`               | `['message', 'level']`   | Session keys read into the `flash` shared prop.                                                         |
 | `cache.etag`               | `true`                   | Weak `ETag` on page and JSON responses.                                                                 |
 | `csrf.skip_for_bearer`     | `true`                   | Let the CSRF variant skip bearer requests without a session cookie.                                     |
+| `history.encrypt`          | `BRIDGE_HISTORY_ENCRYPT` | Store every page encrypted in browser history. See [History encryption](/security/history-encryption).  |
+| `history.clear_on_logout`  | `true`                   | Clear history (`Bridge::clearHistory()`) on Laravel's `Logout` event.                                   |
 | `ssr.enabled`              | `false`                  | Render HTML through the SSR server.                                                                     |
 | `ssr.url`                  | `http://127.0.0.1:13714` | SSR server address.                                                                                     |
 | `ssr.timeout`              | `2.0`                    | Seconds before falling back to client rendering.                                                        |

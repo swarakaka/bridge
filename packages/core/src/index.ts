@@ -50,8 +50,9 @@ export { mergeValue, setDeep, getDeep, hasDeep, isPlainObject } from './pages/me
 export type { MergeMode } from './pages/merge.js'
 export { PageCache } from './cache/PageCache.js'
 export type { PageCacheOptions, CacheLookup, CacheEntry } from './cache/PageCache.js'
-export { History, isHistoryState } from './router/History.js'
-export type { HistoryState, ScrollPositions } from './router/History.js'
+export { History, isHistoryState, isStoredHistoryState } from './router/History.js'
+export type { SealedEntry } from './router/HistoryCipher.js'
+export type { HistoryState, StoredHistoryState, ScrollPositions } from './router/History.js'
 export {
   captureScroll,
   restoreScroll,

@@ -44,6 +44,8 @@ const login = useForm('login', { email: '', password: '' }).dontRemember('passwo
 
 Scroll positions are remembered automatically. See [Scroll management](/advanced/scroll-management).
 
+On pages stored with [history encryption](/security/history-encryption), remembered state is encrypted together with the page.
+
 ## What is not remembered
 
 Page props come from the history entry's stored page, not from the server, so a page restored from history shows the data it had when the user left it. Call `router.reload()` in `onMounted` if freshness matters, or rely on [stream invalidations](/realtime/streams).

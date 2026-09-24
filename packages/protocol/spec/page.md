@@ -28,7 +28,7 @@ A successful page response has status `200` and body:
 | `props`     | object         | yes      | The prop bag. Always an object, possibly empty. Includes shared props.                                                                                    |
 | `build`     | string \| null | yes      | Current asset build identifier, or `null` when the server has none configured.                                                                            |
 | `deferred`  | object         | no       | Map of group name → array of prop keys that are absent from `props` and SHOULD be requested after render (§4). Omitted or empty when nothing is deferred. |
-| `meta`      | object         | no       | Reserved for additive extensions. Clients MUST ignore unknown members.                                                                                    |
+| `meta`      | object         | no       | Additive extensions. Clients MUST ignore unknown members. Defined members: `merge` (§3), `encryptHistory` and `clearHistory` (§10).                       |
 
 Clients MUST ignore unknown top-level members. Servers MUST NOT emit members not defined here or in a later version of this specification.
 
@@ -106,3 +106,23 @@ Non-2xx responses in page mode carry the Bridge error object defined in [errors.
 ## 9. Non-Bridge responses
 
 If a client receives a response to a page request whose `Content-Type` is not `application/vnd.bridge+json` (for example an HTML login page produced by a proxy), it MUST NOT attempt to interpret the body as a page. The recommended behaviour is to surface the response to the application (debug) or perform a full document reload (production).
+
+## 10. History
+
+Clients that keep page objects in the browser's session history (so back/forward can restore a page without a request) store the props with them. Two `meta` members let the server protect that copy.
+
+| Member           | Type    | Meaning                                                                                                   |
+| ---------------- | ------- | --------------------------------------------------------------------------------------------------------- |
+| `encryptHistory` | boolean | When `true`, the client SHOULD store this page, and any per-entry state it keeps with it, encrypted.      |
+| `clearHistory`   | boolean | When `true`, the client SHOULD make every entry it encrypted earlier unreadable before storing this page. |
+
+Servers omit both members when they are not `true`. Both MAY appear on any page object, including one embedded in an HTML shell and a partial response.
+
+Client obligations:
+
+- An encrypted entry is sealed with a key that is not stored in the history entry itself and that does not outlive the browser tab's session. Only data that carries no application state (such as scroll positions) MAY stay in clear.
+- If an entry cannot be decrypted (the key is gone or was replaced, or the data does not authenticate), the client MUST treat it as holding no page and request the URL from the server, which applies authentication again.
+- If encryption is not available (for example outside a secure context), the client MUST NOT store an entry marked `encryptHistory` in clear; it stores the entry without its page.
+- `clearHistory` replaces the key. A client SHOULD also make other browsing contexts of the same origin replace theirs, and SHOULD drop cached page objects.
+
+A server that asks for `clearHistory` on a response that is a redirect (for example after logging a user out) SHOULD carry the request over to the next page object it returns to that client (typically through the session).

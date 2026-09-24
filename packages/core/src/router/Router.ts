@@ -4,7 +4,7 @@ import type { Emitter } from '../events/Emitter.js'
 import type { RequestManager } from '../http/RequestManager.js'
 import { parseResponse, type ParsedResponse } from '../http/responseParser.js'
 import type { OptimisticSettle, PageStore } from '../pages/PageStore.js'
-import type { History, HistoryState } from './History.js'
+import type { History, HistoryState, StoredHistoryState } from './History.js'
 import { captureScroll, resetScroll, restoreScroll } from './Scroll.js'
 import { isSameOrigin, relativeUrl, toUrl } from './url.js'
 import type {
@@ -65,6 +65,7 @@ export class Router {
   private reloadTimer: ReturnType<typeof setTimeout> | null = null
   private unlistenHistory: (() => void) | null = null
   private unlistenScroll: (() => void) | null = null
+  private unlistenPageShow: (() => void) | null = null
   private restoreId = 0
   private readonly d: RouterDependencies
 
@@ -75,17 +76,20 @@ export class Router {
   /** Registers history listeners and records the initial entry. Call once after the page is available. */
   init(): void {
     const page = this.d.store.page
+    if (page) this.applyHistoryMeta(page)
     // Always record the page we booted with: after a full reload the entry still
     // holds the page from before it, which back/forward would otherwise restore.
     if (page && this.d.window) this.d.history.push(page, this.d.store.current.key, true)
     this.unlistenHistory = this.d.history.listen((state) => this.onPopState(state))
     this.unlistenScroll = this.trackScroll()
+    this.unlistenPageShow = this.trackPageShow()
     if (page) void this.loadDeferred(page)
   }
 
   destroy(): void {
     this.unlistenHistory?.()
     this.unlistenScroll?.()
+    this.unlistenPageShow?.()
     if (this.reloadTimer) clearTimeout(this.reloadTimer)
     this.reloadTimer = null
     this.cancelActive()
@@ -607,6 +611,7 @@ export class Router {
   }
 
   private applyPage(response: BridgePage, visit: Visit): void {
+    this.applyHistoryMeta(response)
     // preserveUrl: show the new page under the address the user is on.
     const page =
       visit.preserveUrl && this.d.window
@@ -668,6 +673,7 @@ export class Router {
           const parsed = await parseResponse(response)
           const current = this.d.store.page
           if (parsed.kind === 'page' && current && current.component === parsed.page.component) {
+            this.applyHistoryMeta(parsed.page)
             this.d.store.setPage(parsed.page, { partial: true })
             this.d.history.updatePage(this.d.store.serverPage!)
           } else if (parsed.kind === 'invalid') {
@@ -685,11 +691,24 @@ export class Router {
     )
   }
 
-  private onPopState(state: HistoryState | null): void {
-    this.restoreId++
+  private onPopState(stored: StoredHistoryState | null): void {
+    const id = ++this.restoreId
     this.cancelActive()
     this.cancelDeferred()
 
+    const opened = stored ? this.d.history.open(stored) : null
+    if (opened instanceof Promise) {
+      // Sealed entry (PLAN §23.1): decrypt first; a later back/forward wins.
+      void opened.then((state) => {
+        if (id === this.restoreId && !this.activeVisit) this.restorePopped(state)
+      })
+      return
+    }
+    this.restorePopped(opened)
+  }
+
+  /** An entry without a readable page (none stored, or its key was replaced) is requested again. */
+  private restorePopped(state: HistoryState | null): void {
     if (state?.page) {
       void this.restoreFromHistory(state)
       return
@@ -697,6 +716,36 @@ export class Router {
 
     if (this.d.window)
       void this.visit(this.d.window.location.href, { replace: true, useCache: false })
+  }
+
+  /**
+   * `meta.clearHistory` (spec/page.md §10): replace the history key before
+   * this page is stored, so every entry encrypted earlier becomes unreadable,
+   * and drop cached pages, which may hold the same data.
+   */
+  private applyHistoryMeta(page: BridgePage): void {
+    if (page.meta?.clearHistory !== true) return
+    this.d.history.clear()
+    this.d.cache.clear()
+  }
+
+  /**
+   * A document restored from the back-forward cache never fires popstate. If it
+   * shows an encrypted page whose key was replaced meanwhile (a logout), reload it.
+   */
+  private trackPageShow(): (() => void) | null {
+    const win = this.d.window
+    if (!win) return null
+    const onPageShow = (event: PageTransitionEvent): void => {
+      if (
+        event.persisted &&
+        this.d.store.page?.meta?.encryptHistory === true &&
+        this.d.history.keyReplaced()
+      )
+        win.location.reload()
+    }
+    win.addEventListener('pageshow', onPageShow)
+    return () => win.removeEventListener('pageshow', onPageShow)
   }
 
   private async restoreFromHistory(state: HistoryState): Promise<void> {

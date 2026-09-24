@@ -36,7 +36,9 @@ Route::middleware('guest')->group(function (): void {
 Route::middleware(['auth:sanctum', 'throttle:bridge-stream'])->get('/events', [RealtimeController::class, 'events'])->name('events');
 Route::middleware(['bridge.ticket:web', 'auth:sanctum', 'throttle:bridge-stream'])->get('/events/ticket', [RealtimeController::class, 'events'])->name('events.ticket');
 
-Route::middleware('auth:sanctum')->group(function (): void {
+// `bridge.encrypt-history`: signed-in pages are kept encrypted in browser history, and
+// signing out (Laravel's Logout event) makes them unreadable, so back cannot show them.
+Route::middleware(['auth:sanctum', 'bridge.encrypt-history'])->group(function (): void {
     Route::post('/logout', [AuthController::class, 'destroy'])->name('logout');
     // `precognitive` lets forms validate single fields live through Laravel Precognition.
     Route::resource('customers', CustomerController::class)->middleware('precognitive');

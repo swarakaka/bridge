@@ -203,44 +203,60 @@ describe('SSR renderer', () => {
 })
 
 describe('remembered state', () => {
-  it('restores useRemember and useForm({ remember }) on back navigation', async () => {
-    const { useRemember, useForm } = await import('../src/index.js')
-    const Create = defineComponent({
-      setup() {
-        const tab = useRemember('tab', 'general')
-        const form = useForm({ name: '' }, { remember: 'create' })
-        return () =>
-          h('div', { id: 'create' }, [
-            h('span', { id: 'tab' }, tab.value),
-            h('span', { id: 'name' }, form.data.name),
-            h('button', {
-              id: 'fill',
-              onClick: () => {
-                tab.value = 'billing'
-                form.data.name = 'Initech'
-              },
-            }),
-          ])
-      },
-    })
-    const Other = defineComponent({ setup: () => () => h('div', { id: 'other' }) })
-    window.history.replaceState(null, '', '/customers/create')
-    embed(page({ component: 'Create', url: '/customers/create', props: {} }))
-    app = await createBridgeApp({
-      resolve: (name) => (name === 'Other' ? Other : Create),
-      fetch: mockFetch(() => pageResponse(page({ component: 'Other', url: '/other', props: {} }))),
-    })
+  it.each([
+    ['plain', false],
+    ['encrypted', true],
+  ])(
+    'restores useRemember and useForm({ remember }) on back navigation (%s)',
+    async (_, encrypted) => {
+      const { useRemember, useForm } = await import('../src/index.js')
+      const Create = defineComponent({
+        setup() {
+          const tab = useRemember('tab', 'general')
+          const form = useForm({ name: '' }, { remember: 'create' })
+          return () =>
+            h('div', { id: 'create' }, [
+              h('span', { id: 'tab' }, tab.value),
+              h('span', { id: 'name' }, form.data.name),
+              h('button', {
+                id: 'fill',
+                onClick: () => {
+                  tab.value = 'billing'
+                  form.data.name = 'Initech'
+                },
+              }),
+            ])
+        },
+      })
+      const Other = defineComponent({ setup: () => () => h('div', { id: 'other' }) })
+      window.history.replaceState(null, '', '/customers/create')
+      const meta = encrypted ? { encryptHistory: true } : undefined
+      embed(page({ component: 'Create', url: '/customers/create', props: {}, meta }))
+      app = await createBridgeApp({
+        resolve: (name) => (name === 'Other' ? Other : Create),
+        fetch: mockFetch(() =>
+          pageResponse(page({ component: 'Other', url: '/other', props: {} })),
+        ),
+      })
 
-    document.getElementById('fill')!.click()
-    await flush()
-    await app.bridge.router.visit('/other')
-    await flush()
-    expect(document.getElementById('other')).not.toBeNull()
+      document.getElementById('fill')!.click()
+      await flush()
+      if (encrypted) {
+        // Seals land after Web Crypto answers; the entry then holds nothing readable.
+        await new Promise((r) => setTimeout(r, 20))
+        expect(window.history.state.sealed).toBeDefined()
+        expect(JSON.stringify(window.history.state)).not.toContain('Initech')
+      }
+      await app.bridge.router.visit('/other')
+      await flush()
+      expect(document.getElementById('other')).not.toBeNull()
 
-    window.history.back()
-    await flush()
-    await flush()
-    expect(document.getElementById('tab')!.textContent).toBe('billing')
-    expect(document.getElementById('name')!.textContent).toBe('Initech')
-  })
+      window.history.back()
+      await flush()
+      await flush()
+      if (encrypted) await new Promise((r) => setTimeout(r, 20))
+      expect(document.getElementById('tab')!.textContent).toBe('billing')
+      expect(document.getElementById('name')!.textContent).toBe('Initech')
+    },
+  )
 })

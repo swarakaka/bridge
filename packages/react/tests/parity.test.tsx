@@ -283,40 +283,54 @@ describe('useJsonForm', () => {
 })
 
 describe('remembered state', () => {
-  it('restores useRemember and useForm({ remember }) on back navigation', async () => {
-    const Create: PageComponent = () => {
-      const [tab, setTab] = useRemember('tab', 'general')
-      const form = useForm({ name: '' }, { remember: 'create' })
-      return (
-        <div>
-          <span id="tab">{tab}</span>
-          <span id="name">{form.data.name}</span>
-          <button
-            id="fill"
-            onClick={() => {
-              setTab('billing')
-              form.setData('name', 'Initech')
-            }}
-          />
-        </div>
-      )
-    }
-    const Other: PageComponent = () => <div id="other" />
-    const http = mockFetch(() => pageResponse(page({ component: 'Other', url: '/other' })))
-    await mount({ Create, Other }, page({ component: 'Create', url: '/create' }), http)
+  it.each([
+    ['plain', false],
+    ['encrypted', true],
+  ])(
+    'restores useRemember and useForm({ remember }) on back navigation (%s)',
+    async (_, encrypted) => {
+      const Create: PageComponent = () => {
+        const [tab, setTab] = useRemember('tab', 'general')
+        const form = useForm({ name: '' }, { remember: 'create' })
+        return (
+          <div>
+            <span id="tab">{tab}</span>
+            <span id="name">{form.data.name}</span>
+            <button
+              id="fill"
+              onClick={() => {
+                setTab('billing')
+                form.setData('name', 'Initech')
+              }}
+            />
+          </div>
+        )
+      }
+      const Other: PageComponent = () => <div id="other" />
+      const http = mockFetch(() => pageResponse(page({ component: 'Other', url: '/other' })))
+      const meta = encrypted ? { encryptHistory: true } : undefined
+      await mount({ Create, Other }, page({ component: 'Create', url: '/create', meta }), http)
 
-    await act(async () => ($('#fill') as HTMLButtonElement).click())
-    await flush()
-    await act(async () => void (await app!.bridge.router.visit('/other')))
-    await flush()
-    expect($('#other')).not.toBeNull()
+      await act(async () => ($('#fill') as HTMLButtonElement).click())
+      await flush()
+      if (encrypted) {
+        // Seals land after Web Crypto answers; the entry then holds nothing readable.
+        await act(async () => new Promise((r) => setTimeout(r, 20)))
+        expect(window.history.state.sealed).toBeDefined()
+        expect(JSON.stringify(window.history.state)).not.toContain('Initech')
+      }
+      await act(async () => void (await app!.bridge.router.visit('/other')))
+      await flush()
+      expect($('#other')).not.toBeNull()
 
-    await act(async () => window.history.back())
-    await flush()
-    await flush()
-    expect($('#tab')?.textContent).toBe('billing')
-    expect($('#name')?.textContent).toBe('Initech')
-  })
+      await act(async () => window.history.back())
+      await flush()
+      await flush()
+      if (encrypted) await act(async () => new Promise((r) => setTimeout(r, 20)))
+      expect($('#tab')?.textContent).toBe('billing')
+      expect($('#name')?.textContent).toBe('Initech')
+    },
+  )
 })
 
 describe('useForm remember key and dontRemember', () => {

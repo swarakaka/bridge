@@ -17,5 +17,22 @@ export interface BridgePage {
      */
     [k: string]: [string, ...string[]] | undefined;
   };
-  meta?: {};
+  /**
+   * Additive extensions (spec/page.md §1). Clients MUST ignore unknown members.
+   */
+  meta?: {
+    /**
+     * Prop keys clients may append on opted-in partial reloads (§3).
+     */
+    merge?: string[];
+    /**
+     * Store this page encrypted in the client's history (§10).
+     */
+    encryptHistory?: boolean;
+    /**
+     * Make earlier encrypted history entries unreadable before storing this page (§10).
+     */
+    clearHistory?: boolean;
+    [k: string]: unknown | undefined;
+  };
 }
