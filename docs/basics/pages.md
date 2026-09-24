@@ -3,13 +3,24 @@
 A page is a component name plus props, returned from a controller:
 
 ```php
-use Bridge\Facades\Bridge;
+use Bridge\Bridge;
 
 public function show(Customer $customer)
 {
     return Bridge::render('Customers/Show', [
         'customer' => CustomerResource::make($customer),
     ]);
+}
+```
+
+`Bridge\Bridge` is a facade over the `Bridge\BridgeManager` singleton. To inject the service instead (constructor or method injection, or `app(BridgeManager::class)`), type-hint `BridgeManager`; the container also knows it as `bridge`. Do not type-hint `Bridge\Bridge`: it is the facade, not the service.
+
+```php
+use Bridge\BridgeManager;
+
+public function show(Customer $customer, BridgeManager $bridge)
+{
+    return $bridge->render('Customers/Show', ['customer' => CustomerResource::make($customer)]);
 }
 ```
 

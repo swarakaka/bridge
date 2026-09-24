@@ -3,7 +3,7 @@
 Publish from anywhere: controllers, jobs, listeners, the scheduler. Publishing only writes to the event bus; the stream connections read from it.
 
 ```php
-use Bridge\Facades\Bridge;
+use Bridge\Bridge;
 
 Bridge::to('customers')->invalidate(['customers', 'stats']);      // these props are stale
 Bridge::to('customers')->invalidate('*');                          // everything on the page

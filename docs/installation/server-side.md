@@ -43,6 +43,8 @@ Blade caches compiled views. After upgrading the package, run `php artisan view:
 Route::get('/customers', [CustomerController::class, 'index']);
 
 // app/Http/Controllers/CustomerController.php
+use Bridge\Bridge;
+
 public function index()
 {
     return Bridge::render('Customers/Index', [

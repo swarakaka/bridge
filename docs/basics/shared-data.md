@@ -3,7 +3,7 @@
 Shared props are included in every page. Register them in a service provider:
 
 ```php
-use Bridge\Facades\Bridge;
+use Bridge\Bridge;
 
 public function boot(): void
 {

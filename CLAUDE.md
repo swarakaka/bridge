@@ -55,6 +55,7 @@ The Laravel package is developed only in `packages/laravel` here. `swarakaka/bri
 
 ## Package layout notes (Laravel)
 
+- `Bridge\Bridge` is the facade (static entry point); `Bridge\BridgeManager` is the service (singleton, alias `bridge`) and what src/ type-hints. `Bridge\Facades\Bridge` is a deprecated subclass of the facade kept for 1.x imports (since 2.0).
 - `Bridge\Negotiation` — `Accept` parsing and mode selection. Nothing else may inspect `Accept`.
 - `Bridge\Page`, `Bridge\Props` — representation: `Page` → `PropResolver` (partial selection, hints) → `Serializer` (Laravel-native shapes) → `PageDocument`.
 - `Bridge\Representation` — transport: `HtmlRepresenter`, `PageRepresenter`, `JsonRepresenter` behind `RepresenterRegistry`.

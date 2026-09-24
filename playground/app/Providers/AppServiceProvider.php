@@ -2,7 +2,7 @@
 
 namespace App\Providers;
 
-use Bridge\Facades\Bridge;
+use Bridge\Bridge;
 use Illuminate\Http\Request;
 use Illuminate\Support\ServiceProvider;
 

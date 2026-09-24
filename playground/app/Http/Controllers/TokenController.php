@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use Bridge\Facades\Bridge;
+use Bridge\Bridge;
 use Illuminate\Http\Request;
 
 /**

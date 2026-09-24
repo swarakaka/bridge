@@ -3338,13 +3338,10 @@
             "dist": {
                 "type": "path",
                 "url": "../packages/laravel",
-                "reference": "fb546e0173249a82b70697eb5c04f889f34f73bc"
+                "reference": "87a3a039cbeae6576204e75ee3fdec3044fbb1e5"
             },
             "require": {
-                "illuminate/contracts": "^13.0",
-                "illuminate/http": "^13.0",
-                "illuminate/support": "^13.0",
-                "illuminate/view": "^13.0",
+                "laravel/framework": "^13.0",
                 "php": "^8.4"
             },
             "require-dev": {
@@ -3362,7 +3359,7 @@
                         "Bridge\\BridgeServiceProvider"
                     ],
                     "aliases": {
-                        "Bridge": "Bridge\\Facades\\Bridge"
+                        "Bridge": "Bridge\\Bridge"
                     }
                 }
             },
@@ -3391,7 +3388,7 @@
                 "MIT"
             ],
             "description": "Bridge: a server-driven application protocol for Laravel with Page, JSON and SSE modes from one controller",
-            "homepage": "https://github.com/swarakaka/Bridge",
+            "homepage": "https://github.com/swarakaka/bridge",
             "keywords": [
                 "api",
                 "bridge",
@@ -3401,8 +3398,8 @@
                 "sse"
             ],
             "support": {
-                "issues": "https://github.com/swarakaka/Bridge/issues",
-                "source": "https://github.com/swarakaka/Bridge"
+                "issues": "https://github.com/swarakaka/bridge/issues",
+                "source": "https://github.com/swarakaka/bridge"
             },
             "transport-options": {
                 "symlink": true,

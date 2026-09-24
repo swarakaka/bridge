@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\CustomerResource;
 use App\Models\Customer;
-use Bridge\Facades\Bridge;
+use Bridge\Bridge;
 
 class DashboardController extends Controller
 {

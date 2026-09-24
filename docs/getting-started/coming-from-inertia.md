@@ -7,6 +7,7 @@ Bridge borrows Inertia's developer experience: controllers return pages, page co
 | Inertia                                                                        | Bridge                                                                         |
 | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
 | `Inertia::render()`                                                            | `Bridge::render()`                                                             |
+| `Inertia\Inertia` (facade), `Inertia\ResponseFactory` (service)                | `Bridge\Bridge` (facade), `Bridge\BridgeManager` (service)                     |
 | `Inertia::share()`                                                             | `Bridge::share()`                                                              |
 | `Inertia::lazy()`, `Inertia::defer()`, `Inertia::always()`, `Inertia::merge()` | `Bridge::lazy()`, `Bridge::defer()`, `Bridge::always()`, `Bridge::merge()`     |
 | `@inertia`, `@inertiaHead`                                                     | `@bridge`, `@bridgeHead`, or `<x-bridge::app />`, `<x-bridge::head />`         |

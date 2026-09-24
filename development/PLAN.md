@@ -488,6 +488,8 @@ Composer package `swarakaka/bridge-laravel`, namespace `Bridge\`. PHP 8.4+, Lara
 
 ### 9.1 Public facade surface
 
+`Bridge\Bridge` is the facade (since 2.0, see the deviations section); the service behind it is `Bridge\BridgeManager`.
+
 ```php
 Bridge::render(string $component, array $props = []): PageResponse
 Bridge::redirect(): RedirectBuilder        // ->to() ->route() ->back() ->with() ->flash() ->status() ->created()
@@ -508,7 +510,8 @@ Bridge::mode(): Mode                                     // current negotiated m
 | Class                                                                       | Responsibility                                                                                                                                                    |
 | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `Bridge\BridgeServiceProvider`                                              | Bind services, publish config/views/migration, register middleware alias, exception renderer, Blade directive `@bridge`, testing macros, console commands.        |
-| `Bridge\Bridge` (manager)                                                   | Facade root. Holds shared props, version resolver, shell view, channel authorizer registry; builds responses.                                                     |
+| `Bridge\Bridge`                                                             | Facade over `BridgeManager`; the static entry point (`use Bridge\Bridge;`). `Bridge\Facades\Bridge` extends it, deprecated since 2.0.                                |
+| `Bridge\BridgeManager`                                                      | Facade root, bound as a singleton and aliased `bridge`. Holds shared props, version resolver, shell view, channel authorizer registry; builds responses.          |
 | `Bridge\Negotiation\ContentNegotiator`                                      | The algorithm in §5.                                                                                                                                              |
 | `Bridge\Negotiation\AcceptHeader`, `MediaRange`                             | RFC 9110 parsing with q and parameters.                                                                                                                           |
 | `Bridge\Negotiation\Mode` (enum)                                            | `Html`, `Page`, `Json`, `Stream`.                                                                                                                                 |
@@ -1017,7 +1020,7 @@ database/migrations/create_bridge_stream_events_table.php
 resources/views/app.blade.php                       (default shell, publishable)
 routes/bridge.php                                   (stream-ticket route, optional)
 src/
-  Bridge.php                      BridgeServiceProvider.php     Facades/Bridge.php
+  Bridge.php (facade)  BridgeManager.php  BridgeServiceProvider.php  Facades/Bridge.php (deprecated)
   Negotiation/ContentNegotiator.php  AcceptHeader.php  MediaRange.php  Mode.php  Negotiation.php
   Http/Middleware/HandleBridgeRequests.php  VerifyCsrfToken.php
   Http/Responses/PageResponse.php  RedirectBuilder.php
@@ -1274,6 +1277,10 @@ Recorded as phases ship. Each entry names the section it refines.
 - **§10.2, §10.3 JSON-mode client.** Added `JsonClient`/`JsonRequest` in core and `useJson` in the Vue adapter so a component can call the application's JSON mode (the same routes, `Accept: application/json`) without a page visit; before this the playground used raw `fetch`. The name follows the mode names already used by the composables (`usePage`, `useStream`), not Inertia's `useHttp`. The Bridge envelope is unwrapped (`data`, `meta`); a 2xx body that is not an envelope is exposed as `data` unchanged so non-Bridge JSON routes work too. Error kinds are derived from the HTTP status using the table in `spec/errors.md` §2 because the JSON representation is Laravel-native and carries no `kind`. `useJson` does not react to `csrf`/`unauthenticated` (no reload, no redirect): the caller decides, since JSON calls are not navigations.
 
 - **§10.3, §28 Zero-config page resolution and `withApp` (2026-09-24).** New package `@swarakaka/bridge-vite` (`packages/vite`, in the `fixed` version group), a Vite plugin that rewrites `createBridgeApp(...)` and `createSsrRenderer(...)` calls imported from `@swarakaka/bridge-vue`/`-react` (and their `/server` entries) at build time: a call without `resolve` gets one built on `import.meta.glob('./Pages/**/*.<ext>')` relative to the calling file, and a `pages` option (`'./Dir'` or `{ path, extension, lazy, transform }`) is replaced by the same resolver. It has to be a build step because `import.meta.glob` only works on literal patterns in application source. `resolve` is therefore optional in the adapters' types; without the plugin a missing `resolve` (or a leftover `pages`) throws a message naming the plugin. `withApp(app, { ssr, page })` customises the application before it mounts or renders: the Vue app (register plugins), or for React the element tree (return it wrapped in providers). The same callback can be passed to `createBridgeApp` and `createSsrRenderer`; `setup` (Vue) and `wrap` (React server) remain for full control. Modelled on Inertia's developer experience; the implementation is Bridge's own.
+
+### 2.0 (2026-09-24)
+
+- **§9.1–9.2 Facade layout.** `use Bridge\Bridge;` then `Bridge::render()` failed ("Non-static method … cannot be called statically") because `Bridge\Bridge` was the service and the facade lived at `Bridge\Facades\Bridge`. Following Inertia (`Inertia\Inertia` facade, `Inertia\ResponseFactory` service), the service is now `Bridge\BridgeManager` (singleton, alias `bridge`) and `Bridge\Bridge` is the facade. `Bridge\Facades\Bridge` extends it and is deprecated; the composer `Bridge` alias points at `Bridge\Bridge`. Injecting or resolving `Bridge\Bridge` as the service breaks and gets no shim (a facade instance cannot act as the service), so all packages move to 2.0.0 under the shared version rule (§31); `packages/laravel/UPGRADE.md` describes the migration.
 
 ### Hardening (2026-09-24)
 

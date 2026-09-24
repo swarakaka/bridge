@@ -4,8 +4,9 @@ namespace App\Console\Commands;
 
 use App\Http\Resources\CustomerResource;
 use App\Models\Customer;
-use Bridge\Facades\Bridge;
+use Bridge\Bridge;
 use Bridge\Negotiation\ContentNegotiator;
+use Bridge\Negotiation\Negotiation;
 use Illuminate\Console\Command;
 use Illuminate\Http\Request;
 
@@ -36,7 +37,7 @@ class BenchSerialize extends Command
         foreach ($scenarios as $name => $headers) {
             $request = Request::create('/bench', 'GET', [], [], [], ['HTTP_ACCEPT' => $headers['Accept']]);
             app()->instance('request', $request);
-            $request->attributes->set(\Bridge\Negotiation\Negotiation::REQUEST_ATTRIBUTE, app(ContentNegotiator::class)->negotiate($request));
+            $request->attributes->set(Negotiation::REQUEST_ATTRIBUTE, app(ContentNegotiator::class)->negotiate($request));
 
             $bytes = 0;
             $start = hrtime(true);

@@ -6,7 +6,7 @@ use App\Events\CustomerChanged;
 use App\Http\Requests\StoreCustomerRequest;
 use App\Http\Resources\CustomerResource;
 use App\Models\Customer;
-use Bridge\Facades\Bridge;
+use Bridge\Bridge;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 

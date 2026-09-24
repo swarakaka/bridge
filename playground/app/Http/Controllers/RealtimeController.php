@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
-use Bridge\Facades\Bridge;
+use Bridge\Bridge;
 use Bridge\Stream\StreamWriter;
 use Illuminate\Http\Request;
 
