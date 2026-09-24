@@ -39,7 +39,7 @@ What happens for each client:
 ## Where to start
 
 - [Demo application](/getting-started/demo-application) shows every feature running.
-- [Coming from Inertia](/getting-started/coming-from-inertia) maps Inertia concepts to Bridge and lists the deliberate differences.
+- [Coming from Inertia](/getting-started/coming-from-inertia) maps familiar concepts to Bridge and lists the deliberate differences.
 - [Server-side setup](/installation/server-side) and [Client-side setup](/installation/client-side) get a fresh Laravel app running in a few minutes.
 
 ## Status

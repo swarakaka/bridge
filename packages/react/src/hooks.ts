@@ -1,6 +1,10 @@
 import type {
   Form,
   FormOptions,
+  FormState,
+  FormTransport,
+  JsonForm,
+  JsonFormOptions,
   JsonHandleOptions,
   JsonRequest,
   StreamClient,
@@ -127,10 +131,55 @@ export function useForm<T extends Record<string, unknown>>(
   second?: T | UseFormOptions,
   third?: Omit<UseFormOptions, 'remember'>,
 ): Form<T> & { refresh(): void } {
-  const [initial, options] = formArguments<T>(first, second, third)
+  const [initial, options] = formArguments<T, UseFormOptions>(first, second, third)
   const bridge = useBridge()
   const form = useHandle(() => bridge.form(initial, options), QUIET_FORM_METHODS)
-  const key = options.remember ? `form:${options.remember}` : undefined
+  useFormRemember(form, options.remember)
+  return form
+}
+
+export interface UseJsonFormOptions extends JsonFormOptions {
+  /** Persist the form data in history state under this key (restored on back/forward). */
+  remember?: string | undefined
+}
+
+/**
+ * A form submitted in JSON mode, without navigating: the same routes as page
+ * mode with `Accept: application/json`. Field state and methods match
+ * `useForm`; the last successful response is `form.result` (with `meta` and
+ * `httpStatus`), `form.message` the last error message. An in-flight request
+ * is cancelled on unmount.
+ */
+export function useJsonForm<T extends Record<string, unknown>, R = unknown>(
+  initial: T,
+  options?: UseJsonFormOptions,
+): JsonForm<T, R> & { refresh(): void }
+export function useJsonForm<T extends Record<string, unknown>, R = unknown>(
+  rememberKey: string,
+  initial: T,
+  options?: Omit<UseJsonFormOptions, 'remember'>,
+): JsonForm<T, R> & { refresh(): void }
+export function useJsonForm<T extends Record<string, unknown>, R = unknown>(
+  first: T | string,
+  second?: T | UseJsonFormOptions,
+  third?: Omit<UseJsonFormOptions, 'remember'>,
+): JsonForm<T, R> & { refresh(): void } {
+  const [initial, options] = formArguments<T, UseJsonFormOptions>(first, second, third)
+  const { remember, ...formOptions } = options
+  const bridge = useBridge()
+  const form = useHandle(() => bridge.jsonForm<T, R>(initial, formOptions), QUIET_FORM_METHODS)
+  useEffect(() => () => form.cancel(), [form])
+  useFormRemember(form, remember)
+  return form
+}
+
+/** Restores after mount and writes on change, leaving out `dontRemember` fields. */
+function useFormRemember<T extends Record<string, unknown>>(
+  form: FormState<T, FormTransport>,
+  remember: string | undefined,
+): void {
+  const bridge = useBridge()
+  const key = remember ? `form:${remember}` : undefined
   const [restored, setRestored] = useState(false)
 
   // After mount, so the first client render matches the server markup.
@@ -142,18 +191,15 @@ export function useForm<T extends Record<string, unknown>>(
     setRestored(true)
   }, [])
   useRememberWriter(key, form.rememberable(), restored)
-
-  return form
 }
 
 /** Normalises `(data, options)` and `(rememberKey, data, options)`. */
-function formArguments<T extends Record<string, unknown>>(
-  first: T | string,
-  second?: T | UseFormOptions,
-  third?: Omit<UseFormOptions, 'remember'>,
-): [T, UseFormOptions] {
-  if (typeof first === 'string') return [second as T, { ...third, remember: first }]
-  return [first, (second as UseFormOptions | undefined) ?? {}]
+function formArguments<
+  T extends Record<string, unknown>,
+  O extends { remember?: string | undefined },
+>(first: T | string, second?: T | O, third?: Omit<O, 'remember'>): [T, O] {
+  if (typeof first === 'string') return [second as T, { ...third, remember: first } as O]
+  return [first, ((second as O | undefined) ?? {}) as O]
 }
 
 /** Local state that survives back/forward navigation via history state. */

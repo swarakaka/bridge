@@ -12,8 +12,17 @@ export type {
   WithApp,
 } from './createBridgeApp.js'
 export { BridgeContext, useBridge } from './context.js'
-export { usePage, useProp, useDeferred, useForm, useRemember, useJson, useStream } from './hooks.js'
-export type { UseFormOptions, UseStreamReturn } from './hooks.js'
+export {
+  usePage,
+  useProp,
+  useDeferred,
+  useForm,
+  useRemember,
+  useJson,
+  useJsonForm,
+  useStream,
+} from './hooks.js'
+export type { UseFormOptions, UseJsonFormOptions, UseStreamReturn } from './hooks.js'
 export { BridgeLink, Deferred } from './components.js'
 export type { BridgeLinkProps } from './components.js'
 export { BridgeHead, HeadContext } from './head.js'

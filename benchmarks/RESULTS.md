@@ -1,6 +1,6 @@
 # Benchmark results
 
-Every section is appended by `benchmarks/run.sh` (`pnpm --filter bridge-benchmarks bench`). It records the machine, versions, server shape and the exact command, so numbers can be reproduced or challenged. The harness measures Bridge's modes against each other; it does not yet include the Inertia baseline app planned in `development/PLAN.md` §25, so no comparative claim against Inertia is made.
+Every section is appended by `benchmarks/run.sh` (`pnpm --filter bridge-benchmarks bench`). It records the machine, versions, server shape and the exact command, so numbers can be reproduced or challenged. The harness measures Bridge's modes against each other; it does not yet include the reference baseline app planned in `development/PLAN.md` §25, so no comparative claim against another library is made.
 
 Interpretation notes:
 

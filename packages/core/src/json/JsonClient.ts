@@ -49,6 +49,8 @@ export interface JsonRequestOptions {
   signal?: AbortSignal | undefined
   onProgress?: ((progress: UploadProgress) => void) | undefined
   forceFormData?: boolean | undefined
+  /** `false` when a non-GET request cannot change server data (Precognition), so cached pages are kept. */
+  mutation?: boolean | undefined
 }
 
 export type JsonOutcome<T = unknown> =
@@ -104,7 +106,7 @@ export class JsonClient {
     }
 
     // The server may have changed data that cached pages still show.
-    if (method !== 'get') this.onMutate?.()
+    if (method !== 'get' && options.mutation !== false) this.onMutate?.()
 
     try {
       return await this.classify<T>(response)

@@ -8,6 +8,7 @@ import {
   createBridgeApp,
   useForm,
   useJson,
+  useJsonForm,
   useRemember,
   useStream,
 } from '../src/index.js'
@@ -137,6 +138,75 @@ describe('useJson', () => {
     await flush()
     expect($('#processing')?.textContent).toBe('false')
     expect($('#total')?.textContent).toBe('3')
+  })
+})
+
+describe('useJsonForm', () => {
+  const jsonResponse = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
+
+  it('submits in JSON mode, re-renders with the result, and maps a 422', async () => {
+    let status = 422
+    const http = mockFetch(() =>
+      status === 422
+        ? jsonResponse({ message: 'Invalid.', errors: { name: ['Required'] } }, 422)
+        : jsonResponse({ data: { customer: { id: 7 } } }, 201),
+    )
+    const Create: PageComponent = () => {
+      const form = useJsonForm<{ name: string }, { customer: { id: number } }>({ name: '' })
+      return (
+        <div>
+          <span id="error">{form.errors.name ?? ''}</span>
+          <span id="status">{String(form.httpStatus)}</span>
+          <span id="id">{form.result?.customer.id ?? ''}</span>
+          <button id="empty" onClick={() => void form.post('/customers')} />
+          <button
+            id="fill"
+            onClick={() => void form.setData('name', 'Initech').post('/customers')}
+          />
+        </div>
+      )
+    }
+    await mount({ Create }, page({ component: 'Create', url: '/create' }), http)
+
+    await act(async () => ($('#empty') as HTMLButtonElement).click())
+    await flush()
+    expect($('#error')?.textContent).toBe('Required')
+    expect($('#status')?.textContent).toBe('422')
+
+    status = 201
+    await act(async () => ($('#fill') as HTMLButtonElement).click())
+    await flush()
+    expect($('#error')?.textContent).toBe('')
+    expect($('#id')?.textContent).toBe('7')
+    const [, init] = http.mock.calls[1]!
+    expect((init.headers as Record<string, string>).Accept).toBe('application/json')
+    expect(JSON.parse(String(init.body))).toEqual({ name: 'Initech' })
+    expect(window.location.pathname).toBe('/create')
+  })
+
+  it('cancels an in-flight submission on unmount', async () => {
+    let aborted = false
+    const http = mockFetch(
+      (_url, init) =>
+        new Promise<Response>((_resolve, reject) => {
+          init.signal?.addEventListener('abort', () => {
+            aborted = true
+            reject(Object.assign(new Error('aborted'), { name: 'AbortError' }))
+          })
+        }),
+    )
+    const Create: PageComponent = () => {
+      const form = useJsonForm({ name: 'x' })
+      return <button id="send" onClick={() => void form.post('/customers')} />
+    }
+    await mount({ Create }, page({ component: 'Create', url: '/create' }), http)
+
+    await act(async () => ($('#send') as HTMLButtonElement).click())
+    await flush()
+    act(() => app!.root.unmount())
+
+    expect(aborted).toBe(true)
   })
 })
 

@@ -1,5 +1,5 @@
-import type { Form, FormOptions } from '@swarakaka/bridge-core'
-import { onMounted, reactive, watch, type UnwrapNestedRefs } from 'vue'
+import type { Bridge, Form, FormOptions, FormState, FormTransport } from '@swarakaka/bridge-core'
+import { onMounted, reactive, watch } from 'vue'
 import { useBridge } from '../injection.js'
 
 /**
@@ -38,22 +38,39 @@ export function useForm<T extends Record<string, unknown>>(
   second?: T | UseFormOptions,
   third?: Omit<UseFormOptions, 'remember'>,
 ): ReactiveForm<T> {
-  const [initial, options] = formArguments<T>(first, second, third)
+  const [initial, options] = formArguments<T, UseFormOptions>(first, second, third)
   const bridge = useBridge()
-  const instance = bridge.form(initial, options)
+  return setupForm(
+    'useForm',
+    bridge,
+    bridge.form(initial, options),
+    options.remember,
+  ) as ReactiveForm<T>
+}
+
+/**
+ * Shared by `useForm` and `useJsonForm`: refuses fields named like a member,
+ * makes the instance reactive, wires `remember`, and returns the flat-field proxy.
+ */
+export function setupForm<T extends Record<string, unknown>>(
+  composable: string,
+  bridge: Bridge,
+  instance: FormState<T, FormTransport>,
+  remember: string | undefined,
+): object {
   const members = memberNames(instance)
-  for (const field of Object.keys(initial)) {
+  for (const field of Object.keys(instance.data)) {
     if (members.has(field)) {
       throw new Error(
-        `[bridge] useForm(): the field "${field}" has the same name as a form member (form.${field}). Rename the field, or nest it under another key and use form.data.`,
+        `[bridge] ${composable}(): the field "${field}" has the same name as a form member (form.${field}). Rename the field, or nest it under another key and use form.data.`,
       )
     }
   }
-  const form = reactive(instance) as UnwrapNestedRefs<Form<T>>
-  const flat = flatten(form, members)
+  // The reactive proxy has the instance's shape; `reactive` only unwraps refs, which forms never hold.
+  const form = reactive(instance) as unknown as FormState<T, FormTransport>
 
-  if (options.remember) {
-    const key = `form:${options.remember}`
+  if (remember) {
+    const key = `form:${remember}`
     onMounted(() => {
       const restored = bridge.router.restore<T>(key)
       if (restored) form.setData(form.rememberable(restored))
@@ -65,17 +82,16 @@ export function useForm<T extends Record<string, unknown>>(
     )
   }
 
-  return flat as ReactiveForm<T>
+  return flatten(form, members)
 }
 
 /** Normalises `(data, options)` and `(rememberKey, data, options)`. */
-function formArguments<T extends Record<string, unknown>>(
-  first: T | string,
-  second?: T | UseFormOptions,
-  third?: Omit<UseFormOptions, 'remember'>,
-): [T, UseFormOptions] {
-  if (typeof first === 'string') return [second as T, { ...third, remember: first }]
-  return [first, (second as UseFormOptions | undefined) ?? {}]
+export function formArguments<
+  T extends Record<string, unknown>,
+  O extends { remember?: string | undefined },
+>(first: T | string, second?: T | O, third?: Omit<O, 'remember'>): [T, O] {
+  if (typeof first === 'string') return [second as T, { ...third, remember: first } as O]
+  return [first, ((second as O | undefined) ?? {}) as O]
 }
 
 /** Every property name of the instance and its prototype chain, `Object.prototype` included. */
@@ -93,7 +109,7 @@ function memberNames(instance: object): Set<string> {
  * the form returns this proxy), so Vue tracks reads and triggers writes as before.
  */
 function flatten<T extends Record<string, unknown>>(
-  form: UnwrapNestedRefs<Form<T>>,
+  form: FormState<T, FormTransport>,
   members: Set<string>,
 ): object {
   const bound = new Map<PropertyKey, unknown>()

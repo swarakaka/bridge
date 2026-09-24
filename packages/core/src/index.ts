@@ -26,6 +26,13 @@ export type {
   JsonRequestOptions,
 } from './json/JsonClient.js'
 export { JsonRequest } from './json/JsonRequest.js'
+export { JsonForm } from './json/JsonForm.js'
+export type {
+  JsonFormOptions,
+  JsonFormTransport,
+  JsonSubmitOptions,
+  JsonValidateOptions,
+} from './json/JsonForm.js'
 export type { JsonHandleOptions, JsonCallOptions } from './json/JsonRequest.js'
 export { hasFiles, objectToFormData } from './http/formData.js'
 export { PageStore, readMergeKeys, appendProp } from './pages/PageStore.js'
@@ -57,7 +64,14 @@ export type {
   ValidationErrors,
 } from './router/Visit.js'
 export { Form } from './forms/createForm.js'
-export type { FormOptions, SubmitOptions, ValidateOptions } from './forms/createForm.js'
+export type {
+  FormOptions,
+  PageFormTransport,
+  SubmitOptions,
+  ValidateOptions,
+} from './forms/createForm.js'
+export { FormState } from './forms/FormState.js'
+export type { FormData_, FormTransport, FormValidateOptions } from './forms/FormState.js'
 export { readEmbeddedPage, readBuild, readMeta } from './dom.js'
 export { StreamClient } from './stream/StreamClient.js'
 export type { StreamOptions, StreamState, StreamEvents } from './stream/StreamClient.js'

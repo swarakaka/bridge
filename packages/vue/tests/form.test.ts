@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { defineComponent, h, nextTick, vModelText, watch, withDirectives } from 'vue'
-import { createBridgeApp, useForm } from '../src/index.js'
-import type { BridgeApp, ReactiveForm } from '../src/index.js'
+import { createBridgeApp, useForm, useJsonForm } from '../src/index.js'
+import type { BridgeApp, ReactiveForm, ReactiveJsonForm } from '../src/index.js'
 import { embed, flush, mockFetch, page, pageResponse } from './helpers.js'
 
 type Fields = { name: string; items: string[] }
@@ -253,6 +253,151 @@ describe('useForm flat field access', () => {
       expect(error).toBeInstanceOf(Error)
       expect((error as Error).message).toContain(`"${field}"`)
       expect((error as Error).message).toContain('Rename the field')
+    },
+  )
+})
+
+const jsonResponse = (body: unknown, status = 200): Response =>
+  new Response(body === null ? null : JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  })
+
+describe('useJsonForm', () => {
+  it('submits flat fields in JSON mode, keeps the page, and exposes the result', async () => {
+    const requests: Array<{ url: string; accept: string; body: unknown }> = []
+    const fetch = mockFetch((url, init) => {
+      const headers = init.headers as Record<string, string>
+      requests.push({ url, accept: headers.Accept!, body: JSON.parse(String(init.body)) })
+      return jsonResponse(
+        { data: { customer: { id: 7 } }, meta: { location: '/customers/7' } },
+        201,
+      )
+    })
+    let form!: ReactiveJsonForm<{ name: string }, { customer: { id: number } }>
+    await mountForm(() => {
+      form = useJsonForm<{ name: string }, { customer: { id: number } }>({ name: '' })
+      return () =>
+        h('div', [
+          h('span', { id: 'name' }, form.name),
+          h('span', { id: 'status' }, String(form.httpStatus)),
+          h('span', { id: 'id' }, String(form.result?.customer.id ?? '')),
+        ])
+    }, fetch)
+
+    form.name = 'Initech'
+    await nextTick()
+    expect(text('name')).toBe('Initech')
+    expect(form.isDirty).toBe(true)
+
+    await form.post('/customers')
+    await nextTick()
+
+    expect(requests).toEqual([
+      {
+        url: expect.stringContaining('/customers'),
+        accept: 'application/json',
+        body: { name: 'Initech' },
+      },
+    ])
+    expect(text('status')).toBe('201')
+    expect(text('id')).toBe('7')
+    expect(form.meta.location).toBe('/customers/7')
+    expect(form.isDirty).toBe(false)
+    expect(window.location.pathname).toBe('/customers/create')
+    expect(document.getElementById('other')).toBeNull()
+  })
+
+  it('maps a 422 to errors and message', async () => {
+    const fetch = mockFetch(() =>
+      jsonResponse({ message: 'Invalid.', errors: { email: ['Required'] } }, 422),
+    )
+    let form!: ReactiveJsonForm<{ email: string }>
+    await mountForm(() => {
+      form = useJsonForm({ email: '' })
+      return () => h('p', { id: 'error' }, form.errors.email ?? '')
+    }, fetch)
+
+    await form.post('/customers')
+    await nextTick()
+
+    expect(text('error')).toBe('Required')
+    expect(form.message).toBe('Invalid.')
+  })
+
+  it('takes the remember key first and round-trips without dontRemember fields', async () => {
+    await mountForm(
+      () => {
+        const form = useJsonForm('token', { name: '', secret: '' }).dontRemember('secret')
+        return () =>
+          h('div', [
+            h('span', { id: 'name' }, form.name),
+            h('span', { id: 'secret' }, form.secret),
+            h('button', {
+              id: 'fill',
+              onClick: () => {
+                form.name = 'ci'
+                form.secret = 'hunter2'
+              },
+            }),
+          ])
+      },
+      mockFetch(() => pageResponse(page({ component: 'Other', url: '/other', props: {} }))),
+    )
+
+    document.getElementById('fill')!.click()
+    await flush()
+    expect(JSON.stringify(window.history.state)).not.toContain('hunter2')
+    await app!.bridge.router.visit('/other')
+    await flush()
+    window.history.back()
+    await flush()
+    await flush()
+
+    expect(text('name')).toBe('ci')
+    expect(text('secret')).toBe('')
+  })
+
+  it('cancels an in-flight submission when the component unmounts', async () => {
+    let aborted = false
+    const fetch = mockFetch(
+      (_url, init) =>
+        new Promise<Response>((_resolve, reject) => {
+          init.signal?.addEventListener('abort', () => {
+            aborted = true
+            reject(Object.assign(new Error('aborted'), { name: 'AbortError' }))
+          })
+        }),
+    )
+    let form!: ReactiveJsonForm<{ name: string }>
+    await mountForm(() => {
+      form = useJsonForm({ name: 'x' })
+      return () => h('div')
+    }, fetch)
+
+    const pending = form.post('/customers')
+    await flush()
+    app!.app!.unmount()
+    app!.app = null
+
+    expect(await pending).toEqual({ status: 'cancelled' })
+    expect(aborted).toBe(true)
+  })
+
+  it.each(['result', 'meta', 'httpStatus', 'message', 'errors'])(
+    'refuses a field named %s',
+    async (field) => {
+      let error: unknown
+      await mountForm(() => {
+        try {
+          useJsonForm({ [field]: '' })
+        } catch (e) {
+          error = e
+        }
+        return () => h('div')
+      })
+
+      expect((error as Error).message).toContain(`useJsonForm(): the field "${field}"`)
     },
   )
 })

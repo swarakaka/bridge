@@ -66,6 +66,8 @@ A field cannot share a name with a form member: `data`, `defaults`, `errors`, `a
 
 `submit(method, url, options)`, `get`, `post`, `put`, `patch`, `delete`, `validate` (see [Validation](/basics/validation)), `setData`, `transform(fn)`, `reset(...fields)`, `resetAndClearErrors(...fields)`, `setDefaults()`, `setError`, `clearErrors`, `dontRemember(...fields)`, `cancel`.
 
+To submit a form without navigating, in JSON mode, use [`useJsonForm`](/beyond/json-mode#forms-over-json-usejsonform): same fields and methods, with the response in `form.result`.
+
 Submission options are the [visit options](/basics/manual-visits) plus `resetOnSuccess`. On success the current values become the new defaults unless `resetOnSuccess` is set.
 
 ## Remembering form state

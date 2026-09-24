@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { BridgeHead, useJson, type Method } from '@swarakaka/bridge-vue'
+import { BridgeHead, useJson, useJsonForm, type Method } from '@swarakaka/bridge-vue'
 import { computed, onMounted, ref } from 'vue'
 import AppLayout from '@/Layouts/AppLayout.vue'
 
@@ -39,6 +39,15 @@ const jsonBody = computed(() => {
     if (json.lastError) return JSON.stringify(json.lastError, null, 2)
     return json.data === null ? '' : JSON.stringify(json.data, null, 2)
 })
+
+// A form over JSON mode: field state, 422 errors and Precognition like useForm, but no navigation.
+const customer = useJsonForm<
+    { name: string; email: string },
+    { customer: { id: number; name: string } }
+>({ name: '', email: '' })
+const createCustomer = (): void => {
+    void customer.post('/customers', { resetOnSuccess: true })
+}
 
 // Filled after mount: the server has no window, and the first client render must match it.
 const origin = ref('')
@@ -188,6 +197,55 @@ const run = async (): Promise<void> => {
                         >{{ jsonBody }}</pre>
                 </div>
             </div>
+
+            <form
+                class="space-y-2 rounded border border-slate-200 p-3"
+                data-testid="json-form"
+                @submit.prevent="createCustomer"
+            >
+                <div class="font-medium">Through <code>useJsonForm()</code></div>
+                <p class="text-xs text-slate-500">
+                    A form in JSON mode: <code>POST /customers</code> with
+                    <code>Accept: application/json</code>, errors per field, live validation on
+                    blur, and the created customer in <code>form.result</code>. The page stays.
+                </p>
+                <div v-for="field in ['name', 'email'] as const" :key="field">
+                    <label :for="`json-${field}`" class="block text-xs font-medium capitalize">{{
+                        field
+                    }}</label>
+                    <input
+                        :id="`json-${field}`"
+                        v-model="customer[field]"
+                        class="mt-1 w-full rounded border border-slate-300 px-3 py-1"
+                        :data-testid="`json-form-${field}`"
+                        :aria-invalid="Boolean(customer.errors[field])"
+                        @blur="customer.validate('post', '/customers', field)"
+                    />
+                    <p
+                        v-if="customer.errors[field]"
+                        class="text-xs text-rose-600"
+                        :data-testid="`json-form-error-${field}`"
+                    >
+                        {{ customer.errors[field] }}
+                    </p>
+                </div>
+                <button
+                    type="submit"
+                    class="rounded border border-indigo-600 px-4 py-2 text-indigo-700 disabled:opacity-50"
+                    :disabled="customer.processing"
+                    data-testid="json-form-submit"
+                >
+                    Create with useJsonForm
+                </button>
+                <p
+                    v-if="customer.result && customer.wasSuccessful"
+                    class="text-xs text-emerald-700"
+                    data-testid="json-form-created"
+                >
+                    HTTP {{ customer.httpStatus }}: created {{ customer.result.customer.name }} at
+                    {{ customer.meta.location }}
+                </p>
+            </form>
         </div>
 
         <div v-if="result" class="text-sm" data-testid="result">

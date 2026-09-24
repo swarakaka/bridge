@@ -68,25 +68,81 @@ const create = () =>
 
 Each call also accepts `headers` (an `Authorization` header for a token), `only`/`except` for partial selection, and `onSuccess`, `onInvalid`, `onError`, `onException`, `onFinish` callbacks. The promise resolves to the same outcome (`success`, `invalid`, `error`, `exception` or `cancelled`) and never rejects. One handle runs one request at a time: starting another cancels the previous one, and unmounting the component cancels too (`cancelOnDispose: false` to opt out). Headers passed to `useJson({ headers })` go on every call.
 
-The React adapter does not have a `useJson` hook yet. Create the core `JsonRequest` handle from the bridge instead; it exposes the same members and callbacks (re-render after each callback with your own state):
+The React adapter has the same hook, re-rendering on every change:
 
 ```tsx
-import { useMemo } from 'react'
-import { useBridge } from '@swarakaka/bridge-react'
+import { useJson } from '@swarakaka/bridge-react'
 
-const bridge = useBridge()
-const json = useMemo(() => bridge.jsonRequest<{ customer: { id: number } }>(), [bridge])
-
-const create = () =>
-  json.post('/customers', {
-    data: { name, email },
-    onSuccess: (data, meta) => console.log(data?.customer.id, meta.location),
-  })
+const json = useJson<{ customer: { id: number } }>()
 ```
 
 A `2xx` body that is not a Bridge envelope is exposed as `data` unchanged, so routes that return `response()->json()` work as well. Unlike page visits, a `419` or `401` does not reload or redirect: JSON calls are not navigations, so the component decides what to do.
 
 Outside components, `getBridge().json` is the stateless client (`await bridge.json.get('/customers')` returns the outcome) and `getBridge().jsonRequest()` builds the same stateful handle for other adapters.
+
+## Forms over JSON: `useJsonForm`
+
+`useJson` is a request handle: you pass the body on each call. When the values are a form (fields, validation errors, dirty tracking, reset, live validation), use `useJsonForm`. It has the same field state and methods as [`useForm`](/basics/forms), and submits in JSON mode instead of as a page visit: nothing navigates, and the response is kept on the form.
+
+::: code-group
+
+```vue [Vue]
+<script setup lang="ts">
+import { useJsonForm } from '@swarakaka/bridge-vue'
+
+const form = useJsonForm<{ name: string; email: string }, { customer: { id: number } }>({
+  name: '',
+  email: '',
+})
+</script>
+
+<template>
+  <form @submit.prevent="form.post('/customers', { resetOnSuccess: true })">
+    <input v-model="form.name" />
+    <p v-if="form.errors.name">{{ form.errors.name }}</p>
+    <input v-model="form.email" @blur="form.validate('post', '/customers', 'email')" />
+    <p v-if="form.errors.email">{{ form.errors.email }}</p>
+    <button :disabled="form.processing">Create</button>
+    <p v-if="form.result">Created #{{ form.result.customer.id }} at {{ form.meta.location }}</p>
+  </form>
+</template>
+```
+
+```tsx [React]
+import { useJsonForm } from '@swarakaka/bridge-react'
+
+export function CreateCustomer() {
+  const form = useJsonForm<{ name: string }, { customer: { id: number } }>({ name: '' })
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault()
+        void form.post('/customers')
+      }}
+    >
+      <input value={form.data.name} onChange={(e) => form.setData('name', e.target.value)} />
+      {form.errors.name && <p>{form.errors.name}</p>}
+      {form.result && <p>Created #{form.result.customer.id}</p>}
+    </form>
+  )
+}
+```
+
+:::
+
+Beyond the `useForm` members (`data` and, in Vue, flat fields, `errors`, `processing`, `progress`, `isDirty`, `reset`, `transform`, `validate`, `remember`, `dontRemember`, ...):
+
+| Member       | Meaning                                                                                                    |
+| ------------ | ---------------------------------------------------------------------------------------------------------- |
+| `result`     | `data` of the last successful response (the whole body for a route that does not return a Bridge envelope) |
+| `meta`       | `meta` of the last successful response (`location`, `flash`, ...)                                          |
+| `httpStatus` | Status of the last response                                                                                |
+| `message`    | Message of the last `422` or error response                                                                |
+| `lastError`  | The last non-validation error, with `kind` as for `useJson`                                                |
+
+Submission options are `headers`, `only`/`except`, `forceFormData`, `resetOnSuccess`, and the callbacks `onBefore` (return `false` to skip), `onStart`, `onProgress`, `onSuccess(result, meta)`, `onInvalid(errors, message)`, `onError(error)`, `onException(error)`, `onCancel` and `onFinish(outcome)`. The promise resolves to the same outcome as `useJson` and never rejects. After a success the submitted values become the new defaults unless `resetOnSuccess` is set.
+
+As with `useJson`, a `419` or `401` is reported, not acted on; one submission runs at a time (a new one cancels the previous); and unmounting the component cancels it (Vue: `cancelOnDispose: false` to opt out). `validate()` uses Precognition in JSON mode, so the route needs the `precognitive` middleware as for page forms. Headers passed to `useJsonForm(data, { headers })` go on every request. Field names may not match a member (`result`, `meta`, `message`, `errors`, ...); see [Reserved field names](/basics/forms#reserved-field-names).
 
 ## Caching
 

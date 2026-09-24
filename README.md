@@ -22,7 +22,7 @@ public function index()
 | `Accept: text/event-stream` (on a stream route) | `event: bridge` / `data: {"type":"invalidate","keys":["customers"]}`            |
 | `Accept: text/html`                             | The application shell with the initial page embedded                            |
 
-Bridge is inspired by Inertia's developer experience but is designed as `Laravel → Bridge Protocol → Client`, so the Laravel package has no Vue-specific assumptions and React, mobile, and CLI clients can consume the same backend.
+Bridge is designed as `Laravel → Bridge Protocol → Client`, so the Laravel package has no Vue-specific assumptions and React, mobile, and CLI clients can consume the same backend.
 
 > **Status: 1.0.1, the first public release.** All packages share one version: `swarakaka/bridge-laravel` on Packagist and `@swarakaka/bridge-protocol`, `-core`, `-vue` and `-react` on npm (the React adapter is experimental). Release steps are in [`CONTRIBUTING.md`](CONTRIBUTING.md#releasing-maintainers). [`development/PLAN.md`](development/PLAN.md) holds the design, the phase breakdown and every deviation made since.
 

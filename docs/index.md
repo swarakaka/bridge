@@ -3,7 +3,7 @@ layout: home
 hero:
   name: Bridge
   text: One controller. Page, JSON and stream.
-  tagline: A server-driven application protocol for Laravel with Vue 3 and React clients. Inspired by Inertia's developer experience, designed as Laravel → Protocol → Client.
+  tagline: A server-driven application protocol for Laravel with Vue 3 and React clients, designed as Laravel → Protocol → Client.
   actions:
     - theme: brand
       text: Get started

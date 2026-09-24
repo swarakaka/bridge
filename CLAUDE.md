@@ -84,6 +84,7 @@ The Laravel package is developed only in `packages/laravel` here. `swarakaka/bri
 - `<x-bridge::app />` / `<x-bridge::head />` (`Bridge\View\Components`) read the current response's shell data from the `bridge.shell` request attribute set by `HtmlRepresenter`; the directives keep reading view variables. Both must stay byte-identical (`BladeComponentsTest` checks). Named multiple roots were considered and deferred: two routers cannot both own history.
 - `@swarakaka/bridge-vite` (`packages/vite`) rewrites `createBridgeApp(...)`/`createSsrRenderer(...)` calls imported from the adapters: no `resolve` → a resolver over `import.meta.glob('./Pages/**/*.<ext>')` relative to the calling file; a `pages` option is compiled into the same resolver. It must stay a build-time transform (`import.meta.glob` needs literal patterns in app source). Adapters make `resolve` optional and throw via core `requireResolver` when it is missing. `withApp(app, { ssr, page })` is shared by `createBridgeApp` and `createSsrRenderer` (Vue: app instance, before mount; React: returns the wrapped tree). The playground uses the plugin, so E2E covers it.
 - `useJson` (Vue) wraps core `JsonRequest` over `JsonClient` (`bridge.json`): JSON mode from components without a visit. Deliberately not named `useHttp`; kinds come from the HTTP status because JSON errors are Laravel-native. `useJson` never reloads or redirects on `419`/`401`.
+- Forms share `FormState` (core `forms/FormState.ts`): `Form` submits as a page visit, `JsonForm` through `JsonClient` (response in `result`, not `data`). New form behaviour belongs in `FormState` unless it is transport-specific. `useJsonForm` (Vue, React) reuses `useForm`'s setup (`setupForm` in Vue); every `FormState` member name is a reserved Vue field name.
 
 ## Phase 5 notes
 
@@ -111,7 +112,7 @@ The Laravel package is developed only in `packages/laravel` here. `swarakaka/bri
 
 ## What Bridge is
 
-Bridge is a planned open-source **server-driven application bridge for Laravel** with first-party Vue 3 and React clients (React is experimental), intended to live at `github.com/swarakaka/Bridge`. It is inspired by Inertia's developer experience but must not copy Inertia's internals.
+Bridge is a planned open-source **server-driven application bridge for Laravel** with first-party Vue 3 and React clients (React is experimental), intended to live at `github.com/swarakaka/Bridge`. Its implementation is its own: do not copy other libraries' internals.
 
 One Laravel controller returning `Bridge::render('Customers/Index', [...])` must be consumable in three modes from the same route and business logic:
 

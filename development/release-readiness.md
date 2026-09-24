@@ -11,7 +11,7 @@ Status as of 2026-09-24.
 | SSE: real-HTTP integration tests with `database` and `redis`; two-browser Playwright test; `max_duration` and `Last-Event-ID` verified | Done for `database` (E2E) and `redis` (package test against a Redis service); Playwright runs under `php artisan serve` and FrankenPHP is not yet in CI |
 | Coverage ≥ 90 % in `packages/laravel` and `packages/core`, ≥ 80 % in `packages/vue`                                                    | See the coverage section below                                                                                                                          |
 | PHPStan level 8, strict TypeScript, zero lint errors                                                                                   | Done                                                                                                                                                    |
-| `benchmarks/RESULTS.md` populated by the harness; docs cite it                                                                         | Done (built-in server runs; no Inertia baseline yet)                                                                                                    |
+| `benchmarks/RESULTS.md` populated by the harness; docs cite it                                                                         | Done (built-in server runs; no reference baseline yet)                                                                                                  |
 | Docs cover every section of PLAN §32; protocol spec normative and versioned `1`                                                        | Done (VitePress)                                                                                                                                        |
 | `SECURITY.md`, `CONTRIBUTING.md`; `bridge:install` walkthrough tested in CI (`CHANGELOG.md` kept empty, PLAN deviations §31)           | Docs present; the CI playground job installs from scratch                                                                                               |
 
@@ -28,7 +28,7 @@ Measured on 2026-09-24 (line coverage): `vitest run --coverage` for the npm pack
 ## Not in 1.0
 
 - FrankenPHP and PHP-FPM runs in CI (the deployment guide documents them).
-- The Inertia baseline benchmark app.
+- The reference baseline benchmark app.
 - The external relay (design in `development/relay-design.md`).
 - `@swarakaka/bridge-react` is an experimental skeleton, not part of the 1.0 API surface.
 
