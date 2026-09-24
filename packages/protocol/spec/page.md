@@ -89,12 +89,13 @@ with an empty body. The client MUST perform a full document navigation to `X-Bri
 
 ## 7. Caching defaults
 
-| Situation                                     | `Cache-Control`                        | Other                                                     |
-| --------------------------------------------- | -------------------------------------- | --------------------------------------------------------- |
-| page response                                 | `private, no-cache`                    | weak `ETag` over the body; `304` on `If-None-Match` match |
-| html shell, embedded page, authenticated user | `private, no-store`                    | —                                                         |
-| html shell, embedded page, guest              | `private, no-cache`                    | weak `ETag`                                               |
-| html shell, static (no embedded page)         | `public, max-age=300, must-revalidate` | `ETag`                                                    |
+| Situation                                     | `Cache-Control`                         | Other                                                     |
+| --------------------------------------------- | --------------------------------------- | --------------------------------------------------------- |
+| page response                                 | `private, no-cache`                     | weak `ETag` over the body; `304` on `If-None-Match` match |
+| html shell, embedded page, authenticated user | `private, no-store`                     | —                                                         |
+| html shell, embedded page, guest              | `private, no-cache`                     | weak `ETag`                                               |
+| html shell, static (no embedded page), guest  | `public, max-age=300, must-revalidate`  | `ETag`                                                    |
+| html shell, static, authenticated user        | `private, max-age=300, must-revalidate` | `ETag`                                                    |
 
 Applications MAY relax these per response. A server MUST NOT emit `public` for a response produced for an authenticated user unless the application explicitly forces it.
 

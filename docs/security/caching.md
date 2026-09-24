@@ -2,14 +2,15 @@
 
 Defaults are conservative because most Bridge responses are private:
 
-| Mode                                | Default                                | Notes                         |
-| ----------------------------------- | -------------------------------------- | ----------------------------- |
-| Page                                | `private, no-cache` + weak `ETag`      | `If-None-Match` answers `304` |
-| JSON                                | `private, no-cache` + weak `ETag`      | same                          |
-| HTML shell, embedded, authenticated | `private, no-store`                    | page data is in the document  |
-| HTML shell, embedded, guest         | `private, no-cache` + `ETag`           |                               |
-| HTML shell, static                  | `public, max-age=300, must-revalidate` | `bridge.shell.embed = false`  |
-| Stream                              | `no-cache, no-transform`               | never cacheable               |
+| Mode                                | Default                                 | Notes                         |
+| ----------------------------------- | --------------------------------------- | ----------------------------- |
+| Page                                | `private, no-cache` + weak `ETag`       | `If-None-Match` answers `304` |
+| JSON                                | `private, no-cache` + weak `ETag`       | same                          |
+| HTML shell, embedded, authenticated | `private, no-store`                     | page data is in the document  |
+| HTML shell, embedded, guest         | `private, no-cache` + `ETag`            |                               |
+| HTML shell, static, guest           | `public, max-age=300, must-revalidate`  | `bridge.shell.embed = false`  |
+| HTML shell, static, authenticated   | `private, max-age=300, must-revalidate` | `bridge.shell.embed = false`  |
+| Stream                              | `no-cache, no-transform`                | never cacheable               |
 
 Every page and JSON response carries `Vary: Accept, X-Bridge-Only, X-Bridge-Except, X-Bridge-Component`, so a cache can never serve a page object to a browser navigation or a partial response as a full one.
 

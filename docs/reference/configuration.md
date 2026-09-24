@@ -24,19 +24,19 @@
 
 ## Streams
 
-| Key                               | Default                                                          | Meaning                                                             |
-| --------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------- |
-| `stream.driver`                   | `database`                                                       | Bus driver: `redis`, `database`, `sync`, `null`.                    |
-| `stream.prefix`                   | app name                                                         | Key or table prefix; set when several apps share one Redis.         |
-| `stream.heartbeat_ms`             | `15000`                                                          | Interval of `: hb` comments during silence.                         |
-| `stream.max_duration_s`           | `60` (`300` on Octane)                                           | Connection lifetime before an orderly `end`.                        |
-| `stream.retry_ms`                 | `3000`                                                           | `retry:` hint sent to clients.                                      |
-| `stream.max_connections_per_user` | `3`                                                              | Concurrent streams per user.                                        |
-| `stream.connects_per_minute`      | `30`                                                             | Limit used by `throttle:bridge-stream`.                             |
-| `stream.max_client_channels`      | `20`                                                             | Maximum `?channels=` entries.                                       |
-| `stream.ticket_ttl_s`             | `60`                                                             | Lifetime of signed stream tickets.                                  |
-| `stream.drivers.redis`            | `connection: default, maxlen: 1000`                              | Redis connection and per-channel retention.                         |
-| `stream.drivers.database`         | `table: bridge_stream_events, poll_ms: 1000, retain_minutes: 60` | Table, poll interval and retention pruned by `bridge:stream:prune`. |
+| Key                               | Default                                                                         | Meaning                                                                                                                                |
+| --------------------------------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `stream.driver`                   | `database`                                                                      | Bus driver: `redis`, `database`, `sync`, `null`.                                                                                       |
+| `stream.prefix`                   | app name                                                                        | Key or table prefix; set when several apps share one Redis.                                                                            |
+| `stream.heartbeat_ms`             | `15000`                                                                         | Interval of `: hb` comments during silence.                                                                                            |
+| `stream.max_duration_s`           | `60` (`300` on Octane)                                                          | Connection lifetime before an orderly `end`.                                                                                           |
+| `stream.retry_ms`                 | `3000`                                                                          | `retry:` hint sent to clients.                                                                                                         |
+| `stream.max_connections_per_user` | `3`                                                                             | Concurrent streams per user.                                                                                                           |
+| `stream.connects_per_minute`      | `30`                                                                            | Limit used by `throttle:bridge-stream`.                                                                                                |
+| `stream.max_client_channels`      | `20`                                                                            | Maximum `?channels=` entries.                                                                                                          |
+| `stream.ticket_ttl_s`             | `60`                                                                            | Lifetime of signed stream tickets.                                                                                                     |
+| `stream.drivers.redis`            | `connection: default, maxlen: 1000`                                             | Redis connection and per-channel retention.                                                                                            |
+| `stream.drivers.database`         | `table: bridge_stream_events, poll_ms: 1000, retain_minutes: 60, lookback: 200` | Table, poll interval, retention pruned by `bridge:stream:prune`, and ids re-checked behind the cursor for rows committed out of order. |
 
 ## Commands
 

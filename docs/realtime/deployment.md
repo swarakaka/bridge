@@ -50,6 +50,12 @@ For PHP-FPM behind Nginx, add `fastcgi_buffering off;` on the stream location.
 
 Set `BRIDGE_STREAM_PREFIX` when several apps share one Redis.
 
+### Replay and ordering
+
+A reconnecting client sends `Last-Event-ID`. When pruning (`database`) or `MAXLEN` trimming (`redis`) has removed events after that id, the server answers `replayed: false` and the client reloads its props instead of silently missing events.
+
+On MySQL and PostgreSQL an auto-increment id is taken at insert but becomes visible at commit, so a row published inside a long transaction can appear after rows with higher ids. The database bus re-checks the last `lookback` ids (default 200) on every poll and delivers such rows late, without an SSE `id`. Publish after commit when the event describes data written in a transaction: implement `Illuminate\Contracts\Events\ShouldDispatchAfterCommit` on `ShouldStream` events, or wrap `Bridge::to()` in `DB::afterCommit()`. This also avoids streaming events for work that is rolled back.
+
 ## Sizing rule of thumb
 
 ```

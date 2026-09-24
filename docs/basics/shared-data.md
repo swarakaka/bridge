@@ -17,6 +17,8 @@ public function boot(): void
 
 Closures are resolved per request and container-injected. Page props win over shared props with the same key.
 
+Props shared while the application boots (service providers) apply to every request. Props shared later, from middleware or a controller, apply only to the request that shared them: Bridge drops them once the request is handled, so a long-lived worker such as Octane never carries one user's props into the next request.
+
 ## Defaults
 
 Bridge shares two props out of the box:
