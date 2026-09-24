@@ -59,6 +59,10 @@ Vary: Accept, X-Bridge-Only, X-Bridge-Except, X-Bridge-Component
 
 `html` responses MUST include at least `Vary: Accept`.
 
+## 5a. Page requests inside the server application (non-normative)
+
+The page media type ends in `+json`, and some frameworks treat any `*/json` or `*+json` `Accept` as a request from an API client. Laravel's `wantsJson()`/`expectsJson()` do, and authentication packages then answer a login with JSON or `204` instead of a redirect. A server implementation SHOULD make application code see a page request as a browser navigation once the mode is negotiated, while its own representation logic uses the stored negotiation result. The Laravel server replaces `Accept` with `text/html, application/xhtml+xml` for the rest of the request and keeps the client's value in a request attribute. Nothing changes on the wire: the client still sends the page media type, and responses are selected as in §2.
+
 ## 6. What this specification does not do
 
 - It does not use `X-Requested-With`.

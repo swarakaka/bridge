@@ -97,6 +97,7 @@ The Laravel package is developed only in `packages/laravel` here. `swarakaka/bri
 - On PHP's built-in server a request sent while the page opens its SSE stream can wait until that stream ends (`max_duration`, 8 s in E2E): a worker may take two new connections and run the stream first. It is not keep-alive (the server already sends `Connection: close`). E2E's `expect.timeout` is therefore `max_duration + 2 s`; do not lower it below the stream lifetime.
 - The Redis bus sends raw commands (no connection key prefix). Tests that inspect or delete its keys must use `executeRaw`, not `Redis::connection()->del()`/`keys()`.
 - A queued `router.reload()` waits for an in-flight visit instead of cancelling it; `form.validate()` uses `router.request()`, outside the visit pipeline. Keep background requests out of `performVisit`.
+- During a page visit `HandleBridgeRequests` swaps `Accept` for `text/html, application/xhtml+xml` (original in `Negotiation::ORIGINAL_ACCEPT_ATTRIBUTE`) so `wantsJson()` is false (Fortify, `verified`). Bridge code must read the stored negotiation (`Negotiation::for()`), never the header, after the middleware ran.
 - New regression tests should fail on the old code; for Vue component-update bugs pass slots as `{ default, $stable: true }` or Vue re-renders the child anyway and hides the bug.
 
 ## Phase 4 notes

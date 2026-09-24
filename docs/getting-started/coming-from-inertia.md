@@ -23,7 +23,7 @@ Bridge borrows Inertia's developer experience: controllers return pages, page co
 
 ## What is different, and why
 
-**Mode selection uses `Accept`, not a marker header.** The page media type `application/vnd.bridge+json; v=1` is the marker, so no `X-Inertia: true` equivalent exists and `Vary: Accept` is the caching mechanism. See [Modes and negotiation](/core-concepts/modes).
+**Mode selection uses `Accept`, not a marker header.** The page media type `application/vnd.bridge+json; v=1` is the marker, so no `X-Inertia: true` equivalent exists and `Vary: Accept` is the caching mechanism. See [Modes and negotiation](/core-concepts/modes). As with Inertia, `$request->wantsJson()` is `false` during a page visit, so Fortify and other packages redirect instead of answering with JSON.
 
 **JSON mode is part of the protocol.** Any client that sends `Accept: application/json` gets `{ data, meta }` with Laravel-native resource shapes from the same controllers. There are no API controllers to write. See [JSON mode](/beyond/json-mode).
 

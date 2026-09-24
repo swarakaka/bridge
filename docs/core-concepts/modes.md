@@ -18,4 +18,16 @@ Rules that matter day to day:
 
 Read the negotiated mode when you must (rarely): `request()->bridgeMode()` or `Bridge::mode()`.
 
+## `wantsJson()` and `expectsJson()` in page mode
+
+A page visit is a browser navigation, so Laravel code downstream of Bridge's middleware sees it as one: during a page visit `HandleBridgeRequests` replaces `Accept` with `text/html, application/xhtml+xml` and `$request->wantsJson()` and `$request->expectsJson()` return `false`. Laravel and its packages branch on these methods to choose between an API answer and a redirect: Fortify's login, logout, two-factor and password responses, `verified` (`EnsureEmailIsVerified`), `password.confirm` (`RequirePassword`). In page mode they redirect, and Bridge turns the redirect into a `303` the client follows. JSON-mode requests (`Accept: application/json`) keep their JSON branch, and stream requests are untouched.
+
+Bridge itself reads the negotiation stored on the request, never the header. If your code needs the client's header, it is in `$request->attributes->get(Negotiation::ORIGINAL_ACCEPT_ATTRIBUTE)` (`Bridge\Negotiation\Negotiation`). The header is restored after the response is built, so request loggers and terminable middleware see the value the client sent.
+
+Guidance for your own code and for packages you write:
+
+- Do not use `wantsJson()` to detect Bridge. Use `request()->bridgeMode()` if you must know the mode, and prefer returning a redirect or `Bridge::render()` and letting Bridge represent it.
+- Branch on `wantsJson()` only where you mean "an API client asked for JSON". That is exactly JSON mode, and it keeps working.
+- Middleware that runs **before** Bridge's (global middleware, and route middleware in Laravel's priority list, such as `auth`, `throttle` and `SubstituteBindings`) still sees the original `Accept`. Code there should throw (an `AuthenticationException`, a `ThrottleRequestsException`, `abort()`) rather than build a response itself: Bridge's exception renderer represents exceptions per mode wherever they are thrown.
+
 The full algorithm is in the [protocol reference](/reference/protocol).
