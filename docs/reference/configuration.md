@@ -19,6 +19,7 @@
 | `ssr.enabled`              | `false`                  | Render HTML through the SSR server.                                                                     |
 | `ssr.url`                  | `http://127.0.0.1:13714` | SSR server address.                                                                                     |
 | `ssr.timeout`              | `2.0`                    | Seconds before falling back to client rendering.                                                        |
+| `ssr.cooldown_s`           | `10`                     | After a connection failure or timeout, skip SSR for this many seconds.                                  |
 | `ssr.bundle`               | `bootstrap/ssr/ssr.js`   | Bundle started by `bridge:ssr`.                                                                         |
 | `middleware.auto_register` | `true`                   | Append the `bridge` middleware to the `web` group.                                                      |
 
@@ -35,7 +36,7 @@
 | `stream.connects_per_minute`      | `30`                                                                            | Limit used by `throttle:bridge-stream`.                                                                                                |
 | `stream.max_client_channels`      | `20`                                                                            | Maximum `?channels=` entries.                                                                                                          |
 | `stream.ticket_ttl_s`             | `60`                                                                            | Lifetime of signed stream tickets.                                                                                                     |
-| `stream.drivers.redis`            | `connection: default, maxlen: 1000`                                             | Redis connection and per-channel retention.                                                                                            |
+| `stream.drivers.redis`            | `connection: default, maxlen: 1000, retain_minutes: 60`                         | Redis connection, per-channel length, and how long an idle channel's key lives after its last publish.                                 |
 | `stream.drivers.database`         | `table: bridge_stream_events, poll_ms: 1000, retain_minutes: 60, lookback: 200` | Table, poll interval, retention pruned by `bridge:stream:prune`, and ids re-checked behind the cursor for rows committed out of order. |
 
 ## Commands

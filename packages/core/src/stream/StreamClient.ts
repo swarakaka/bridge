@@ -297,6 +297,9 @@ export class StreamClient {
       this.close()
       return
     }
+    // Back off from scratch only after a connection that was actually healthy; a
+    // refused one (throttled: ready, error, close) keeps growing the delay.
+    if (!this.sawError && Date.now() - connectedAt >= 1000) this.backoff.reset()
     this.scheduleReconnect()
   }
 
@@ -420,7 +423,6 @@ export class StreamClient {
     switch (control.type) {
       case 'ready': {
         this.heartbeatMs = control.heartbeat
-        this.backoff.reset()
         const reconnect = this._reconnects > 0
         this.events.emit('ready', control)
         this.events.emit('open', { replayed: control.replayed, reconnect })

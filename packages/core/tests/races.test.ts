@@ -350,4 +350,24 @@ describe('stream races', () => {
     expect(stream.state).toBe('open')
     stream.close()
   })
+
+  it('keeps growing the backoff while the server throttles the connection', async () => {
+    const throttled =
+      'retry: 20\nevent: bridge\ndata: {"type":"ready","protocol":1,"replayed":false,"heartbeat":15000,"maxDuration":null}\n\n' +
+      'event: bridge\ndata: {"type":"error","status":429,"kind":"throttled","message":"busy","final":false}\n\n'
+    const fetch = vi.fn(
+      async () =>
+        new Response(throttled, { status: 200, headers: { 'Content-Type': 'text/event-stream' } }),
+    ) as unknown as typeof globalThis.fetch
+    bridge = bridgeWith(mockFetch(() => pageResponse(page())))
+    const stream = bridge.stream('/events', {
+      fetch,
+      backoff: { factor: 4, jitter: 0, max: 10_000 },
+    })
+
+    // Delays 20 ms, then 80 ms: two attempts by 70 ms (a reset on `ready` would make it four).
+    await new Promise((r) => setTimeout(r, 70))
+    expect(fetch).toHaveBeenCalledTimes(2)
+    stream.close()
+  })
 })

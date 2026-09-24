@@ -51,6 +51,8 @@ Clients MUST implement:
 3. No automatic reconnect after `error` with `final: true`, or after HTTP `401`/`403` on the connection request.
 4. **Resync** when `ready.replayed` is `false` on a reconnect: reload every page prop the client watches (equivalent to `invalidate: "*"` scoped to the current page), because events may have been missed. A client MAY skip the resync when the previous connection ended with `end` and it had no `id` to send as `Last-Event-ID`: the server could not replay anything, and there was nothing to miss (a bus without replay).
 
+A server that refuses a connection for capacity (too many open streams for the subject) sends `ready`, then `error{status:429, kind:"throttled", final:false}`, and closes **without** `end`, so the client backs off (starting at the advertised `retry`) instead of reconnecting immediately.
+
 Servers SHOULD bound connection lifetime (`maxDuration`) and end connections with `end{reason:"max_duration", reconnect:true}`; clients treat this as routine.
 
 ## 7. Channels

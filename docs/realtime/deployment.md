@@ -7,7 +7,7 @@ Bridge streams are long-lived HTTP responses. Each open stream occupies one PHP 
 - **Bounded lifetime.** Every connection ends after `bridge.stream.max_duration_s` (60 s on classic PHP, 300 s on Octane) with `end{reason:"max_duration", reconnect:true}`. The client reconnects at once with `Last-Event-ID`, replays what it missed, and users notice nothing. Workers recycle, and deploys never wait on hour-long connections.
 - **Blocking reads.** The stream waits inside the bus (`XREAD BLOCK` on Redis, a polling sleep on the database driver) instead of spinning.
 - **Heartbeats and abort detection.** A `: hb` comment every `heartbeat_ms` keeps proxies from timing out and lets PHP notice a closed socket, after which the loop exits and the per-user counter is released.
-- **Per-user cap.** `max_connections_per_user` (default 3) refuses extra streams with `error{429}` + `end{reconnect:true}`; the client backs off.
+- **Per-user cap.** `max_connections_per_user` (default 3) refuses extra streams with `error{429}` and closes without `end`, so the client backs off with growing delays.
 - **Publishing is decoupled.** Queue workers, jobs and the scheduler only publish to the bus. A future external relay can serve the streams while Laravel keeps publishing.
 
 Run `php artisan bridge:doctor --url=https://your.app/events --token=...` after deploying. It checks PHP output settings, the bus round trip and the time to the first stream byte (slow first bytes mean a buffering proxy).
