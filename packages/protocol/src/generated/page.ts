@@ -26,6 +26,23 @@ export interface BridgePage {
      */
     merge?: string[];
     /**
+     * Prop keys clients may prepend on opted-in partial reloads (§3).
+     */
+    prepend?: string[];
+    /**
+     * Prop keys clients may deep-merge on opted-in partial reloads (§3).
+     */
+    deepMerge?: string[];
+    /**
+     * Match paths per merge key: the last segment is the item key (§3).
+     */
+    matchOn?: {
+      /**
+       * @minItems 1
+       */
+      [k: string]: [string, ...string[]] | undefined;
+    };
+    /**
      * Store this page encrypted in the client's history (§10).
      */
     encryptHistory?: boolean;

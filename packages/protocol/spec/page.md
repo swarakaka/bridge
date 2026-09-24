@@ -19,16 +19,16 @@ A successful page response has status `200` and body:
 }
 ```
 
-| Field       | Type           | Required | Meaning                                                                                                                                                   |
-| ----------- | -------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `protocol`  | integer        | yes      | Protocol version of this document. Equals the `v` of the response media type.                                                                             |
-| `type`      | `"page"`       | yes      | Discriminator.                                                                                                                                            |
-| `component` | string         | yes      | Opaque component name. Clients resolve it however they like; servers MUST NOT assume a file format.                                                       |
-| `url`       | string         | yes      | Path plus query (no origin) of the request as the server routed it. Clients push this to history.                                                         |
-| `props`     | object         | yes      | The prop bag. Always an object, possibly empty. Includes shared props.                                                                                    |
-| `build`     | string \| null | yes      | Current asset build identifier, or `null` when the server has none configured.                                                                            |
-| `deferred`  | object         | no       | Map of group name → array of prop keys that are absent from `props` and SHOULD be requested after render (§4). Omitted or empty when nothing is deferred. |
-| `meta`      | object         | no       | Additive extensions. Clients MUST ignore unknown members. Defined members: `merge` (§3), `encryptHistory` and `clearHistory` (§10), `once` (§11).         |
+| Field       | Type           | Required | Meaning                                                                                                                                                                                 |
+| ----------- | -------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `protocol`  | integer        | yes      | Protocol version of this document. Equals the `v` of the response media type.                                                                                                           |
+| `type`      | `"page"`       | yes      | Discriminator.                                                                                                                                                                          |
+| `component` | string         | yes      | Opaque component name. Clients resolve it however they like; servers MUST NOT assume a file format.                                                                                     |
+| `url`       | string         | yes      | Path plus query (no origin) of the request as the server routed it. Clients push this to history.                                                                                       |
+| `props`     | object         | yes      | The prop bag. Always an object, possibly empty. Includes shared props.                                                                                                                  |
+| `build`     | string \| null | yes      | Current asset build identifier, or `null` when the server has none configured.                                                                                                          |
+| `deferred`  | object         | no       | Map of group name → array of prop keys that are absent from `props` and SHOULD be requested after render (§4). Omitted or empty when nothing is deferred.                               |
+| `meta`      | object         | no       | Additive extensions. Clients MUST ignore unknown members. Defined members: `merge`, `prepend`, `deepMerge` and `matchOn` (§3), `encryptHistory` and `clearHistory` (§10), `once` (§11). |
 
 Clients MUST ignore unknown top-level members. Servers MUST NOT emit members not defined here or in a later version of this specification.
 
@@ -56,7 +56,21 @@ Rules:
 
 - The server MUST evaluate `X-Bridge-Component`; on mismatch it MUST ignore the selection and return a full page.
 - The client MUST merge a partial response into the current page only when `component` equals the current component; otherwise it MUST treat the response as a full page swap.
-- Merging replaces each returned key wholesale (no deep merge). Keys listed in `meta.merge` MAY instead be appended (arrays concatenate; objects with array members such as paginators concatenate those members and take the other members from the response) when the client opted in for that request, e.g. "load more". Requests that did not opt in, including invalidation reloads, replace the key.
+- Merging replaces each returned key wholesale. Keys listed in a merge member (below) MAY instead be combined with the current value when the client opted in for that request, e.g. "load more". Requests that did not opt in, including invalidation reloads, replace the key.
+
+Merge members of `meta`, each listing a key at most once across the three lists:
+
+| Member      | Type                         | Combination                                                                                                                                                                    |
+| ----------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `merge`     | array of keys                | Append: arrays concatenate; objects concatenate their array members (a paginator's `data`) and take the other members from the response.                                       |
+| `prepend`   | array of keys                | As `merge`, with incoming items placed before the current ones.                                                                                                                |
+| `deepMerge` | array of keys                | Objects merge key by key at every depth; arrays at any depth concatenate (append); any other value, or a type mismatch, takes the incoming value.                              |
+| `matchOn`   | object: key → array of paths | Match paths for keys in the three lists. The last segment of a path is the item key; the others lead to an array inside the prop (`id` for a list, `data.id` for a paginator). |
+
+When a match path points at an array being concatenated, an incoming item whose item key equals an existing item's replaces that item in place and is not added again; items without a match are added at the list's end (or start, for `prepend`). Paths contain no commas or whitespace.
+
+A client MAY let a request override the combination for every listed key (for example to prepend a page loaded above the current ones). Clients that do not know `prepend` or `deepMerge` replace those keys.
+
 - Lazy props (§4) are included only when named in `X-Bridge-Only`.
 
 ## 4. Lazy, deferred, always

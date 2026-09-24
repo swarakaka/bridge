@@ -1,12 +1,111 @@
 import type { BridgePage, BridgeStreamControl } from '@swarakaka/bridge-protocol'
 import { getDeep, hasDeep, isPlainObject, mergeValue, setDeep, type MergeMode } from './merge.js'
 
-/** Keys the server marked with Bridge::merge() (spec/page.md §3, `meta.merge`). */
+/** A visit's merge opt-in: each key's own mode, or one direction for all merge keys. */
+export type MergeOption = boolean | 'append' | 'prepend'
+
+/** How a merge key combines with the current value (spec/page.md §3). */
+export type MergeHintMode = 'append' | 'prepend' | 'deep'
+
+export interface MergeHint {
+  mode: MergeHintMode
+  /** Match paths: the last segment is the item key, the others lead to the array. */
+  matchOn: string[]
+}
+
+/** Merge keys of a page by mode, from `meta.merge`, `meta.prepend`, `meta.deepMerge` and `meta.matchOn`. */
+export function readMergeModes(page: BridgePage): Record<string, MergeHint> {
+  const meta = (page.meta ?? {}) as Record<string, unknown>
+  const strings = (value: unknown): string[] =>
+    Array.isArray(value) ? value.filter((k): k is string => typeof k === 'string') : []
+  const matchOn = isPlainObject(meta.matchOn) ? meta.matchOn : {}
+  const hints: Record<string, MergeHint> = {}
+  const add = (keys: unknown, mode: MergeHintMode): void => {
+    for (const key of strings(keys)) hints[key] ??= { mode, matchOn: strings(matchOn[key]) }
+  }
+  add(meta.merge, 'append')
+  add(meta.prepend, 'prepend')
+  add(meta.deepMerge, 'deep')
+  return hints
+}
+
+/** Every key the server marked for merging, whatever its mode. */
 export function readMergeKeys(page: BridgePage): string[] {
-  const meta = (page as { meta?: { merge?: unknown } }).meta
-  return Array.isArray(meta?.merge)
-    ? meta.merge.filter((k): k is string => typeof k === 'string')
-    : []
+  return Object.keys(readMergeModes(page))
+}
+
+/**
+ * Combines an incoming prop value with the current one (spec/page.md §3).
+ * append/prepend: arrays concatenate at that end; objects concatenate their
+ * array members and take the rest from the incoming value. deep: objects merge
+ * at every depth and arrays append. A match path replaces an item already
+ * shown instead of adding it again.
+ */
+export function combineProp(
+  current: unknown,
+  incoming: unknown,
+  mode: MergeHintMode = 'append',
+  matchOn: string[] = [],
+): unknown {
+  const itemKeys = new Map<string, string>()
+  for (const path of matchOn) {
+    const cut = path.lastIndexOf('.')
+    itemKeys.set(cut === -1 ? '' : path.slice(0, cut), path.slice(cut + 1))
+  }
+  return combine(current, incoming, mode, itemKeys, '')
+}
+
+function combine(
+  current: unknown,
+  incoming: unknown,
+  mode: MergeHintMode,
+  itemKeys: Map<string, string>,
+  path: string,
+): unknown {
+  if (Array.isArray(current) && Array.isArray(incoming))
+    return concatItems(current, incoming, mode === 'prepend', itemKeys.get(path))
+  if (!isPlainObject(current) || !isPlainObject(incoming)) return incoming
+
+  const out: Record<string, unknown> = { ...current, ...incoming }
+  for (const key of Object.keys(incoming)) {
+    const child = path === '' ? key : `${path}.${key}`
+    if (mode === 'deep') out[key] = combine(current[key], incoming[key], mode, itemKeys, child)
+    else if (Array.isArray(current[key]) && Array.isArray(incoming[key]))
+      out[key] = concatItems(
+        current[key] as unknown[],
+        incoming[key] as unknown[],
+        mode === 'prepend',
+        itemKeys.get(child),
+      )
+  }
+  return out
+}
+
+function concatItems(
+  current: unknown[],
+  incoming: unknown[],
+  prepend: boolean,
+  itemKey: string | undefined,
+): unknown[] {
+  if (itemKey === undefined) return prepend ? [...incoming, ...current] : [...current, ...incoming]
+
+  const idOf = (item: unknown): unknown =>
+    isPlainObject(item) && itemKey in item ? item[itemKey] : undefined
+  const positions = new Map<unknown, number>()
+  current.forEach((item, index) => {
+    const id = idOf(item)
+    if (id !== undefined && !positions.has(id)) positions.set(id, index)
+  })
+
+  const kept = [...current]
+  const added: unknown[] = []
+  for (const item of incoming) {
+    const id = idOf(item)
+    const at = id === undefined ? undefined : positions.get(id)
+    if (at === undefined) added.push(item)
+    else kept[at] = item
+  }
+  return prepend ? [...added, ...kept] : [...kept, ...added]
 }
 
 /**
@@ -14,17 +113,7 @@ export function readMergeKeys(page: BridgePage): string[] {
  * objects concatenate `data` and take the rest (links, meta) from the incoming page.
  */
 export function appendProp(current: unknown, incoming: unknown): unknown {
-  if (Array.isArray(current) && Array.isArray(incoming)) return [...current, ...incoming]
-  if (isPlainObject(current) && isPlainObject(incoming)) {
-    const out: Record<string, unknown> = { ...current, ...incoming }
-    for (const key of Object.keys(incoming)) {
-      if (Array.isArray(current[key]) && Array.isArray(incoming[key])) {
-        out[key] = [...(current[key] as unknown[]), ...(incoming[key] as unknown[])]
-      }
-    }
-    return out
-  }
-  return incoming
+  return combineProp(current, incoming, 'append')
 }
 
 export interface PageState {
@@ -43,8 +132,12 @@ export interface SetPageOptions {
   preserveState?: boolean | undefined
   /** Merge only the returned keys into the current props (partial reload). */
   partial?: boolean | undefined
-  /** Append keys listed in `meta.merge` instead of replacing them (opt-in per visit). */
-  merge?: boolean | undefined
+  /**
+   * Combine keys the server marked for merging instead of replacing them
+   * (opt-in per visit): `true` uses each key's mode, `'append'`/`'prepend'`
+   * override it for every merge key.
+   */
+  merge?: MergeOption | undefined
 }
 
 /**
@@ -162,11 +255,18 @@ export class PageStore implements OptimisticTarget {
 
     if (options.partial && previous && previous.component === page.component) {
       const server = this.serverPage!
-      const mergeKeys = new Set(options.merge ? readMergeKeys(page) : [])
+      const hints = options.merge ? readMergeModes(page) : {}
+      const override = typeof options.merge === 'string' ? options.merge : null
       const merged: Record<string, unknown> = { ...(server.props as Record<string, unknown>) }
       for (const [key, value] of Object.entries(page.props as Record<string, unknown>)) {
-        merged[key] = mergeKeys.has(key)
-          ? appendProp((server.props as Record<string, unknown>)[key], value)
+        const hint = hints[key]
+        merged[key] = hint
+          ? combineProp(
+              (server.props as Record<string, unknown>)[key],
+              value,
+              override ?? hint.mode,
+              hint.matchOn,
+            )
           : value
       }
       const props = this.holdOptimistic(merged)

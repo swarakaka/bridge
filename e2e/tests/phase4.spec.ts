@@ -18,6 +18,40 @@ test.describe('merge props and precognition', () => {
     await expect(page).toHaveURL(/\/customers$/)
   })
 
+  test('load more does not repeat a row when a customer was created meanwhile', async ({
+    page,
+    login,
+  }) => {
+    await login()
+    await page.goto('/customers')
+    await expect(page.getByTestId('customer-row')).toHaveCount(20)
+
+    // Another user creates a customer: page 2 now starts with the last row of page 1.
+    const status = await page.evaluate(async () => {
+      const token = decodeURIComponent(document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] ?? '')
+      const response = await fetch('/customers', {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          'X-XSRF-TOKEN': token,
+        },
+        body: JSON.stringify({ name: 'Shifted Row', email: `shift-${Date.now()}@example.com` }),
+      })
+      return response.status
+    })
+    expect(status).toBe(201)
+
+    await page.getByTestId('load-more').click()
+    // matchOn('data.id'): 20 + 20 rows, one of them already shown, so 39 distinct rows.
+    await expect(page.getByTestId('customer-row')).toHaveCount(39)
+    const names = await page
+      .getByTestId('customer-row')
+      .locator('td:nth-child(2)')
+      .allTextContents()
+    expect(new Set(names).size).toBe(names.length)
+  })
+
   test('fields validate live on blur through Precognition', async ({ page, login }) => {
     await login()
     await page.goto('/customers/create')

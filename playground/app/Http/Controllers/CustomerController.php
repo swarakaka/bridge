@@ -27,9 +27,11 @@ class CustomerController extends Controller
 
         return Bridge::render('Customers/Index', [
             // Bridge::merge(): a "load more" partial reload appends the next page's rows.
+            // matchOn('data.id'): a customer created meanwhile shifts the pages by one row;
+            // the row already shown is replaced instead of appearing twice.
             'customers' => Bridge::merge(fn () => CustomerResource::collection(
                 Customer::query()->search($filters['search'])->latest('id')->paginate(min(200, max(1, (int) $request->integer('per_page', 20))))->withQueryString(),
-            )),
+            ))->matchOn('data.id'),
             'filters' => $filters,
             'stats' => Bridge::defer(fn () => [
                 'total' => Customer::count(),

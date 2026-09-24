@@ -4,7 +4,7 @@ import type { Emitter } from '../events/Emitter.js'
 import type { RequestManager } from '../http/RequestManager.js'
 import { parseResponse, type ParsedResponse } from '../http/responseParser.js'
 import type { OnceStore } from '../pages/OnceStore.js'
-import type { OptimisticSettle, PageStore } from '../pages/PageStore.js'
+import type { MergeOption, OptimisticSettle, PageStore } from '../pages/PageStore.js'
 import type { History, HistoryState, StoredHistoryState } from './History.js'
 import { createPoll, type PollHandle, type PollOptions } from './poll.js'
 import { captureScroll, resetScroll, restoreScroll } from './Scroll.js'
@@ -40,6 +40,11 @@ export interface ReloadOptions {
   except?: string[] | undefined
   headers?: Record<string, string> | undefined
   preserveScroll?: boolean | undefined
+  /**
+   * Combine merge props instead of replacing them (see `VisitOptions.merge`).
+   * Coalesced reloads merge only when every caller asked for the same value.
+   */
+  merge?: MergeOption | undefined
   /** `false` marks the reload as background work (`visit.showProgress`); combined reloads show progress if any caller wants it. */
   showProgress?: boolean | undefined
   onSuccess?: ((page: BridgePage) => void) | undefined
@@ -53,6 +58,8 @@ interface PendingReload {
   headers: Record<string, string>
   preserveScroll: boolean
   showProgress: boolean
+  /** undefined until the first caller; a disagreement between callers means no merge. */
+  merge: MergeOption | undefined
   resolvers: Array<(outcome: VisitOutcome) => void>
   callbacks: ReloadOptions[]
 }
@@ -164,6 +171,7 @@ export class Router {
         headers: {},
         preserveScroll: true,
         showProgress: false,
+        merge: undefined,
         resolvers: [],
         callbacks: [],
       })
@@ -174,6 +182,8 @@ export class Router {
       Object.assign(pending.headers, options.headers ?? {})
       if (options.preserveScroll === false) pending.preserveScroll = false
       if (options.showProgress !== false) pending.showProgress = true
+      const merge = options.merge ?? false
+      pending.merge = pending.resolvers.length === 0 || pending.merge === merge ? merge : false
       pending.resolvers.push(resolve)
       pending.callbacks.push(options)
 
@@ -368,6 +378,7 @@ export class Router {
         preserveState: true,
         preserveScroll: pending.preserveScroll,
         showProgress: pending.showProgress,
+        merge: pending.merge ?? false,
         replace: true,
         useCache: false,
         onSuccess: (p) => pending.callbacks.forEach((c) => c.onSuccess?.(p)),

@@ -28,6 +28,25 @@
           "items": { "type": "string", "minLength": 1 },
           "description": "Prop keys clients may append on opted-in partial reloads (§3)."
         },
+        "prepend": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Prop keys clients may prepend on opted-in partial reloads (§3)."
+        },
+        "deepMerge": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Prop keys clients may deep-merge on opted-in partial reloads (§3)."
+        },
+        "matchOn": {
+          "type": "object",
+          "description": "Match paths per merge key: the last segment is the item key (§3).",
+          "additionalProperties": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^[^,\\s]+$" },
+            "minItems": 1
+          }
+        },
         "encryptHistory": {
           "type": "boolean",
           "description": "Store this page encrypted in the client's history (§10)."

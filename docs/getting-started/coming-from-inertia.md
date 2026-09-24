@@ -46,7 +46,7 @@ Bridge borrows Inertia's developer experience: controllers return pages, page co
 
 **Optimistic updates** use the same API (`router.optimistic(fn).post(url)`, the `optimistic` visit option, `form.optimistic(fn)`, and the `optimistic` prop on `<BridgeForm>`), with the same rollback on validation errors, error responses and interrupted visits. On `useJsonForm`, the Bridge counterpart of `useHttp`, the callback changes page props rather than the form's own data, and a success keeps them; `router.patchProps()` reconciles them with the response. After a successful submit the current values become the new defaults unless `resetOnSuccess` is set.
 
-**Merge props are opt-in per visit.** A "load more" visit passes `merge: true`; invalidations and searches replace. See [Merging props](/data/merging-props).
+**Merge props are opt-in per visit.** A "load more" visit passes `merge: true`; invalidations and searches replace, so there is no `reset` option. `->prepend()`, `->matchOn()` and `Bridge::deepMerge()` are available; a match path always names the list and the item key (`data.id` for a paginator, `id` for a plain list). See [Merging props](/data/merging-props).
 
 **History encryption works the same way** (`bridge.history.encrypt`, the `bridge.encrypt-history` middleware, `Bridge::encryptHistory()`, `Bridge::clearHistory()`), with one difference: signing out clears history by default (`history.clear_on_logout`), so you do not call `clearHistory()` in your logout action. See [History encryption](/security/history-encryption).
 

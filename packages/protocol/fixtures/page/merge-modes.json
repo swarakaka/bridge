@@ -1,0 +1,19 @@
+{
+  "protocol": 1,
+  "type": "page",
+  "component": "Feed",
+  "url": "/feed?page=2",
+  "props": {
+    "auth": { "user": { "id": 1, "name": "Ada" } },
+    "customers": { "data": [{ "id": 22, "name": "Globex" }], "meta": { "current_page": 2 } },
+    "messages": [{ "id": 7, "body": "Earlier" }],
+    "settings": { "theme": { "dark": true } }
+  },
+  "build": "3f9c1a",
+  "meta": {
+    "merge": ["customers"],
+    "prepend": ["messages"],
+    "deepMerge": ["settings"],
+    "matchOn": { "customers": ["data.id"], "messages": ["id"] }
+  }
+}

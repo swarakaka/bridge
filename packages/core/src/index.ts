@@ -36,13 +36,22 @@ export type {
 export type { JsonHandleOptions, JsonCallOptions } from './json/JsonRequest.js'
 export { hasFiles, objectToFormData, formDataToObject, parseFieldName } from './http/formData.js'
 export { readFormElement, writeFormElement, fileFieldNames } from './forms/dom.js'
-export { PageStore, readMergeKeys, appendProp } from './pages/PageStore.js'
+export {
+  PageStore,
+  readMergeKeys,
+  readMergeModes,
+  appendProp,
+  combineProp,
+} from './pages/PageStore.js'
 export type {
   PageState,
   PageListener,
   SetPageOptions,
   OptimisticSettle,
   OptimisticTarget,
+  MergeOption,
+  MergeHint,
+  MergeHintMode,
 } from './pages/PageStore.js'
 export { loadWhenVisible } from './pages/whenVisible.js'
 export { OnceStore, readOnceMeta } from './pages/OnceStore.js'
