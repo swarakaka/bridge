@@ -1,4 +1,4 @@
-import type { JsonForm, JsonFormOptions } from '@swarakaka/bridge-core'
+import type { JsonForm, JsonFormOptions, Method } from '@swarakaka/bridge-core'
 import { getCurrentScope, onScopeDispose } from 'vue'
 import { useBridge } from '../injection.js'
 import { formArguments, setupForm } from './useForm.js'
@@ -27,16 +27,28 @@ export function useJsonForm<T extends Record<string, unknown>, R = unknown>(
   options?: UseJsonFormOptions,
 ): ReactiveJsonForm<T, R>
 export function useJsonForm<T extends Record<string, unknown>, R = unknown>(
+  method: Method,
+  url: string | URL,
+  initial: T,
+  options?: UseJsonFormOptions,
+): ReactiveJsonForm<T, R>
+export function useJsonForm<T extends Record<string, unknown>, R = unknown>(
   rememberKey: string,
   initial: T,
   options?: Omit<UseJsonFormOptions, 'remember'>,
 ): ReactiveJsonForm<T, R>
 export function useJsonForm<T extends Record<string, unknown>, R = unknown>(
   first: T | string,
-  second?: T | UseJsonFormOptions,
-  third?: Omit<UseJsonFormOptions, 'remember'>,
+  second?: T | UseJsonFormOptions | string | URL,
+  third?: T | Omit<UseJsonFormOptions, 'remember'>,
+  fourth?: UseJsonFormOptions,
 ): ReactiveJsonForm<T, R> {
-  const [initial, options] = formArguments<T, UseJsonFormOptions>(first, second, third)
+  const [initial, options, endpoint] = formArguments<T, UseJsonFormOptions>(
+    first,
+    second,
+    third,
+    fourth,
+  )
   const { remember, cancelOnDispose, ...formOptions } = options
   const bridge = useBridge()
   const form = setupForm(
@@ -44,6 +56,7 @@ export function useJsonForm<T extends Record<string, unknown>, R = unknown>(
     bridge,
     bridge.jsonForm<T, R>(initial, formOptions),
     remember,
+    endpoint,
   ) as ReactiveJsonForm<T, R>
 
   if (cancelOnDispose !== false && getCurrentScope()) {

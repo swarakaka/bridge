@@ -16,17 +16,45 @@ In page mode there is no redirect: the client receives the errors in the respons
 
 ## Live validation with Precognition
 
-Add Laravel's `precognitive` middleware to the route and call `form.validate(method, url, field)` when a field loses focus:
+Add Laravel's `precognitive` middleware to the route, create the form with its endpoint, and validate a field when it loses focus:
 
 ```php
 Route::resource('customers', CustomerController::class)->middleware('precognitive');
 ```
 
 ```vue
-<input v-model="form.email" @blur="form.validate('post', '/customers', 'email')" />
+<script setup lang="ts">
+const form = useForm('post', '/customers', { name: '', email: '', avatar: null as File | null })
+</script>
+
+<template>
+  <form @submit.prevent="form.submit()">
+    <input v-model="form.email" @blur="form.validate('email')" />
+    <p v-if="form.invalid('email')">{{ form.errors.email }}</p>
+    <p v-else-if="form.valid('email')">Looks good.</p>
+    <button :disabled="form.processing">Save</button>
+  </form>
+</template>
 ```
 
-Only that field's rules run. A `422` sets the field's error, a `204` clears it, and other fields' errors are untouched. `form.validating` is true while the request is in flight.
+Only the requested fields' rules run (`Precognition-Validate-Only`). A `422` sets their errors, a `204` clears them, and other fields' errors are untouched. `form.submit()` without a method and URL sends to the same endpoint. `useForm(data).withPrecognition('post', '/customers')` binds an endpoint after creation, and `useJsonForm` takes the same arguments.
+
+| Member                                                                           | Meaning                                                                                                                                                 |
+| -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `validate('email')`, `validate(['a', 'b'])`                                      | Validate these fields                                                                                                                                   |
+| `validate()`                                                                     | Validate the touched fields; nothing is sent when none are                                                                                              |
+| `validate({ only, onBefore, onSuccess, onInvalid, onError, onFinish, headers })` | Options; `onBefore` returning `false` skips the request                                                                                                 |
+| `touch('email')`, `touch(['a', 'b'])`, `touch()`                                 | Mark fields (all top-level fields without arguments) as touched, without validating. `validate(field)` does not touch                                   |
+| `touched('email')`, `touched()`                                                  | Whether that field, or any field, was touched                                                                                                           |
+| `valid('email')`                                                                 | Validated through Precognition and without an error                                                                                                     |
+| `invalid('email')`                                                               | Has an error                                                                                                                                            |
+| `validating`                                                                     | A validation request is in flight                                                                                                                       |
+| `setValidationTimeout(ms)`                                                       | Debounce window, default `1500`. The first call is sent at once; calls within the window are combined into one request at its end. `0` sends every call |
+| `validateFiles()`                                                                | Include files. By default `File`, `Blob` and `FileList` values are left out of validation requests, and fields holding them are not validated           |
+
+`reset()` forgets touched and validated state for the fields it resets. Messages are strings in `form.errors` (the first per field) and lists in `form.allErrors`.
+
+The explicit form `form.validate(method, url, field)` still works: it validates against that endpoint at once, without the debounce, with every value including files, and with no field it runs every rule.
 
 ## Named error bags
 

@@ -42,7 +42,7 @@ export class Form<T extends FormData_> extends FormState<T, PageFormTransport> {
     super(initial, options)
   }
 
-  async submit(
+  protected async submitTo(
     method: Method,
     url: string | URL,
     options: SubmitOptions = {},

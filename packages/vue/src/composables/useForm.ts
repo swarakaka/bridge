@@ -1,4 +1,11 @@
-import type { Bridge, Form, FormOptions, FormState, FormTransport } from '@swarakaka/bridge-core'
+import type {
+  Bridge,
+  Form,
+  FormOptions,
+  FormState,
+  FormTransport,
+  Method,
+} from '@swarakaka/bridge-core'
 import { onMounted, reactive, watch } from 'vue'
 import { useBridge } from '../injection.js'
 
@@ -23,8 +30,16 @@ export interface UseFormOptions extends FormOptions {
  *
  * `useForm('key', data)` is `useForm(data, { remember: 'key' })`; chain
  * `.dontRemember('password')` to keep fields out of history state.
+ * `useForm('post', '/customers', data)` binds the endpoint for Precognition
+ * (`form.validate('email')`) and for `form.submit()`.
  */
 export function useForm<T extends Record<string, unknown>>(
+  initial: T,
+  options?: UseFormOptions,
+): ReactiveForm<T>
+export function useForm<T extends Record<string, unknown>>(
+  method: Method,
+  url: string | URL,
   initial: T,
   options?: UseFormOptions,
 ): ReactiveForm<T>
@@ -35,16 +50,23 @@ export function useForm<T extends Record<string, unknown>>(
 ): ReactiveForm<T>
 export function useForm<T extends Record<string, unknown>>(
   first: T | string,
-  second?: T | UseFormOptions,
-  third?: Omit<UseFormOptions, 'remember'>,
+  second?: T | UseFormOptions | string | URL,
+  third?: T | Omit<UseFormOptions, 'remember'>,
+  fourth?: UseFormOptions,
 ): ReactiveForm<T> {
-  const [initial, options] = formArguments<T, UseFormOptions>(first, second, third)
+  const [initial, options, endpoint] = formArguments<T, UseFormOptions>(
+    first,
+    second,
+    third,
+    fourth,
+  )
   const bridge = useBridge()
   return setupForm(
     'useForm',
     bridge,
     bridge.form(initial, options),
     options.remember,
+    endpoint,
   ) as ReactiveForm<T>
 }
 
@@ -57,7 +79,9 @@ export function setupForm<T extends Record<string, unknown>>(
   bridge: Bridge,
   instance: FormState<T, FormTransport>,
   remember: string | undefined,
+  endpoint: FormEndpoint | null,
 ): object {
+  if (endpoint) instance.withPrecognition(endpoint.method, endpoint.url)
   const members = memberNames(instance)
   for (const field of Object.keys(instance.data)) {
     if (members.has(field)) {
@@ -85,13 +109,28 @@ export function setupForm<T extends Record<string, unknown>>(
   return flatten(form, members)
 }
 
-/** Normalises `(data, options)` and `(rememberKey, data, options)`. */
+export interface FormEndpoint {
+  method: Method
+  url: string | URL
+}
+
+/** Normalises `(data, options)`, `(rememberKey, data, options)` and `(method, url, data, options)`. */
 export function formArguments<
   T extends Record<string, unknown>,
   O extends { remember?: string | undefined },
->(first: T | string, second?: T | O, third?: Omit<O, 'remember'>): [T, O] {
-  if (typeof first === 'string') return [second as T, { ...third, remember: first } as O]
-  return [first, ((second as O | undefined) ?? {}) as O]
+>(
+  first: unknown,
+  second?: unknown,
+  third?: unknown,
+  fourth?: unknown,
+): [T, O, FormEndpoint | null] {
+  if (typeof first === 'string' && (typeof second === 'string' || second instanceof URL)) {
+    return [third as T, (fourth ?? {}) as O, { method: first as Method, url: second }]
+  }
+  if (typeof first === 'string') {
+    return [second as T, { ...(third as object | undefined), remember: first } as O, null]
+  }
+  return [first as T, (second ?? {}) as O, null]
 }
 
 /** Every property name of the instance and its prototype chain, `Object.prototype` included. */

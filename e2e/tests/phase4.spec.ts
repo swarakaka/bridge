@@ -39,6 +39,8 @@ test.describe('merge props and precognition', () => {
     await page.getByLabel('email').blur()
     expect((await ok).status()).toBe(204)
     await expect(page.getByTestId('error-email')).toHaveCount(0)
+    await expect(page.getByTestId('valid-email')).toBeVisible()
+    await expect(page.getByTestId('valid-name')).toHaveCount(0)
     await expect(page).toHaveURL(/\/customers\/create$/)
   })
 

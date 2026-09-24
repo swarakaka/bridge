@@ -106,7 +106,7 @@ The Laravel package is developed only in `packages/laravel` here. `swarakaka/bri
 ## Phase 4 notes
 
 - Merge props are opt-in per visit (`merge: true`); invalidations and searches replace. Server lists keys in `meta.merge`.
-- `form.validate(method, url, field)` uses Laravel Precognition; routes need the `precognitive` middleware. A 204 is parsed as `empty` and reported as success without touching the page.
+- `form.validate(field)` (endpoint bound by `useForm(method, url, data)`/`withPrecognition`; debounced, files left out) and the explicit `form.validate(method, url, field)` (immediate, everything sent) use Laravel Precognition; routes need the `precognitive` middleware. Precognition state is one private `precog` member of `FormState` so it reserves one Vue field name. A 204 is parsed as `empty` and reported as success without touching the page.
 - The benchmark harness starts PHP's built-in server directly from `playground/public` (not `artisan serve`: its output pipe stalls streams when stdio is ignored), as a detached process group it kills on exit, and refuses to start if the port is busy. Idle keep-alive sockets pin dev-server workers, so load requests send `Connection: close`. SQLite runs in WAL mode for the database bus (`DB_JOURNAL_MODE`, `DB_BUSY_TIMEOUT` in the playground config).
 - A stream subscription is live only after `ready`; tests and load generators must wait for it before publishing.
 

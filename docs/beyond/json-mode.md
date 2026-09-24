@@ -90,17 +90,18 @@ Outside components, `getBridge().json` is the stateless client (`await bridge.js
 <script setup lang="ts">
 import { useJsonForm } from '@swarakaka/bridge-vue'
 
-const form = useJsonForm<{ name: string; email: string }, { customer: { id: number } }>({
-  name: '',
-  email: '',
-})
+const form = useJsonForm<{ name: string; email: string }, { customer: { id: number } }>(
+  'post',
+  '/customers',
+  { name: '', email: '' },
+)
 </script>
 
 <template>
-  <form @submit.prevent="form.post('/customers', { resetOnSuccess: true })">
+  <form @submit.prevent="form.submit({ resetOnSuccess: true })">
     <input v-model="form.name" />
     <p v-if="form.errors.name">{{ form.errors.name }}</p>
-    <input v-model="form.email" @blur="form.validate('post', '/customers', 'email')" />
+    <input v-model="form.email" @blur="form.validate('email')" />
     <p v-if="form.errors.email">{{ form.errors.email }}</p>
     <button :disabled="form.processing">Create</button>
     <p v-if="form.result">Created #{{ form.result.customer.id }} at {{ form.meta.location }}</p>

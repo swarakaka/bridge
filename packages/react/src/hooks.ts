@@ -7,6 +7,7 @@ import type {
   JsonFormOptions,
   JsonHandleOptions,
   JsonRequest,
+  Method,
   StreamClient,
   StreamOptions,
   StreamState,
@@ -110,7 +111,16 @@ export interface UseFormOptions extends FormOptions {
 }
 
 /** Form methods that do not re-render: safe to chain during render (`useForm(...).dontRemember('password')`). */
-const QUIET_FORM_METHODS: ReadonlySet<PropertyKey> = new Set(['dontRemember', 'rememberable'])
+const QUIET_FORM_METHODS: ReadonlySet<PropertyKey> = new Set([
+  'dontRemember',
+  'rememberable',
+  'touched',
+  'valid',
+  'invalid',
+  'withPrecognition',
+  'setValidationTimeout',
+  'validateFiles',
+])
 
 /**
  * A core Form re-rendered on every change. Mutations go through the returned
@@ -122,18 +132,33 @@ export function useForm<T extends Record<string, unknown>>(
   options?: UseFormOptions,
 ): Form<T> & { refresh(): void }
 export function useForm<T extends Record<string, unknown>>(
+  method: Method,
+  url: string | URL,
+  initial: T,
+  options?: UseFormOptions,
+): Form<T> & { refresh(): void }
+export function useForm<T extends Record<string, unknown>>(
   rememberKey: string,
   initial: T,
   options?: Omit<UseFormOptions, 'remember'>,
 ): Form<T> & { refresh(): void }
 export function useForm<T extends Record<string, unknown>>(
   first: T | string,
-  second?: T | UseFormOptions,
-  third?: Omit<UseFormOptions, 'remember'>,
+  second?: T | UseFormOptions | string | URL,
+  third?: T | Omit<UseFormOptions, 'remember'>,
+  fourth?: UseFormOptions,
 ): Form<T> & { refresh(): void } {
-  const [initial, options] = formArguments<T, UseFormOptions>(first, second, third)
+  const [initial, options, endpoint] = formArguments<T, UseFormOptions>(
+    first,
+    second,
+    third,
+    fourth,
+  )
   const bridge = useBridge()
-  const form = useHandle(() => bridge.form(initial, options), QUIET_FORM_METHODS)
+  const form = useHandle(
+    () => withEndpoint(bridge.form(initial, options), endpoint),
+    QUIET_FORM_METHODS,
+  )
   useFormRemember(form, options.remember)
   return form
 }
@@ -155,19 +180,34 @@ export function useJsonForm<T extends Record<string, unknown>, R = unknown>(
   options?: UseJsonFormOptions,
 ): JsonForm<T, R> & { refresh(): void }
 export function useJsonForm<T extends Record<string, unknown>, R = unknown>(
+  method: Method,
+  url: string | URL,
+  initial: T,
+  options?: UseJsonFormOptions,
+): JsonForm<T, R> & { refresh(): void }
+export function useJsonForm<T extends Record<string, unknown>, R = unknown>(
   rememberKey: string,
   initial: T,
   options?: Omit<UseJsonFormOptions, 'remember'>,
 ): JsonForm<T, R> & { refresh(): void }
 export function useJsonForm<T extends Record<string, unknown>, R = unknown>(
   first: T | string,
-  second?: T | UseJsonFormOptions,
-  third?: Omit<UseJsonFormOptions, 'remember'>,
+  second?: T | UseJsonFormOptions | string | URL,
+  third?: T | Omit<UseJsonFormOptions, 'remember'>,
+  fourth?: UseJsonFormOptions,
 ): JsonForm<T, R> & { refresh(): void } {
-  const [initial, options] = formArguments<T, UseJsonFormOptions>(first, second, third)
+  const [initial, options, endpoint] = formArguments<T, UseJsonFormOptions>(
+    first,
+    second,
+    third,
+    fourth,
+  )
   const { remember, ...formOptions } = options
   const bridge = useBridge()
-  const form = useHandle(() => bridge.jsonForm<T, R>(initial, formOptions), QUIET_FORM_METHODS)
+  const form = useHandle(
+    () => withEndpoint(bridge.jsonForm<T, R>(initial, formOptions), endpoint),
+    QUIET_FORM_METHODS,
+  )
   useEffect(() => () => form.cancel(), [form])
   useFormRemember(form, remember)
   return form
@@ -193,13 +233,36 @@ function useFormRemember<T extends Record<string, unknown>>(
   useRememberWriter(key, form.rememberable(), restored)
 }
 
-/** Normalises `(data, options)` and `(rememberKey, data, options)`. */
+interface FormEndpoint {
+  method: Method
+  url: string | URL
+}
+
+/** Normalises `(data, options)`, `(rememberKey, data, options)` and `(method, url, data, options)`. */
 function formArguments<
   T extends Record<string, unknown>,
   O extends { remember?: string | undefined },
->(first: T | string, second?: T | O, third?: Omit<O, 'remember'>): [T, O] {
-  if (typeof first === 'string') return [second as T, { ...third, remember: first } as O]
-  return [first, ((second as O | undefined) ?? {}) as O]
+>(
+  first: unknown,
+  second?: unknown,
+  third?: unknown,
+  fourth?: unknown,
+): [T, O, FormEndpoint | null] {
+  if (typeof first === 'string' && (typeof second === 'string' || second instanceof URL)) {
+    return [third as T, (fourth ?? {}) as O, { method: first as Method, url: second }]
+  }
+  if (typeof first === 'string') {
+    return [second as T, { ...(third as object | undefined), remember: first } as O, null]
+  }
+  return [first as T, (second ?? {}) as O, null]
+}
+
+/** Binds the Precognition endpoint of `useForm(method, url, data)`. */
+function withEndpoint<F extends { withPrecognition(method: Method, url: string | URL): F }>(
+  form: F,
+  endpoint: FormEndpoint | null,
+): F {
+  return endpoint ? form.withPrecognition(endpoint.method, endpoint.url) : form
 }
 
 /** Local state that survives back/forward navigation via history state. */

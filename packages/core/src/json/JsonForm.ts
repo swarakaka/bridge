@@ -70,7 +70,7 @@ export class JsonForm<T extends FormData_, R = unknown> extends FormState<T, Jso
     super(initial, options)
   }
 
-  async submit(
+  protected async submitTo(
     method: Method,
     url: string | URL,
     options: JsonSubmitOptions<R> = {},

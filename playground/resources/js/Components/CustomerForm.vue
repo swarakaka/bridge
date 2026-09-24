@@ -10,7 +10,8 @@ const props = defineProps<{
     method: 'post' | 'put'
 }>()
 
-const form = useForm({
+// Bound to the endpoint, so `validate(field)` and `submit()` need no method and URL.
+const form = useForm(props.method, props.action, {
     name: props.customer?.name ?? '',
     email: props.customer?.email ?? '',
     company: props.customer?.company ?? '',
@@ -25,12 +26,13 @@ const onFile = (event: Event): void => {
 }
 
 const submit = (): void => {
-    void form.submit(props.method, props.action, { preserveScroll: true })
+    void form.submit({ preserveScroll: true })
 }
 
-// Live validation of one field through Laravel Precognition (route has the `precognitive` middleware).
+// Live validation through Laravel Precognition (the route has the `precognitive` middleware):
+// debounced, and the avatar file is not uploaded for it.
 const validateField = (field: string): void => {
-    void form.validate(props.method, props.action, field)
+    void form.touch(field).validate(field)
 }
 </script>
 
@@ -53,6 +55,13 @@ const validateField = (field: string): void => {
                 :data-testid="`error-${field}`"
             >
                 {{ form.errors[field] }}
+            </p>
+            <p
+                v-else-if="form.valid(field)"
+                class="mt-1 text-sm text-emerald-600"
+                :data-testid="`valid-${field}`"
+            >
+                Looks good.
             </p>
         </div>
 

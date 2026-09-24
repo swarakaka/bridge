@@ -141,6 +141,55 @@ describe('useJson', () => {
   })
 })
 
+describe('useForm with a Precognition endpoint', () => {
+  it('renders valid/invalid during render without looping and validates the bound endpoint', async () => {
+    const http = mockFetch((_url, init) =>
+      (init.headers as Record<string, string>).Precognition
+        ? pageResponse(
+            {
+              protocol: 1,
+              type: 'error',
+              error: { status: 422, kind: 'validation', message: 'x', errors: { email: ['Bad'] } },
+            },
+            422,
+          )
+        : pageResponse(page({ component: 'Create', url: '/create' })),
+    )
+    let renders = 0
+    const Create: PageComponent = () => {
+      renders++
+      const form = useForm('post', '/customers', { email: '' }).setValidationTimeout(0)
+      return (
+        <div>
+          <span id="state">
+            {form.valid('email') ? 'valid' : form.invalid('email') ? 'invalid' : 'unknown'}
+          </span>
+          <span id="touched">{String(form.touched('email'))}</span>
+          <button
+            id="blur"
+            onClick={() => {
+              form.touch('email')
+              void form.validate('email')
+            }}
+          />
+        </div>
+      )
+    }
+    await mount({ Create }, page({ component: 'Create', url: '/create' }), http)
+    await flush()
+    expect(renders).toBeLessThan(5)
+
+    await act(async () => ($('#blur') as HTMLButtonElement).click())
+    await flush()
+
+    expect($('#state')?.textContent).toBe('invalid')
+    expect($('#touched')?.textContent).toBe('true')
+    const [url, init] = http.mock.calls.at(-1)!
+    expect(String(url)).toContain('/customers')
+    expect((init.headers as Record<string, string>)['Precognition-Validate-Only']).toBe('email')
+  })
+})
+
 describe('useJsonForm', () => {
   const jsonResponse = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })

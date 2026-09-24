@@ -1,3 +1,4 @@
+import { hasFiles } from '../http/formData.js'
 import type { UploadProgress } from '../http/RequestManager.js'
 import type { Method } from '../router/url.js'
 import type { ValidationErrors } from '../router/Visit.js'
@@ -25,6 +26,10 @@ export interface FormTransport {
 
 export interface FormValidateOptions<K extends FormTransport> {
   headers?: Record<string, string> | undefined
+  /** Fields to validate (the bound-endpoint style; same as passing them first). */
+  only?: string[] | undefined
+  /** Return `false` to skip the request. */
+  onBefore?: (() => boolean | void) | undefined
   onInvalid?: ((errors: ValidationErrors, detail: K['invalid']) => void) | undefined
   onError?: ((error: K['error']) => void) | undefined
   onSuccess?: (() => void) | undefined
@@ -40,9 +45,9 @@ export type PrecognitionResult<K extends FormTransport> =
   | { kind: 'cancelled' }
 
 /**
- * Field state shared by every form (PLAN §14, §14.1): values, defaults,
+ * Field state shared by every form (PLAN §14, §14.1, §15): values, defaults,
  * errors, submission flags and Precognition. Subclasses supply the transport
- * (`submit`, `cancel`, `precognition`). Framework adapters wrap instances in
+ * (`submitTo`, `cancel`, `precognition`). Framework adapters wrap instances in
  * their reactivity system; all mutations go through `this` so proxies work.
  */
 export abstract class FormState<T extends FormData_, K extends FormTransport> {
@@ -64,6 +69,16 @@ export abstract class FormState<T extends FormData_, K extends FormTransport> {
   private recentlyTimer: ReturnType<typeof setTimeout> | null = null
   private readonly unremembered = new Set<string>()
   private validation: AbortController | null = null
+  /** Precognition state, in one member so it reserves one Vue field name (§15). */
+  private readonly precog: PrecognitionState<K> = {
+    endpoint: null,
+    touched: new Set(),
+    validated: new Set(),
+    timeout: 1500,
+    files: false,
+    timer: null,
+    pending: null,
+  }
 
   constructor(initial: T, options: FormOptions = {}) {
     this.data = clone(initial)
@@ -71,7 +86,8 @@ export abstract class FormState<T extends FormData_, K extends FormTransport> {
     this.options = options
   }
 
-  abstract submit(
+  /** Sends the form with this transport. */
+  protected abstract submitTo(
     method: Method,
     url: string | URL,
     options?: K['submitOptions'],
@@ -96,6 +112,65 @@ export abstract class FormState<T extends FormData_, K extends FormTransport> {
     this.lastError = error
   }
 
+  /**
+   * Submit to the given endpoint, or with no method and URL to the one bound
+   * by `withPrecognition` (or `useForm(method, url, data)`).
+   */
+  submit(options?: K['submitOptions']): Promise<K['outcome']>
+  submit(method: Method, url: string | URL, options?: K['submitOptions']): Promise<K['outcome']>
+  submit(
+    methodOrOptions?: Method | K['submitOptions'],
+    url?: string | URL,
+    options?: K['submitOptions'],
+  ): Promise<K['outcome']> {
+    if (typeof methodOrOptions === 'string' && url !== undefined) {
+      return this.submitTo(methodOrOptions, url, options)
+    }
+    const endpoint = this.endpoint('submit')
+    return this.submitTo(endpoint.method, endpoint.url, methodOrOptions as K['submitOptions'])
+  }
+
+  /** Bind the endpoint used by `validate(field)` and `submit()` without a method and URL. */
+  withPrecognition(method: Method, url: string | URL): this {
+    this.precog.endpoint = { method, url }
+    return this
+  }
+
+  /** Debounce for `validate(field)` in ms (default 1500; 0 sends every call at once). */
+  setValidationTimeout(ms: number): this {
+    this.precog.timeout = ms
+    return this
+  }
+
+  /** Send files with `validate(field)` requests; by default they are left out. */
+  validateFiles(): this {
+    this.precog.files = true
+    return this
+  }
+
+  /** Mark fields as touched without validating; with no arguments, every top-level field. */
+  touch(...fields: Array<string | string[]>): this {
+    const list = fields.flat()
+    for (const field of list.length > 0 ? list : Object.keys(this.data))
+      this.precog.touched.add(field)
+    return this
+  }
+
+  /** Whether the field was touched; with no argument, whether any field was. */
+  touched(field?: string): boolean {
+    return field === undefined ? this.precog.touched.size > 0 : this.precog.touched.has(field)
+  }
+
+  /** The field was validated through Precognition and has no error. */
+  valid(field: string): boolean {
+    return this.precog.validated.has(field) && !Object.hasOwn(this.errors, field)
+  }
+
+  /** The field has an error. */
+  invalid(field: string): boolean {
+    return Object.hasOwn(this.errors, field)
+  }
+
   get isDirty(): boolean {
     return JSON.stringify(this.data) !== JSON.stringify(this.defaults)
   }
@@ -105,23 +180,23 @@ export abstract class FormState<T extends FormData_, K extends FormTransport> {
   }
 
   get(url: string | URL, options?: K['submitOptions']): Promise<K['outcome']> {
-    return this.submit('get', url, options)
+    return this.submitTo('get', url, options)
   }
 
   post(url: string | URL, options?: K['submitOptions']): Promise<K['outcome']> {
-    return this.submit('post', url, options)
+    return this.submitTo('post', url, options)
   }
 
   put(url: string | URL, options?: K['submitOptions']): Promise<K['outcome']> {
-    return this.submit('put', url, options)
+    return this.submitTo('put', url, options)
   }
 
   patch(url: string | URL, options?: K['submitOptions']): Promise<K['outcome']> {
-    return this.submit('patch', url, options)
+    return this.submitTo('patch', url, options)
   }
 
   delete(url: string | URL, options?: K['submitOptions']): Promise<K['outcome']> {
-    return this.submit('delete', url, options)
+    return this.submitTo('delete', url, options)
   }
 
   /**
@@ -148,12 +223,18 @@ export abstract class FormState<T extends FormData_, K extends FormTransport> {
     return this
   }
 
+  /** Restore defaults; touched and validated state is forgotten for the same fields. */
   reset(...fields: Array<keyof T & string>): this {
     if (fields.length === 0) {
       this.data = clone(this.defaults)
+      this.precog.touched.clear()
+      this.precog.validated.clear()
     } else {
-      for (const field of fields)
-        (this.data as Record<string, unknown>)[field] = clone(this.defaults[field])
+      for (const field of fields) {
+        ;(this.data as Record<string, unknown>)[field] = clone(this.defaults[field])
+        this.precog.touched.delete(field)
+        this.precog.validated.delete(field)
+      }
     }
     return this
   }
@@ -221,26 +302,133 @@ export abstract class FormState<T extends FormData_, K extends FormTransport> {
   }
 
   /**
-   * Validate through Laravel Precognition without running the controller.
-   * With fields, only those rules run and only their errors change; a 204
-   * clears them. The route needs the `precognitive` middleware.
+   * Validate through Laravel Precognition without running the controller;
+   * the route needs the `precognitive` middleware. Only the validated fields'
+   * errors change, and a 204 clears them.
    *
-   * Runs beside submissions: it never cancels one, and a newer call
+   * - `validate(field | fields, options?)`, `validate({ only, ...options })`,
+   *   `validate()`: against the bound endpoint (`withPrecognition`). No fields
+   *   means the touched ones. Debounced (`setValidationTimeout`): the first
+   *   call is sent at once, later calls within the window are combined into
+   *   one request. Files are left out unless `validateFiles()` was called.
+   * - `validate(method, url, fields?, options?)`: that endpoint, sent at once
+   *   with the whole data; no fields validates every rule.
+   *
+   * Runs beside submissions: it never cancels one, and a newer request
    * supersedes an older one still in flight.
    */
-  async validate(
+  validate(
+    fields?: string | string[] | FormValidateOptions<K>,
+    options?: FormValidateOptions<K>,
+  ): Promise<K['outcome']>
+  validate(
     method: Method,
     url: string | URL,
-    fields: string | string[] = [],
-    options: FormValidateOptions<K> = {},
+    fields?: string | string[],
+    options?: FormValidateOptions<K>,
+  ): Promise<K['outcome']>
+  validate(
+    first?: string | string[] | FormValidateOptions<K>,
+    second?: string | URL | FormValidateOptions<K>,
+    third?: string | string[],
+    fourth?: FormValidateOptions<K>,
+  ): Promise<K['outcome']> {
+    if (typeof first === 'string' && (typeof second === 'string' || second instanceof URL)) {
+      const fields = third === undefined ? [] : Array.isArray(third) ? third : [third]
+      return this.precognize(first as Method, second, fields, fourth ?? {}, true)
+    }
+    const options = (
+      typeof first === 'object' && !Array.isArray(first) ? first : (second ?? {})
+    ) as FormValidateOptions<K>
+    const explicit =
+      typeof first === 'string' ? [first] : Array.isArray(first) ? first : (options.only ?? null)
+    this.endpoint('validate')
+    return this.debounced(explicit, options)
+  }
+
+  private endpoint(action: string): { method: Method; url: string | URL } {
+    const endpoint = this.precog.endpoint
+    if (!endpoint) {
+      throw new Error(
+        `[bridge] form.${action}() without a method and URL needs an endpoint: create the form with (method, url, data) or call form.withPrecognition(method, url).`,
+      )
+    }
+    return endpoint
+  }
+
+  /** Leading call at once, then one combined trailing request per window. */
+  private debounced(
+    fields: string[] | null,
+    options: FormValidateOptions<K>,
+  ): Promise<K['outcome']> {
+    const state = this.precog
+    if (state.timeout <= 0) return this.validateBound(fields ?? null, options)
+    if (state.timer === null) {
+      state.timer = setTimeout(() => this.flushValidation(), state.timeout)
+      return this.validateBound(fields, options)
+    }
+    clearTimeout(state.timer)
+    state.timer = setTimeout(() => this.flushValidation(), state.timeout)
+    const pending = (state.pending ??= { fields: new Set(), touched: false, options, waiters: [] })
+    if (fields) for (const field of fields) pending.fields.add(field)
+    else pending.touched = true
+    pending.options = options
+    return new Promise((resolve, reject) => pending.waiters.push({ resolve, reject }))
+  }
+
+  private flushValidation(): void {
+    const state = this.precog
+    state.timer = null
+    const pending = state.pending
+    if (!pending) return
+    state.pending = null
+    state.timer = setTimeout(() => this.flushValidation(), state.timeout)
+    const fields = new Set(pending.fields)
+    if (pending.touched) for (const field of state.touched) fields.add(field)
+    this.validateBound([...fields], pending.options).then(
+      (outcome) => pending.waiters.forEach((w) => w.resolve(outcome)),
+      (error: unknown) => pending.waiters.forEach((w) => w.reject(error)),
+    )
+  }
+
+  /** Bound endpoint; `null` fields means the touched ones, and nothing to validate sends nothing. */
+  private validateBound(
+    fields: string[] | null,
+    options: FormValidateOptions<K>,
+  ): Promise<K['outcome']> {
+    const only = fields ?? [...this.precog.touched]
+    if (only.length === 0) return Promise.resolve({ status: 'cancelled' } as K['outcome'])
+    const { method, url } = this.endpoint('validate')
+    return this.precognize(method, url, only, options, this.precog.files)
+  }
+
+  private async precognize(
+    method: Method,
+    url: string | URL,
+    requested: string[],
+    options: FormValidateOptions<K>,
+    includeFiles: boolean,
   ): Promise<K['outcome']> {
     const cancelled = { status: 'cancelled' } as K['outcome']
-    const only = Array.isArray(fields) ? fields : [fields]
+    if (options.onBefore?.() === false) return cancelled
+
+    let data = this.transformer(this.data)
+    let only = requested
+    if (!includeFiles) {
+      only = requested.filter((field) => !hasFiles(valueAt(data, field)))
+      if (requested.length > 0 && only.length === 0) return cancelled
+      data = withoutFiles(data) as Record<string, unknown>
+    }
+
     const headers: Record<string, string> = { ...(options.headers ?? {}), Precognition: 'true' }
     if (only.length > 0) headers['Precognition-Validate-Only'] = only.join(',')
     const clearScoped = (): void => {
       if (only.length > 0) this.clearErrors(...only)
       else this.clearErrors()
+    }
+    const markValidated = (): void => {
+      for (const field of only.length > 0 ? only : Object.keys(this.data))
+        this.precog.validated.add(field)
     }
 
     this.validation?.abort()
@@ -248,13 +436,7 @@ export abstract class FormState<T extends FormData_, K extends FormTransport> {
     this.validating = true
 
     try {
-      const result = await this.precognition(
-        method,
-        url,
-        this.transformer(this.data),
-        headers,
-        controller.signal,
-      )
+      const result = await this.precognition(method, url, data, headers, controller.signal)
       if (controller.signal.aborted) return cancelled
 
       switch (result.kind) {
@@ -265,6 +447,7 @@ export abstract class FormState<T extends FormData_, K extends FormTransport> {
               : result.errors
           clearScoped()
           this.setError(scoped)
+          markValidated()
           this.recordInvalid(result.detail)
           warnIfOnlyOnError(this, 'validate', options)
           options.onInvalid?.(result.errors, result.detail)
@@ -276,6 +459,7 @@ export abstract class FormState<T extends FormData_, K extends FormTransport> {
           return result.outcome
         case 'passed':
           clearScoped()
+          markValidated()
           options.onSuccess?.()
           return result.outcome
         case 'unexpected':
@@ -332,6 +516,56 @@ export abstract class FormState<T extends FormData_, K extends FormTransport> {
     this.errors = flat
     this.allErrors = { ...errors }
   }
+}
+
+interface PrecognitionState<K extends FormTransport> {
+  /** Bound by `withPrecognition` / `useForm(method, url, data)`. */
+  endpoint: { method: Method; url: string | URL } | null
+  touched: Set<string>
+  /** Fields a Precognition answer covered, for `valid()`. */
+  validated: Set<string>
+  timeout: number
+  files: boolean
+  timer: ReturnType<typeof setTimeout> | null
+  /** Calls made during the debounce window, sent together when it ends. */
+  pending: {
+    fields: Set<string>
+    /** A call asked for the touched fields. */
+    touched: boolean
+    options: FormValidateOptions<K>
+    waiters: Array<{ resolve: (outcome: K['outcome']) => void; reject: (error: unknown) => void }>
+  } | null
+}
+
+/** The value at a dotted path (`items.0.photo`). */
+function valueAt(data: unknown, path: string): unknown {
+  let cursor = data
+  for (const segment of path.split('.')) {
+    if (typeof cursor !== 'object' || cursor === null) return undefined
+    cursor = (cursor as Record<string, unknown>)[segment]
+  }
+  return cursor
+}
+
+/** A copy of the data without `File`, `Blob` and `FileList` values. */
+function withoutFiles(value: unknown): unknown {
+  if (isFile(value)) return undefined
+  if (Array.isArray(value)) return value.filter((item) => !isFile(item)).map(withoutFiles)
+  if (value && typeof value === 'object' && !(value instanceof Date)) {
+    const out: Record<string, unknown> = {}
+    for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
+      if (!isFile(item)) out[key] = withoutFiles(item)
+    }
+    return out
+  }
+  return value
+}
+
+function isFile(value: unknown): boolean {
+  return (
+    (typeof Blob !== 'undefined' && value instanceof Blob) ||
+    (typeof FileList !== 'undefined' && value instanceof FileList)
+  )
 }
 
 const warnedForms = new WeakSet<object>()

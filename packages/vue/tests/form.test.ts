@@ -401,3 +401,89 @@ describe('useJsonForm', () => {
     },
   )
 })
+
+describe('useForm with a Precognition endpoint', () => {
+  const precognition = (init: RequestInit): boolean =>
+    Boolean((init.headers as Record<string, string>).Precognition)
+
+  it('binds the endpoint, validates on blur and renders valid/invalid/touched', async () => {
+    let answer = 422
+    const fetch = mockFetch((_url, init) => {
+      if (!precognition(init)) return pageResponse(page({ url: '/customers/1' }))
+      return answer === 422
+        ? pageResponse(
+            {
+              protocol: 1,
+              type: 'error',
+              error: { status: 422, kind: 'validation', message: 'x', errors: { email: ['Bad'] } },
+            },
+            422,
+          )
+        : new Response(null, { status: 204 })
+    })
+    let form!: ReactiveForm<{ email: string }>
+    await mountForm(() => {
+      form = useForm('post', '/customers', { email: '' }).setValidationTimeout(0)
+      return () =>
+        h('div', [
+          h('input', {
+            id: 'email',
+            onBlur: () => {
+              form.touch('email')
+              void form.validate('email')
+            },
+          }),
+          h(
+            'span',
+            { id: 'state' },
+            form.valid('email') ? 'valid' : form.invalid('email') ? 'invalid' : 'unknown',
+          ),
+          h('span', { id: 'touched' }, String(form.touched('email'))),
+        ])
+    }, fetch)
+    expect(text('state')).toBe('unknown')
+
+    document.getElementById('email')!.dispatchEvent(new Event('blur'))
+    await flush()
+    expect(text('state')).toBe('invalid')
+    expect(text('touched')).toBe('true')
+
+    answer = 204
+    form.email = 'ada@example.com'
+    await form.validate()
+    await nextTick()
+    expect(text('state')).toBe('valid')
+
+    await form.submit()
+    const last = (
+      fetch as unknown as { mock: { calls: Array<[string, RequestInit]> } }
+    ).mock.calls.at(-1)!
+    expect(String(last[0])).toContain('/customers')
+    expect(last[1].method?.toUpperCase()).toBe('POST')
+  })
+
+  it('still reads a string and an object as the remember key and data', async () => {
+    let form!: ReactiveForm<{ name: string }>
+    await mountForm(() => {
+      form = useForm('create', { name: 'x' })
+      return () => h('div')
+    })
+
+    expect(form.name).toBe('x')
+    expect(() => form.validate('name')).toThrow(/withPrecognition/)
+  })
+
+  it.each(['valid', 'invalid', 'touched', 'touch'])('refuses a field named %s', async (field) => {
+    let error: unknown
+    await mountForm(() => {
+      try {
+        useForm({ [field]: '' })
+      } catch (e) {
+        error = e
+      }
+      return () => h('div')
+    })
+
+    expect((error as Error).message).toContain(`"${field}"`)
+  })
+})
