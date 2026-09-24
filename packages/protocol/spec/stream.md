@@ -38,7 +38,7 @@ The server sends the comment line `: hb` whenever no bytes have been written for
 ## 5. Identifiers, `Last-Event-ID`, and replay
 
 - Events originating from the event bus carry an `id` that is an opaque, monotonically increasing cursor within a connection. Locally generated events (`ready`, `end`, heartbeat) carry no `id`, with one exception: when the bus can replay, `end{reason:"max_duration"}` carries the connection's current cursor as its `id`, so the reconnect replays events published in the gap even if the connection delivered none. A bus event that becomes visible after an event with a higher `id` was sent (for example a database row committed late) is sent without an `id`, so the client's `Last-Event-ID` never moves backwards.
-- On reconnect the client sends `Last-Event-ID: <last id seen>`.
+- On reconnect the client sends `Last-Event-ID: <last id seen>`. A client that cannot set the header on a new connection (a new native `EventSource`) MAY send the query parameter `lastEventId` instead; servers MUST accept it and MUST prefer the header when both are present. The id carries no authority, so exposing it in URLs and logs is harmless.
 - If the server can replay, it emits every event after that id (subject to current authorization) before resuming live delivery, and sets `replayed: true` in `ready`. Otherwise it sets `replayed: false`. A server MUST NOT set `replayed: true` when retention (pruning, trimming) may have dropped events after that id, or when it cannot interpret the id; the client then resyncs.
 - `id` values grant no authority. Every (re)connection is a new HTTP request and is authenticated and authorized afresh. Replayed events are filtered by the channels the connection is authorized for **now**.
 

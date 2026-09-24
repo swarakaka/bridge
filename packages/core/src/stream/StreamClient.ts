@@ -201,7 +201,7 @@ export class StreamClient {
 
     if (this.options.transport === 'eventsource' && typeof EventSource !== 'undefined') {
       this.opening = false
-      this.connectEventSource(target)
+      this.connectEventSource(target, attempt)
       return
     }
     await this.connectFetch(target, attempt)
@@ -300,8 +300,13 @@ export class StreamClient {
     this.scheduleReconnect()
   }
 
-  private connectEventSource(target: string): void {
-    const source = new EventSource(target, {
+  private connectEventSource(target: string, attempt: number): void {
+    // A new EventSource cannot send Last-Event-ID; the server also reads it from
+    // the query (spec §5). The browser's own reconnects send the header, which wins.
+    const url = toUrl(target)
+    if (this.lastEventId) url.searchParams.set('lastEventId', this.lastEventId)
+    this.sentLastEventId = this.lastEventId
+    const source = new EventSource(url.href, {
       withCredentials: this.options.withCredentials !== false,
     })
     this.source = source
@@ -311,11 +316,12 @@ export class StreamClient {
       this.backoff.reset()
     }
     source.onerror = () => {
-      // The browser reconnects on its own; mirror the state.
       if (source.readyState === EventSource.CLOSED) {
+        // The server refused the connection (the browser does not retry those).
         this.source = null
-        if (!this.closed) this.scheduleReconnect()
+        if (!this.closed && attempt === this.attempt) void this.probeRefusal(target, attempt)
       } else {
+        // A dropped connection: the browser reconnects on its own; mirror the state.
         this.setState('reconnecting')
       }
     }
@@ -339,6 +345,40 @@ export class StreamClient {
         }),
       )
     }
+  }
+
+  /**
+   * EventSource hides the status of a refused connection. Ask the same URL for
+   * JSON: authentication middleware answers 401/403 before the stream route
+   * would, and an allowed request gets 406 without opening a stream or taking a
+   * connection slot. 401/403 stop reconnecting (spec §6.3); anything else backs off.
+   */
+  private async probeRefusal(target: string, attempt: number): Promise<void> {
+    let status: number | null = null
+    try {
+      const response = await this.fetchImpl(target, {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+        credentials: this.options.withCredentials === false ? 'omit' : 'include',
+        cache: 'no-store',
+      })
+      status = response.status
+      void response.body?.cancel().catch(() => undefined)
+    } catch {
+      // Network failure: treat as transient.
+    }
+    if (this.closed || attempt !== this.attempt) return
+
+    if (status === 401 || status === 403) {
+      this.emitTransportError(`Stream refused with status ${status}`, status)
+      this.close()
+      return
+    }
+    this.emitTransportError(
+      status === null ? 'Stream connection failed' : `Stream failed with status ${status}`,
+      status ?? undefined,
+    )
+    this.scheduleReconnect()
   }
 
   /** Names of application events to listen for with the EventSource transport (fetch needs none). */

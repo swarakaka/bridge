@@ -21,7 +21,7 @@ const { state, on, lastEventAt, reconnectAttempts, connect, close } = useStream(
 ## Transports
 
 - **fetch (default).** Reads the response body as a stream. It can send `Authorization` and custom headers, observes heartbeats, and runs a watchdog that reconnects after 2.5 heartbeat intervals of silence.
-- **EventSource.** The browser's native API. It cannot set headers, so it suits cookie sessions only, and it cannot see heartbeats. Use `transport: 'eventsource'` when you want the browser to own reconnection.
+- **EventSource.** The browser's native API. It cannot set headers, so it suits cookie sessions only, and it cannot see heartbeats. Use `transport: 'eventsource'` when you want the browser to own reconnection. When the browser gives up (the server refused the connection), Bridge opens a new `EventSource` with the last id in the `lastEventId` query parameter, since the constructor cannot send `Last-Event-ID`. Because `EventSource` hides the status, Bridge asks the same URL once with `Accept: application/json`: `401`/`403` stop reconnecting, anything else backs off. Signed ticket URLs accept the extra `lastEventId` parameter.
 
 ## Automatic behaviour
 

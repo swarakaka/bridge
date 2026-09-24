@@ -169,4 +169,36 @@ test.describe('stream protocol', () => {
     })
     expect(bad.status).toBe(401)
   })
+
+  test('a native EventSource reconnect: lastEventId in the ticket URL, and a JSON probe for refusals', async () => {
+    const post = (path: string, body?: unknown) =>
+      fetch(`${base}${path}`, {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      })
+    await post('/realtime/notify', { message: 'resume me', level: 'info' })
+    const { url } = (await (await post('/realtime/ticket')).json()) as { url: string }
+
+    // No headers at all, as a new EventSource would connect; the ticket signature still holds.
+    const resumed = await fetch(`${url}&lastEventId=0`, {
+      headers: { Accept: 'text/event-stream' },
+    })
+    expect(resumed.status).toBe(200)
+    const frames = parse(await readStream(resumed, 3000))
+    expect(frames[1]!.data).toMatchObject({ type: 'ready', replayed: true })
+    expect(frames.some((f) => (f.data as { message?: string })?.message === 'resume me')).toBe(true)
+
+    // The client's refusal probe: allowed → 406 without opening a stream; refused → 401.
+    const allowed = await fetch(url, { headers: { Accept: 'application/json' } })
+    expect(allowed.status).toBe(406)
+    const refused = await fetch(url.replace('bridge_user=', 'bridge_user=9'), {
+      headers: { Accept: 'application/json' },
+    })
+    expect(refused.status).toBe(401)
+  })
 })

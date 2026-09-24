@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { RequestManager } from '../src/index.js'
 import type { Bridge } from '../src/index.js'
-import { bridgeWith, mockFetch, page, pageResponse, tick } from './helpers.js'
+import { bridgeWith, header, mockFetch, page, pageResponse, tick } from './helpers.js'
 
 /** Minimal XMLHttpRequest double: records the request and lets the test drive progress and completion. */
 class FakeXhr {
@@ -183,5 +183,67 @@ describe('StreamClient EventSource transport', () => {
     stream.close()
     expect(stream.state).toBe('closed')
     expect(states).toContain('reconnecting')
+  })
+
+  it('resumes from the last id in the query after a refused connection with a transient status', async () => {
+    const probe = mockFetch(() => new Response('{}', { status: 503 }))
+    bridge = bridgeWith(probe)
+    const stream = bridge.stream('/events', {
+      transport: 'eventsource',
+      backoff: { initial: 1, max: 1, jitter: 0 },
+    })
+    await tick()
+    const first = FakeEventSource.instances[0]!
+    expect(first.url).not.toContain('lastEventId')
+    first.onopen?.()
+    first.emit('bridge', '{"type":"invalidate","keys":["customers"]}', '41')
+    first.readyState = 2
+    first.onerror?.()
+    await tick()
+    await tick()
+
+    expect(header(probe.calls()[0]!.init, 'Accept')).toBe('application/json')
+    const second = FakeEventSource.instances[1]!
+    expect(new URL(second.url).searchParams.get('lastEventId')).toBe('41')
+    expect(stream.state).not.toBe('closed')
+    stream.close()
+  })
+
+  it('stops reconnecting when the refused connection turns out to be a 401', async () => {
+    bridge = bridgeWith(mockFetch(() => new Response('{}', { status: 401 })))
+    const stream = bridge.stream('/events', {
+      transport: 'eventsource',
+      backoff: { initial: 1, max: 1, jitter: 0 },
+    })
+    const errors: unknown[] = []
+    stream.on('error', (e) => errors.push(e))
+    await tick()
+    const source = FakeEventSource.instances[0]!
+    source.readyState = 2
+    source.onerror?.()
+    await tick()
+    await tick()
+
+    expect(stream.state).toBe('closed')
+    expect(errors).toContainEqual(expect.objectContaining({ type: 'transport', status: 401 }))
+    expect(FakeEventSource.instances).toHaveLength(1)
+  })
+
+  it('closes when the server ends without reconnect or sends a final error', async () => {
+    bridge = bridgeWith(mockFetch(() => pageResponse(page())))
+    const ended = bridge.stream('/events', { transport: 'eventsource' })
+    const failed = bridge.stream('/other', { transport: 'eventsource' })
+    await tick()
+    const [a, b] = FakeEventSource.instances
+    a!.emit('bridge', '{"type":"end","reason":"closed","reconnect":false}')
+    b!.emit(
+      'bridge',
+      '{"type":"error","status":403,"kind":"forbidden","message":"no","final":true}',
+    )
+
+    expect(ended.state).toBe('closed')
+    expect(failed.state).toBe('closed')
+    expect(a!.readyState).toBe(2)
+    expect(b!.readyState).toBe(2)
   })
 })
