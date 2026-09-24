@@ -179,7 +179,8 @@ export class PageStore implements OptimisticTarget {
           props,
           ...(page.meta ? { meta: page.meta } : {}),
         },
-        error: null,
+        // A background merge (deferred or lazy props, an invalidation) must not
+        // dismiss an error shown in place of the page; a full page swap does.
       }
       this.notify()
       return

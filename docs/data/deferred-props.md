@@ -31,7 +31,7 @@ The page object lists the pending keys per group in `deferred`. The client issue
 
 :::
 
-`useDeferred('stats')` exposes `loading` and `value` for custom handling. Deferred requests are aborted when the user navigates away before they finish.
+`useDeferred('stats')` exposes `loading` and `value` for custom handling. Deferred requests are aborted when the user navigates away before they finish. For widgets far down the page, [load when visible](/data/load-when-visible) fetches only what the user scrolls to.
 
 ## Other modes
 

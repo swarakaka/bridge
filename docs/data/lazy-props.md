@@ -13,7 +13,7 @@ return Bridge::render('Customers/Index', [
 router.reload({ only: ['filtersUi'] })
 ```
 
-Unlike a [deferred prop](/data/deferred-props), nothing is fetched automatically. JSON clients opt in with `X-Bridge-Only: filtersUi`.
+Unlike a [deferred prop](/data/deferred-props), nothing is fetched automatically; to fetch it when part of the page scrolls into view, use [`<WhenVisible>`](/data/load-when-visible). JSON clients opt in with `X-Bridge-Only: filtersUi`.
 
 | Hint     | Full page load                   | Partial reload naming it         | JSON mode                 |
 | -------- | -------------------------------- | -------------------------------- | ------------------------- |

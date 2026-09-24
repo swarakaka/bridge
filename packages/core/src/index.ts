@@ -44,6 +44,8 @@ export type {
   OptimisticSettle,
   OptimisticTarget,
 } from './pages/PageStore.js'
+export { loadWhenVisible } from './pages/whenVisible.js'
+export type { WhenVisibleOptions, WhenVisibleHandle } from './pages/whenVisible.js'
 export { requireResolver } from './pages/resolver.js'
 export type { PagesOption } from './pages/resolver.js'
 export { mergeValue, setDeep, getDeep, hasDeep, isPlainObject } from './pages/merge.js'

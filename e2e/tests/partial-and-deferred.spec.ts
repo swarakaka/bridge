@@ -42,3 +42,31 @@ test.describe('partial reloads and deferred props', () => {
     await expect(page.getByTestId('pagination')).toContainText(/21–40 of \d+/)
   })
 })
+
+test.describe('load when visible', () => {
+  test('a lazy prop loads once when its section scrolls into view', async ({ page, login }) => {
+    await login()
+    // A short viewport keeps the Activity section below the fold.
+    await page.setViewportSize({ width: 1024, height: 220 })
+    const loads: string[] = []
+    page.on('request', (request) => {
+      const only = request.headers()['x-bridge-only']
+      if (only) loads.push(only)
+    })
+
+    await page.goto('/customers/2')
+    await expect(page.getByTestId('activity-loading')).toBeAttached()
+    await page.waitForTimeout(300)
+    expect(loads).toEqual([])
+
+    await page.getByTestId('activity').scrollIntoViewIfNeeded()
+    await expect(page.getByTestId('activity')).toContainText('Customer created')
+    await expect(page.getByTestId('activity-loading')).toHaveCount(0)
+
+    // Scrolling away and back does not load it again.
+    await page.mouse.wheel(0, -2000)
+    await page.getByTestId('activity').scrollIntoViewIfNeeded()
+    await page.waitForTimeout(300)
+    expect(loads).toEqual(['activity'])
+  })
+})

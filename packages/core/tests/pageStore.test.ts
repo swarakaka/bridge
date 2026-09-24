@@ -70,4 +70,14 @@ describe('PageStore', () => {
     store.setPage(page())
     expect(store.current.error).toBeNull()
   })
+
+  it('keeps an error shown in place through partial merges, not through a page swap', () => {
+    const store = new PageStore(page())
+    store.setError({ status: 403, kind: 'forbidden', message: 'no' })
+    store.setPage(page({ props: { stats: 1 } }), { partial: true })
+    expect(store.current.error?.status).toBe(403)
+    expect(store.current.page?.props).toMatchObject({ stats: 1 })
+    store.setPage(page())
+    expect(store.current.error).toBeNull()
+  })
 })

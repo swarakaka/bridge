@@ -24,6 +24,8 @@ export {
 } from './hooks.js'
 export type { UseFormOptions, UseJsonFormOptions, UseStreamReturn } from './hooks.js'
 export { BridgeLink, Deferred } from './components.js'
+export { WhenVisible, useWhenVisible } from './whenVisible.js'
+export type { WhenVisibleProps, UseWhenVisibleOptions } from './whenVisible.js'
 export type { BridgeLinkProps } from './components.js'
 export { BridgeForm, useFormContext } from './form.js'
 export type {

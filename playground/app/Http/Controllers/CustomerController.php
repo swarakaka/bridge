@@ -65,6 +65,8 @@ class CustomerController extends Controller
     {
         return Bridge::render('Customers/Show', [
             'customer' => CustomerResource::make($customer),
+            // Bridge::lazy(): left out of the page; <WhenVisible> requests it when scrolled to.
+            'activity' => Bridge::lazy(fn () => $this->activity($customer)),
         ]);
     }
 
@@ -123,5 +125,23 @@ class CustomerController extends Controller
         return Bridge::redirect()
             ->route('customers.index')
             ->flash('Customer deleted.');
+    }
+
+    /**
+     * @return list<array{at: string|null, text: string}>
+     */
+    private function activity(Customer $customer): array
+    {
+        $entries = [['at' => $customer->created_at?->toIso8601String(), 'text' => 'Customer created']];
+
+        if ($customer->updated_at !== null && ! $customer->updated_at->equalTo($customer->created_at)) {
+            $entries[] = ['at' => $customer->updated_at->toIso8601String(), 'text' => 'Details updated'];
+        }
+
+        if ($customer->starred) {
+            $entries[] = ['at' => null, 'text' => 'Starred'];
+        }
+
+        return array_reverse($entries);
     }
 }

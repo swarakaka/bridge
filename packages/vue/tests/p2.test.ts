@@ -230,8 +230,8 @@ describe('remembered state', () => {
       })
       const Other = defineComponent({ setup: () => () => h('div', { id: 'other' }) })
       window.history.replaceState(null, '', '/customers/create')
-      const meta = encrypted ? { encryptHistory: true } : undefined
-      embed(page({ component: 'Create', url: '/customers/create', props: {}, meta }))
+      const meta = encrypted ? { meta: { encryptHistory: true } } : {}
+      embed(page({ component: 'Create', url: '/customers/create', props: {}, ...meta }))
       app = await createBridgeApp({
         resolve: (name) => (name === 'Other' ? Other : Create),
         fetch: mockFetch(() =>

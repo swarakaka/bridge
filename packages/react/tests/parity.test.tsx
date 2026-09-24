@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { act, createContext, createElement, useContext, useEffect } from 'react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { act, createContext, createElement, useContext, useEffect, useRef } from 'react'
 import { createBridge, getBridge, PageCache, router } from '@swarakaka/bridge-core'
 import type { BridgePage } from '@swarakaka/bridge-protocol'
 import {
@@ -14,6 +14,8 @@ import {
   useFormContext,
   usePage,
   useStream,
+  useWhenVisible,
+  WhenVisible,
 } from '../src/index.js'
 import type { BridgeApp, BridgeFormInstance, PageComponent } from '../src/index.js'
 import { createSsrRenderer } from '../src/server/index.js'
@@ -308,8 +310,8 @@ describe('remembered state', () => {
       }
       const Other: PageComponent = () => <div id="other" />
       const http = mockFetch(() => pageResponse(page({ component: 'Other', url: '/other' })))
-      const meta = encrypted ? { encryptHistory: true } : undefined
-      await mount({ Create, Other }, page({ component: 'Create', url: '/create', meta }), http)
+      const meta = encrypted ? { meta: { encryptHistory: true } } : {}
+      await mount({ Create, Other }, page({ component: 'Create', url: '/create', ...meta }), http)
 
       await act(async () => ($('#fill') as HTMLButtonElement).click())
       await flush()
@@ -713,5 +715,140 @@ describe('optimistic updates', () => {
     )
     await flush()
     expect($('#likes')?.textContent).toBe('1')
+  })
+})
+
+describe('WhenVisible', () => {
+  class FakeObserver {
+    static instances: FakeObserver[] = []
+    readonly elements: Element[] = []
+    disconnected = false
+    constructor(
+      readonly callback: IntersectionObserverCallback,
+      readonly options: IntersectionObserverInit = {},
+    ) {
+      FakeObserver.instances.push(this)
+    }
+    observe(element: Element): void {
+      this.elements.push(element)
+    }
+    disconnect(): void {
+      this.disconnected = true
+    }
+    unobserve(): void {}
+    takeRecords(): IntersectionObserverEntry[] {
+      return []
+    }
+    fire(visible: boolean): void {
+      act(() =>
+        this.callback(
+          this.elements.map(
+            (target) => ({ isIntersecting: visible, target }) as IntersectionObserverEntry,
+          ),
+          this as unknown as IntersectionObserver,
+        ),
+      )
+    }
+  }
+  /** Past the router's 50 ms reload debounce. */
+  const settle = () => act(() => new Promise((r) => setTimeout(r, 80)))
+
+  beforeEach(() => {
+    FakeObserver.instances = []
+    Object.defineProperty(window, 'IntersectionObserver', {
+      value: FakeObserver,
+      configurable: true,
+      writable: true,
+    })
+  })
+  afterEach(() => {
+    delete (window as { IntersectionObserver?: unknown }).IntersectionObserver
+  })
+
+  const Show: PageComponent = () => (
+    <WhenVisible
+      data="activity"
+      buffer={200}
+      as="section"
+      id="activity"
+      fallback={<p id="fallback">loading…</p>}
+    >
+      {({ loading }) => <p id="ready">ready {String(loading)}</p>}
+    </WhenVisible>
+  )
+
+  it('shows the fallback until visible, then loads the keys in one partial reload', async () => {
+    const http = mockFetch(() =>
+      pageResponse(page({ component: 'Show', props: { activity: ['signed in'] } })),
+    )
+    await mount({ Show }, page({ component: 'Show' }), http)
+
+    expect($('#activity')?.tagName).toBe('SECTION')
+    expect($('#fallback')).not.toBeNull()
+    expect(FakeObserver.instances[0]!.options.rootMargin).toBe('200px')
+    expect(http).not.toHaveBeenCalled()
+
+    FakeObserver.instances[0]!.fire(true)
+    await settle()
+
+    expect(http).toHaveBeenCalledTimes(1)
+    expect((http.mock.calls[0]![1].headers as Record<string, string>)['X-Bridge-Only']).toBe(
+      'activity',
+    )
+    expect($('#ready')?.textContent).toBe('ready false')
+    expect(FakeObserver.instances[0]!.disconnected).toBe(true)
+  })
+
+  it('renders the content without a request when the keys are present', async () => {
+    const http = mockFetch(() => pageResponse(page()))
+    await mount({ Show }, page({ component: 'Show', props: { activity: [] } }), http)
+    expect($('#ready')).not.toBeNull()
+    expect(FakeObserver.instances).toHaveLength(0)
+    expect(http).not.toHaveBeenCalled()
+  })
+
+  it('stops observing when unmounted', async () => {
+    await mount({ Show }, page({ component: 'Show' }))
+    act(() => app!.root.unmount())
+    expect(FakeObserver.instances[0]!.disconnected).toBe(true)
+  })
+
+  it('useWhenVisible reports visibility and loading for custom markup', async () => {
+    let release: () => void = () => undefined
+    const Custom: PageComponent = () => {
+      const target = useRef<HTMLDivElement>(null)
+      const { visible, loading } = useWhenVisible(target, ['comments'])
+      return (
+        <div ref={target} id="custom">
+          {`${String(visible)} ${String(loading)}`}
+        </div>
+      )
+    }
+    const http = mockFetch(
+      () =>
+        new Promise<Response>((resolve) => {
+          release = () =>
+            resolve(pageResponse(page({ component: 'Custom', props: { comments: [] } })))
+        }),
+    )
+    await mount({ Custom }, page({ component: 'Custom' }), http)
+    const text = () => $('#custom')?.textContent
+
+    expect(text()).toBe('false false')
+    FakeObserver.instances[0]!.fire(true)
+    expect(text()).toBe('true true')
+
+    await settle()
+    await act(async () => release())
+    await flush()
+    expect(text()).toBe('true false')
+    FakeObserver.instances[0]!.fire(false)
+    expect(text()).toBe('false false')
+  })
+
+  it('renders the fallback on the server', async () => {
+    const render = createSsrRenderer({ resolve: () => Show })
+    const result = await render(page({ component: 'Show' }))
+    expect(result.body).toContain('<section id="activity"><p id="fallback">loading…</p></section>')
   })
 })

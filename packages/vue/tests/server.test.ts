@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest'
 import { defineComponent, h, inject } from 'vue'
 import { createSsrRenderer, createSsrServer } from '../src/server/index.js'
-import { BridgeHead, usePage } from '../src/index.js'
+import { BridgeHead, usePage, WhenVisible } from '../src/index.js'
 import { page } from './helpers.js'
 
 const Layout = defineComponent({
@@ -32,6 +32,26 @@ const Index = defineComponent({
 ;(Index as unknown as { layout: unknown }).layout = Layout
 
 describe('SSR renderer', () => {
+  it('renders the WhenVisible fallback without observing or loading', async () => {
+    const Show = defineComponent({
+      setup: () => () =>
+        h(
+          WhenVisible,
+          { data: 'activity' },
+          {
+            default: () => h('p', 'ready'),
+            fallback: () => h('p', 'later'),
+          },
+        ),
+    })
+    const render = createSsrRenderer({ resolve: () => Show })
+    const result = await render(page({ component: 'Show', props: {} }))
+    expect(result.body).toContain('<div><p>later</p></div>')
+    expect((await render(page({ component: 'Show', props: { activity: [] } }))).body).toContain(
+      '<div><p>ready</p></div>',
+    )
+  })
+
   it('renders a page with layout, props and head fragments', async () => {
     const render = createSsrRenderer({ resolve: () => Index })
     const result = await render(page())

@@ -1,11 +1,15 @@
 <script setup lang="ts">
-import { BridgeHead, BridgeLink, router } from '@swarakaka/bridge-vue'
+import { BridgeHead, BridgeLink, router, WhenVisible } from '@swarakaka/bridge-vue'
 import { ref } from 'vue'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import type { Customer } from '@/types'
 
 defineOptions({ layout: AppLayout })
-const props = defineProps<{ customer: Customer }>()
+const props = defineProps<{
+    customer: Customer
+    // A lazy prop: absent until <WhenVisible> below loads it.
+    activity?: Array<{ at: string | null; text: string }>
+}>()
 
 // Optimistic: the star flips at once and flips back if the server refuses (locked customers).
 const starError = ref<string | null>(null)
@@ -88,6 +92,25 @@ const destroy = (): void => {
         <dt class="text-slate-500">Created</dt>
         <dd class="col-span-2">{{ customer.created_at }}</dd>
     </dl>
+    <section class="mt-8 max-w-lg" aria-labelledby="activity-heading">
+        <h2 id="activity-heading" class="text-lg font-semibold">Activity</h2>
+        <WhenVisible data="activity" class="mt-2 text-sm" data-testid="activity">
+            <template #fallback>
+                <p class="text-slate-500" data-testid="activity-loading">Loading activity…</p>
+            </template>
+            <ul class="divide-y divide-slate-200">
+                <li
+                    v-for="(entry, index) in activity ?? []"
+                    :key="index"
+                    class="flex justify-between py-1"
+                    data-testid="activity-entry"
+                >
+                    <span>{{ entry.text }}</span>
+                    <span class="text-slate-500">{{ entry.at ?? '' }}</span>
+                </li>
+            </ul>
+        </WhenVisible>
+    </section>
     <p class="mt-8 text-sm">
         <BridgeLink href="/customers" class="text-indigo-600 hover:underline"
             >← Back to customers</BridgeLink

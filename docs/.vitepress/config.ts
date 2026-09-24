@@ -61,6 +61,7 @@ export default defineConfig({
           { text: 'Partial reloads', link: '/data/partial-reloads' },
           { text: 'Deferred props', link: '/data/deferred-props' },
           { text: 'Lazy props', link: '/data/lazy-props' },
+          { text: 'Load when visible', link: '/data/load-when-visible' },
           { text: 'Always props', link: '/data/always-props' },
           { text: 'Merging props', link: '/data/merging-props' },
           { text: 'Prefetching', link: '/data/prefetching' },

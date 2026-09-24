@@ -50,4 +50,6 @@ Bridge borrows Inertia's developer experience: controllers return pages, page co
 
 **History encryption works the same way** (`bridge.history.encrypt`, the `bridge.encrypt-history` middleware, `Bridge::encryptHistory()`, `Bridge::clearHistory()`), with one difference: signing out clears history by default (`history.clear_on_logout`), so you do not call `clearHistory()` in your logout action. See [History encryption](/security/history-encryption).
 
-**No polling, "load when visible" or "once" props yet.** Streams cover most polling use cases; the others are candidates for later releases.
+**`<WhenVisible>` works the same way** (`data`, `buffer`, `always`, `as`, and reload options in `reload` rather than `params`), and loads `Bridge::lazy()` props. See [Load when visible](/data/load-when-visible).
+
+**No polling or "once" props yet.** Streams cover most polling use cases; once props are a candidate for a later release.
