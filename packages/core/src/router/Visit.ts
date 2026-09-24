@@ -1,6 +1,6 @@
 import type { BridgeError, BridgePage } from '@swarakaka/bridge-protocol'
 import type { UploadProgress } from '../http/RequestManager.js'
-import type { Method } from './url.js'
+import type { Method, QueryStringArrayFormat } from './url.js'
 
 export type ValidationErrors = Record<string, string[]>
 
@@ -18,6 +18,14 @@ export interface VisitOptions {
   /** Let the visit use a fresh/stale cached page (GET only). Default true for GET. */
   useCache?: boolean | undefined
   forceFormData?: boolean | undefined
+  /** `false` marks the visit as background work that progress indicators should skip (`visit.showProgress`). */
+  showProgress?: boolean | undefined
+  /** Keep the current URL: the new page is shown and stored under the address the user is on. */
+  preserveUrl?: boolean | undefined
+  /** Arrays in the query string of a GET visit: `a[0]=x` (default) or `a[]=x`. */
+  queryStringArrayFormat?: QueryStringArrayFormat | undefined
+  /** Cache tags to flush from the page cache when the visit succeeds (see `router.prefetch`). */
+  invalidateCacheTags?: string | string[] | undefined
   onBefore?: ((visit: Visit) => void | boolean) | undefined
   onStart?: ((visit: Visit) => void) | undefined
   onProgress?: ((progress: UploadProgress) => void) | undefined
@@ -41,6 +49,9 @@ export interface Visit {
   only: string[]
   except: string[]
   merge: boolean
+  /** `false` for background visits a progress indicator should skip. */
+  showProgress: boolean
+  preserveUrl: boolean
   prefetch: boolean
   completed: boolean
   cancelled: boolean

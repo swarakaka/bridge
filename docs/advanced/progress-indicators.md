@@ -11,7 +11,8 @@ import { getBridge } from '@swarakaka/bridge-vue'
 let timer: ReturnType<typeof setTimeout> | undefined
 const bridge = getBridge()
 
-bridge.on('start', () => {
+bridge.on('start', (visit) => {
+  if (!visit.showProgress) return // background visits, e.g. `showProgress: false` on "load more"
   timer = setTimeout(() => NProgress.start(), 250) // only for visits slower than 250 ms
 })
 bridge.on('progress', ({ progress }) => {
@@ -24,7 +25,7 @@ bridge.on('finish', () => {
 })
 ```
 
-The delay avoids a flicker on fast navigations and on pages served from the prefetch cache.
+The delay avoids a flicker on fast navigations and on pages served from the prefetch cache. Pass `showProgress: false` to a visit (or a `BridgeLink`) that should not move the bar; prefetches never emit visit events.
 
 ## Per-element indicators
 

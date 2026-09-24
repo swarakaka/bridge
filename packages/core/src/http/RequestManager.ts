@@ -2,7 +2,7 @@ import { HEADERS, PAGE_ACCEPT } from '@swarakaka/bridge-protocol'
 import { readXsrfToken } from './csrf.js'
 import { hasFiles, objectToFormData } from './formData.js'
 import type { HttpResponse } from './responseParser.js'
-import { mergeQuery, type Method } from '../router/url.js'
+import { mergeQuery, type Method, type QueryStringArrayFormat } from '../router/url.js'
 
 export interface HttpRequest {
   method: Method
@@ -18,6 +18,8 @@ export interface HttpRequest {
   onProgress?: ((progress: UploadProgress) => void) | undefined
   /** Force multipart + XHR (used for uploads); auto-detected from data otherwise. */
   forceFormData?: boolean | undefined
+  /** Arrays in GET query strings: `a[0]=x` (default) or `a[]=x`. */
+  queryStringArrayFormat?: QueryStringArrayFormat | undefined
 }
 
 export interface UploadProgress {
@@ -84,7 +86,7 @@ export class RequestManager {
         !(request.data instanceof FormData) &&
         Object.keys(request.data).length > 0
       ) {
-        url = mergeQuery(url, request.data)
+        url = mergeQuery(url, request.data, request.queryStringArrayFormat)
       }
     } else {
       const token = this.xsrfCookie()

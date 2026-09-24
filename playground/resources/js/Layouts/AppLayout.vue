@@ -9,7 +9,10 @@ const { props: page, url } = usePage<SharedProps>()
 const user = computed(() => page.value.auth?.user ?? null)
 const navigating = ref(false)
 const bridge = useBridge()
-bridge.on('start', () => (navigating.value = true))
+// Background visits (`showProgress: false`, e.g. "load more") keep the indicator hidden.
+bridge.on('start', (visit) => {
+    if (visit.showProgress) navigating.value = true
+})
 bridge.on('finish', () => (navigating.value = false))
 
 const flash = ref<{ message?: string; level?: string } | null>(null)

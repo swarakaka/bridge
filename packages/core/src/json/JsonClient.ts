@@ -2,7 +2,7 @@ import { isJsonDocument } from '@swarakaka/bridge-protocol'
 import type { BridgeJsonDocument, BridgeJsonError } from '@swarakaka/bridge-protocol'
 import type { RequestManager, UploadProgress } from '../http/RequestManager.js'
 import type { HttpResponse } from '../http/responseParser.js'
-import type { Method } from '../router/url.js'
+import type { Method, QueryStringArrayFormat } from '../router/url.js'
 import type { ValidationErrors } from '../router/Visit.js'
 
 export const JSON_ACCEPT = 'application/json'
@@ -49,6 +49,8 @@ export interface JsonRequestOptions {
   signal?: AbortSignal | undefined
   onProgress?: ((progress: UploadProgress) => void) | undefined
   forceFormData?: boolean | undefined
+  /** Arrays in the query string of a GET: `a[0]=x` (default) or `a[]=x`. */
+  queryStringArrayFormat?: QueryStringArrayFormat | undefined
   /** `false` when a non-GET request cannot change server data (Precognition), so cached pages are kept. */
   mutation?: boolean | undefined
 }
@@ -99,6 +101,7 @@ export class JsonClient {
         signal: options.signal,
         onProgress: options.onProgress,
         forceFormData: options.forceFormData,
+        queryStringArrayFormat: options.queryStringArrayFormat,
       })
     } catch (error) {
       if (isAbort(error) || options.signal?.aborted) return { status: 'cancelled' }

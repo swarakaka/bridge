@@ -54,6 +54,7 @@ export {
 export { Router } from './router/Router.js'
 export type { RouterDependencies, ReloadOptions } from './router/Router.js'
 export { isSameOrigin, relativeUrl, mergeQuery, toUrl, stripHash } from './router/url.js'
+export type { QueryStringArrayFormat } from './router/url.js'
 export type { Method } from './router/url.js'
 export type {
   VisitOptions,

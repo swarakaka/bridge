@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { act, createContext, createElement, useContext, useEffect } from 'react'
-import { createBridge, getBridge } from '@swarakaka/bridge-core'
+import { createBridge, getBridge, PageCache } from '@swarakaka/bridge-core'
 import type { BridgePage } from '@swarakaka/bridge-protocol'
 import {
   BridgeHead,
@@ -415,6 +415,53 @@ describe('BridgeLink', () => {
     expect(headers['X-Custom']).toBe('1')
     expect(success).toHaveBeenCalledTimes(1)
     expect(($('#list') as HTMLElement).className).toBe('link active')
+  })
+  it('tags its prefetch and passes preserveUrl, showProgress and the array format to the visit', async () => {
+    const http = mockFetch((url) =>
+      pageResponse(page({ component: 'Home', url: new URL(url).pathname + new URL(url).search })),
+    )
+    const Home: PageComponent = () => (
+      <div>
+        <BridgeLink id="users" href="/users" prefetch="mount" cacheTags="users">
+          Users
+        </BridgeLink>
+        <BridgeLink
+          id="more"
+          href="/customers?page=2"
+          data={{ tags: ['a'] }}
+          preserveUrl
+          showProgress={false}
+          queryStringArrayFormat="brackets"
+          prefetch={false}
+        >
+          More
+        </BridgeLink>
+      </div>
+    )
+    await mount({ Home }, page({ component: 'Home', url: '/customers?page=1' }), http)
+    await flush()
+    const key = PageCache.key('/users')
+    expect(app!.bridge.cache.get(key).state).toBe('fresh')
+    app!.bridge.router.flushByCacheTags(['users'])
+    expect(app!.bridge.cache.get(key).state).toBe('miss')
+
+    const progress: boolean[] = []
+    app!.bridge.on('start', (visit) => {
+      progress.push(visit.showProgress)
+    })
+    await act(async () => {
+      $('#more')!.dispatchEvent(
+        new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }),
+      )
+    })
+    await flush()
+
+    const more = http.mock.calls
+      .map(([url]) => decodeURIComponent(String(url)))
+      .find((url) => url.includes('/customers'))
+    expect(more).toContain('page=2&tags[]=a')
+    expect(progress).toEqual([false])
+    expect(window.location.search).toBe('?page=1')
   })
 })
 

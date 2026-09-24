@@ -3,6 +3,8 @@ import type { BridgePage } from '@swarakaka/bridge-protocol'
 export interface CacheEntry {
   page: BridgePage
   fetchedAt: number
+  /** Set by `prefetch({ cacheTags })`; `flushTags` removes entries by tag. */
+  tags: string[]
 }
 
 export interface PageCacheOptions {
@@ -53,9 +55,11 @@ export class PageCache {
     return { state: 'miss' }
   }
 
-  set(key: string, page: BridgePage): void {
+  /** Stores a page; without `tags`, an entry replacing one keeps that entry's tags. */
+  set(key: string, page: BridgePage, tags?: string[]): void {
+    const kept = tags ?? this.entries.get(key)?.tags ?? []
     this.entries.delete(key)
-    this.entries.set(key, { page, fetchedAt: this.now() })
+    this.entries.set(key, { page, fetchedAt: this.now(), tags: kept })
     while (this.entries.size > this.max) {
       const oldest = this.entries.keys().next().value
       if (oldest === undefined) break
@@ -69,6 +73,18 @@ export class PageCache {
 
   clear(): void {
     this.entries.clear()
+  }
+
+  /** Removes every entry carrying any of these tags; returns how many were removed. */
+  flushTags(tags: string[]): number {
+    let removed = 0
+    for (const [key, entry] of this.entries) {
+      if (entry.tags.some((tag) => tags.includes(tag))) {
+        this.entries.delete(key)
+        removed++
+      }
+    }
+    return removed
   }
 
   get size(): number {

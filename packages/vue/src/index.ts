@@ -35,6 +35,7 @@ export type {
   VisitOutcome,
   Form,
   Method,
+  QueryStringArrayFormat,
   JsonOutcome,
   JsonError,
   JsonMeta,

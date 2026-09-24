@@ -14,7 +14,8 @@ test.describe('merge props and precognition', () => {
 
     await expect(page.getByTestId('customer-row')).toHaveCount(40)
     await expect(page.getByTestId('load-more')).toContainText('40 of')
-    await expect(page).toHaveURL(/page=2/)
+    // preserveUrl: the merged list stays at /customers.
+    await expect(page).toHaveURL(/\/customers$/)
   })
 
   test('fields validate live on blur through Precognition', async ({ page, login }) => {

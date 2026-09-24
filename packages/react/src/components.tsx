@@ -2,6 +2,7 @@ import type {
   BridgeError,
   BridgePage,
   Method,
+  QueryStringArrayFormat,
   ValidationErrors,
   Visit,
 } from '@swarakaka/bridge-core'
@@ -33,6 +34,12 @@ export interface BridgeLinkProps extends DomProps {
   except?: string[]
   headers?: Record<string, string>
   prefetch?: 'hover' | 'mount' | false
+  /** Tags for the prefetched page, for `router.flushByCacheTags`. */
+  cacheTags?: string | string[]
+  invalidateCacheTags?: string | string[]
+  showProgress?: boolean
+  preserveUrl?: boolean
+  queryStringArrayFormat?: QueryStringArrayFormat
   /** Added to `className` while the current page URL matches `href` (query ignored). */
   activeClass?: string
   onBefore?: (visit: Visit) => void | boolean
@@ -62,6 +69,11 @@ export function BridgeLink({
   except,
   headers,
   prefetch = 'hover',
+  cacheTags,
+  invalidateCacheTags,
+  showProgress,
+  preserveUrl,
+  queryStringArrayFormat,
   activeClass,
   className,
   onBefore,
@@ -82,7 +94,7 @@ export function BridgeLink({
   const state = usePageState(bridge)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const doPrefetch = () => {
-    if (method === 'get') void bridge.router.prefetch(href, { only, except, headers })
+    if (method === 'get') void bridge.router.prefetch(href, { only, except, headers, cacheTags })
   }
 
   useEffect(() => {
@@ -114,6 +126,10 @@ export function BridgeLink({
       only,
       except,
       headers,
+      showProgress,
+      preserveUrl,
+      queryStringArrayFormat,
+      invalidateCacheTags,
       onBefore,
       onStart,
       onFinish,

@@ -23,15 +23,17 @@
 
 :::
 
-| Prop                              | Meaning                                                                                          |
-| --------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `href`                            | Target URL. Cross-origin URLs are followed with a full document load.                            |
-| `method`, `data`                  | Request method and body for non-GET links. Non-GET links preserve state by default.              |
-| `as`                              | `a` (default) or `button`. Use `button` for non-GET links so they are not crawlable.             |
-| `replace`                         | Replace the history entry instead of pushing.                                                    |
-| `preserveState`, `preserveScroll` | See [Manual visits](/basics/manual-visits) and [Scroll management](/advanced/scroll-management). |
-| `only`, `except`                  | [Partial reload](/data/partial-reloads) selection.                                               |
-| `prefetch`                        | `hover` (default, after 75 ms), `mount`, or `false`. See [Prefetching](/data/prefetching).       |
-| `activeClass`                     | Class applied when the link's path matches the current page (Vue).                               |
+| Prop                                                                           | Meaning                                                                                          |
+| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| `href`                                                                         | Target URL. Cross-origin URLs are followed with a full document load.                            |
+| `method`, `data`                                                               | Request method and body for non-GET links. Non-GET links preserve state by default.              |
+| `as`                                                                           | `a` (default) or `button`. Use `button` for non-GET links so they are not crawlable.             |
+| `replace`                                                                      | Replace the history entry instead of pushing.                                                    |
+| `preserveState`, `preserveScroll`                                              | See [Manual visits](/basics/manual-visits) and [Scroll management](/advanced/scroll-management). |
+| `only`, `except`                                                               | [Partial reload](/data/partial-reloads) selection.                                               |
+| `prefetch`                                                                     | `hover` (default, after 75 ms), `mount`, or `false`. See [Prefetching](/data/prefetching).       |
+| `cacheTags`                                                                    | Tags for the prefetched page ([cache tags](/data/prefetching#cache-tags)).                       |
+| `preserveUrl`, `showProgress`, `queryStringArrayFormat`, `invalidateCacheTags` | Passed to the visit; see [Manual visits](/basics/manual-visits#options).                         |
+| `activeClass`                                                                  | Class applied when the link's path matches the current page (Vue).                               |
 
 Modifier clicks (new tab, middle click) are left to the browser.

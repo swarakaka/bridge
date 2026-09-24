@@ -19,7 +19,8 @@ let timer: ReturnType<typeof setTimeout> | null = null
 onBeforeUnmount(() => timer && clearTimeout(timer))
 
 // "Load more": the server marks `customers` with Bridge::merge(), so this partial
-// reload appends the next page's rows instead of replacing them.
+// reload appends the next page's rows instead of replacing them. The URL stays
+// (`?page=2` would show only page 2 on reload) and the button shows its own state.
 const loadingMore = ref(false)
 const loadMore = (): void => {
     const next = props.customers.meta.current_page + 1
@@ -33,7 +34,8 @@ const loadMore = (): void => {
             merge: true,
             preserveState: true,
             preserveScroll: true,
-            replace: true,
+            preserveUrl: true,
+            showProgress: false,
             onFinish: () => (loadingMore.value = false),
         },
     )

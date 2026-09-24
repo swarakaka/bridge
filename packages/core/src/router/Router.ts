@@ -181,9 +181,12 @@ export class Router {
     return this.visit(url, { replace })
   }
 
+  /** Warms the page cache; `cacheTags` label the entry for `flushByCacheTags`. */
   async prefetch(
     url: string | URL,
-    options: Pick<VisitOptions, 'only' | 'except' | 'headers'> = {},
+    options: Pick<VisitOptions, 'only' | 'except' | 'headers'> & {
+      cacheTags?: string | string[] | undefined
+    } = {},
   ): Promise<void> {
     const target = toUrl(url)
     if (!isSameOrigin(target)) return
@@ -201,7 +204,7 @@ export class Router {
         prefetch: true,
       })
       const parsed = await parseResponse(response)
-      if (parsed.kind === 'page') this.d.cache.set(key, parsed.page)
+      if (parsed.kind === 'page') this.d.cache.set(key, parsed.page, tagList(options.cacheTags))
     } catch {
       // Prefetch failures are silent by design.
     }
@@ -221,6 +224,11 @@ export class Router {
 
   clearCache(): void {
     this.d.cache.clear()
+  }
+
+  /** Removes cached pages carrying any of these tags (set by `prefetch({ cacheTags })`). */
+  flushByCacheTags(tags: string | string[]): void {
+    this.d.cache.flushTags(tagList(tags))
   }
 
   cancel(): void {
@@ -312,6 +320,8 @@ export class Router {
       only: options.only ?? [],
       except: options.except ?? [],
       merge: options.merge ?? false,
+      showProgress: options.showProgress ?? true,
+      preserveUrl: options.preserveUrl ?? false,
       prefetch: false,
       completed: false,
       cancelled: false,
@@ -357,6 +367,7 @@ export class Router {
           return { status: 'cancelled' }
         }
         this.applyPage(lookup.entry.page, visit)
+        this.flushInvalidated(options)
         this.finish(visit, options)
         options.onSuccess?.(lookup.entry.page)
         return { status: 'success', page: lookup.entry.page }
@@ -390,6 +401,7 @@ export class Router {
         build: this.d.build(),
         signal: visit.controller.signal,
         forceFormData: options.forceFormData,
+        queryStringArrayFormat: options.queryStringArrayFormat,
         onProgress: (progress) => {
           this.d.events.emit('progress', { visit, progress })
           options.onProgress?.(progress)
@@ -440,6 +452,7 @@ export class Router {
         await this.prepare(parsed.page)
         if (visit.cancelled) return { status: 'cancelled' }
         this.applyPage(parsed.page, visit)
+        this.flushInvalidated(options)
         this.d.events.emit('success', { visit, page: parsed.page })
         options.onSuccess?.(parsed.page)
         return { status: 'success', page: parsed.page }
@@ -450,6 +463,7 @@ export class Router {
 
       case 'empty':
         // 204/304: nothing to apply (Precognition success, not modified).
+        this.flushInvalidated(options)
         options.onSuccess?.(this.d.store.page as BridgePage)
         return { status: 'success', page: this.d.store.page as BridgePage }
 
@@ -530,7 +544,17 @@ export class Router {
     return exception
   }
 
-  private applyPage(page: BridgePage, visit: Visit): void {
+  /** `invalidateCacheTags` of a visit that succeeded. */
+  private flushInvalidated(options: VisitOptions): void {
+    if (options.invalidateCacheTags) this.d.cache.flushTags(tagList(options.invalidateCacheTags))
+  }
+
+  private applyPage(response: BridgePage, visit: Visit): void {
+    // preserveUrl: show the new page under the address the user is on.
+    const page =
+      visit.preserveUrl && this.d.window
+        ? { ...response, url: relativeUrl(this.d.window.location.href) }
+        : response
     const current = this.d.store.page
     const partial =
       (visit.only.length > 0 || visit.except.length > 0) &&
@@ -686,4 +710,8 @@ export class Router {
   private hardNavigate(url: string): void {
     if (this.d.window) this.d.window.location.href = url
   }
+}
+
+function tagList(tags: string | string[] | undefined): string[] {
+  return tags === undefined ? [] : Array.isArray(tags) ? tags : [tags]
 }

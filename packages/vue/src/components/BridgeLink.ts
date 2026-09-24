@@ -1,4 +1,4 @@
-import type { Method } from '@swarakaka/bridge-core'
+import type { Method, QueryStringArrayFormat } from '@swarakaka/bridge-core'
 import { defineComponent, h, onBeforeUnmount, onMounted, type PropType } from 'vue'
 import { useBridge } from '../injection.js'
 import { pageStateRef } from '../state.js'
@@ -21,6 +21,18 @@ export const BridgeLink = defineComponent({
     except: { type: Array as PropType<string[]>, default: () => [] },
     headers: { type: Object as PropType<Record<string, string>>, default: () => ({}) },
     prefetch: { type: [String, Boolean] as PropType<'hover' | 'mount' | false>, default: 'hover' },
+    /** Tags for the prefetched page, for `router.flushByCacheTags`. */
+    cacheTags: { type: [String, Array] as PropType<string | string[]>, default: undefined },
+    invalidateCacheTags: {
+      type: [String, Array] as PropType<string | string[]>,
+      default: undefined,
+    },
+    showProgress: { type: Boolean, default: true },
+    preserveUrl: { type: Boolean, default: false },
+    queryStringArrayFormat: {
+      type: String as PropType<QueryStringArrayFormat>,
+      default: undefined,
+    },
     activeClass: { type: String, default: '' },
   },
   emits: ['before', 'start', 'finish', 'success', 'invalid', 'error'],
@@ -35,6 +47,7 @@ export const BridgeLink = defineComponent({
         only: props.only,
         except: props.except,
         headers: props.headers,
+        cacheTags: props.cacheTags,
       })
     }
 
@@ -67,6 +80,10 @@ export const BridgeLink = defineComponent({
         only: props.only,
         except: props.except,
         headers: props.headers,
+        showProgress: props.showProgress,
+        preserveUrl: props.preserveUrl,
+        queryStringArrayFormat: props.queryStringArrayFormat,
+        invalidateCacheTags: props.invalidateCacheTags,
         onBefore: (visit) => {
           emit('before', visit)
         },

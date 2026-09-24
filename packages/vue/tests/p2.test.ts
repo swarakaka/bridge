@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h, nextTick, type Component } from 'vue'
-import { createBridge, getBridge } from '@swarakaka/bridge-core'
+import { createBridge, getBridge, PageCache } from '@swarakaka/bridge-core'
 import { BridgeHead, BridgeLink, createBridgeApp, useStream } from '../src/index.js'
 import { createSsrRenderer } from '../src/server/index.js'
 import type { BridgeApp } from '../src/index.js'
@@ -104,6 +104,60 @@ describe('BridgeLink', () => {
     await app.bridge.router.visit('/customers/1')
     await nextTick()
     expect(link().classList.contains('active')).toBe(true)
+  })
+})
+
+describe('BridgeLink visit options', () => {
+  it('tags its prefetch and passes preserveUrl, showProgress and the array format to the visit', async () => {
+    window.history.replaceState(null, '', '/customers?page=1')
+    const Page = defineComponent({
+      setup: () => () =>
+        h('div', [
+          h(
+            BridgeLink,
+            { href: '/users', prefetch: 'mount', cacheTags: 'users', id: 'users' },
+            { default: () => 'Users' },
+          ),
+          h(
+            BridgeLink,
+            {
+              href: '/customers?page=2',
+              data: { tags: ['a'] },
+              preserveUrl: true,
+              showProgress: false,
+              queryStringArrayFormat: 'brackets',
+              prefetch: false,
+              id: 'more',
+            },
+            { default: () => 'More' },
+          ),
+        ]),
+    })
+    embed(page({ url: '/customers?page=1' }))
+    const fetch = mockFetch((url) =>
+      pageResponse(page({ url: new URL(url).pathname + new URL(url).search, props: {} })),
+    )
+    app = await createBridgeApp({ resolve: () => Page, fetch })
+    await flush()
+    const users = PageCache.key('/users')
+    expect(app.bridge.cache.get(users).state).toBe('fresh')
+    app.bridge.router.flushByCacheTags('users')
+    expect(app.bridge.cache.get(users).state).toBe('miss')
+
+    const progress: boolean[] = []
+    app.bridge.on('start', (visit) => {
+      progress.push(visit.showProgress)
+    })
+    document.getElementById('more')!.click()
+    await flush()
+
+    const calls = (fetch as unknown as { mock: { calls: Array<[string]> } }).mock.calls
+    const more = calls
+      .map((c) => decodeURIComponent(String(c[0])))
+      .find((u) => u.includes('/customers'))
+    expect(more).toContain('page=2&tags[]=a')
+    expect(progress).toEqual([false])
+    expect(window.location.search).toBe('?page=1')
   })
 })
 
