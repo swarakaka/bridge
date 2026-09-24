@@ -74,7 +74,11 @@ export type JsonOutcome<T = unknown> =
  * page visits. Never throws: every result is a `JsonOutcome`.
  */
 export class JsonClient {
-  constructor(private readonly http: RequestManager) {}
+  /** `onMutate` runs after every non-GET request that reached the server (e.g. to clear the page cache). */
+  constructor(
+    private readonly http: RequestManager,
+    private readonly onMutate: (() => void) | null = null,
+  ) {}
 
   async request<T = unknown>(
     method: Method,
@@ -98,6 +102,9 @@ export class JsonClient {
       if (isAbort(error) || options.signal?.aborted) return { status: 'cancelled' }
       return { status: 'exception', error }
     }
+
+    // The server may have changed data that cached pages still show.
+    if (method !== 'get') this.onMutate?.()
 
     try {
       return await this.classify<T>(response)

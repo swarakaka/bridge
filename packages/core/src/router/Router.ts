@@ -41,6 +41,7 @@ export interface ReloadOptions {
 }
 
 interface PendingReload {
+  component: string | null
   only: Set<string> | null
   except: Set<string>
   headers: Record<string, string>
@@ -55,11 +56,14 @@ interface PendingReload {
  */
 export class Router {
   private activeVisit: Visit | null = null
+  private activeIsReload = false
   private deferredControllers = new Set<AbortController>()
   private visitId = 0
   private pendingReload: PendingReload | null = null
   private reloadTimer: ReturnType<typeof setTimeout> | null = null
   private unlistenHistory: (() => void) | null = null
+  private unlistenScroll: (() => void) | null = null
+  private restoreId = 0
   private readonly d: RouterDependencies
 
   constructor(deps: RouterDependencies) {
@@ -69,16 +73,19 @@ export class Router {
   /** Registers history listeners and records the initial entry. Call once after the page is available. */
   init(): void {
     const page = this.d.store.page
-    if (page && this.d.window) {
-      const existing = this.d.history.current()
-      if (!existing) this.d.history.push(page, this.d.store.current.key, true)
-    }
+    // Always record the page we booted with: after a full reload the entry still
+    // holds the page from before it, which back/forward would otherwise restore.
+    if (page && this.d.window) this.d.history.push(page, this.d.store.current.key, true)
     this.unlistenHistory = this.d.history.listen((state) => this.onPopState(state))
+    this.unlistenScroll = this.trackScroll()
     if (page) void this.loadDeferred(page)
   }
 
   destroy(): void {
     this.unlistenHistory?.()
+    this.unlistenScroll?.()
+    if (this.reloadTimer) clearTimeout(this.reloadTimer)
+    this.reloadTimer = null
     this.cancelActive()
     this.cancelDeferred()
   }
@@ -134,6 +141,7 @@ export class Router {
   reload(options: ReloadOptions = {}): Promise<VisitOutcome> {
     return new Promise((resolve) => {
       const pending = (this.pendingReload ??= {
+        component: this.d.store.page?.component ?? null,
         only: new Set(),
         except: new Set(),
         headers: {},
@@ -159,6 +167,8 @@ export class Router {
   invalidate(keys: string[] | '*'): Promise<VisitOutcome> | null {
     const page = this.d.store.page
     if (!page) return null
+    // Cached pages may hold the data that just changed.
+    this.d.cache.clear()
     if (keys === '*') return this.reload()
     const present = keys.filter((key) => this.d.store.hasProp(key.split('.')[0]!))
     if (present.length === 0) return null
@@ -217,13 +227,56 @@ export class Router {
     this.cancelActive()
   }
 
+  /**
+   * A page-protocol request outside the visit pipeline: it neither cancels nor
+   * waits for the active visit, emits no router events and never swaps the
+   * page. Precognition validation uses it.
+   */
+  async request(
+    url: string | URL,
+    options: {
+      method?: VisitOptions['method']
+      data?: VisitOptions['data']
+      headers?: Record<string, string> | undefined
+      signal?: AbortSignal | undefined
+    } = {},
+  ): Promise<ParsedResponse> {
+    const response = await this.d.http.send({
+      method: options.method ?? 'get',
+      url: toUrl(url),
+      data: options.data,
+      headers: options.headers,
+      component: this.d.store.page?.component,
+      build: this.d.build(),
+      signal: options.signal,
+    })
+    return parseResponse(response)
+  }
+
   // ---------------------------------------------------------------------------
 
   private async flushReload(): Promise<void> {
+    this.reloadTimer = null
+
+    // A background reload must not abort the user's navigation or submit: wait for it.
+    if (this.activeVisit && !this.activeIsReload) {
+      this.reloadTimer = setTimeout(
+        () => void this.flushReload(),
+        Math.max(this.d.reloadDebounce, 10),
+      )
+      return
+    }
+
     const pending = this.pendingReload
     this.pendingReload = null
-    this.reloadTimer = null
     if (!pending) return
+
+    // A navigation that finished meanwhile left the page the reload was meant for.
+    if ((this.d.store.page?.component ?? null) !== pending.component) {
+      pending.callbacks.forEach((c) => c.onFinish?.())
+      pending.resolvers.forEach((resolve) => resolve({ status: 'cancelled' }))
+      return
+    }
 
     const page = this.d.store.page
     const url = page ? page.url : (this.d.window?.location.href ?? '/')
@@ -285,6 +338,7 @@ export class Router {
     this.cancelActive()
     if (!isReload) this.cancelDeferred()
     this.activeVisit = visit
+    this.activeIsReload = isReload
 
     const isGet = visit.method === 'get'
     const cacheable =
@@ -298,6 +352,10 @@ export class Router {
       const lookup = this.d.cache.get(cacheKey)
       if (lookup.state === 'fresh') {
         await this.prepare(lookup.entry.page)
+        if (visit.cancelled) {
+          this.finish(visit, options)
+          return { status: 'cancelled' }
+        }
         this.applyPage(lookup.entry.page, visit)
         this.finish(visit, options)
         options.onSuccess?.(lookup.entry.page)
@@ -305,6 +363,10 @@ export class Router {
       }
       if (lookup.state === 'stale') {
         await this.prepare(lookup.entry.page)
+        if (visit.cancelled) {
+          this.finish(visit, options)
+          return { status: 'cancelled' }
+        }
         this.applyPage(lookup.entry.page, visit)
         visit.preserveState = true
         visit.preserveScroll = true
@@ -498,8 +560,12 @@ export class Router {
   }
 
   private async loadDeferred(page: BridgePage): Promise<void> {
+    // Only groups with a key still missing: a restored history entry may already hold them.
     const groups = page.deferred
-      ? Object.values(page.deferred).filter((g): g is [string, ...string[]] => Array.isArray(g))
+      ? Object.values(page.deferred).filter(
+          (g): g is [string, ...string[]] =>
+            Array.isArray(g) && g.some((key) => !(key in page.props)),
+        )
       : []
     if (groups.length === 0) return
 
@@ -539,6 +605,7 @@ export class Router {
   }
 
   private onPopState(state: HistoryState | null): void {
+    this.restoreId++
     this.cancelActive()
     this.cancelDeferred()
 
@@ -552,11 +619,37 @@ export class Router {
   }
 
   private async restoreFromHistory(state: HistoryState): Promise<void> {
+    const id = this.restoreId
     await this.prepare(state.page)
-    {
-      this.d.store.setPage(state.page, { preserveState: false })
-      if (this.d.window) restoreScroll(state.scroll, this.d.window.document)
-      this.d.events.emit('navigate', { page: state.page, visit: null })
+    // A later back/forward (or a visit) superseded this one while its component loaded.
+    if (id !== this.restoreId || this.activeVisit) return
+    this.d.store.setPage(state.page, { preserveState: false })
+    if (this.d.window) restoreScroll(state.scroll, this.d.window.document)
+    this.d.events.emit('navigate', { page: state.page, visit: null })
+    // Deferred groups that never arrived before the user left are fetched now.
+    void this.loadDeferred(state.page)
+  }
+
+  /**
+   * Keeps the current entry's scroll position up to date while the user scrolls,
+   * since the entry being left can no longer be written once popstate fires.
+   */
+  private trackScroll(): (() => void) | null {
+    const win = this.d.window
+    if (!win) return null
+    // Trailing debounce: browsers rate-limit replaceState (Safari throws past ~100 per 10 s).
+    let timer: ReturnType<typeof setTimeout> | null = null
+    const onScroll = (): void => {
+      if (timer !== null) clearTimeout(timer)
+      timer = setTimeout(() => {
+        timer = null
+        this.d.history.saveScroll(captureScroll(win.document))
+      }, 150)
+    }
+    win.addEventListener('scroll', onScroll, { passive: true, capture: true })
+    return () => {
+      win.removeEventListener('scroll', onScroll, { capture: true })
+      if (timer !== null) clearTimeout(timer)
     }
   }
 

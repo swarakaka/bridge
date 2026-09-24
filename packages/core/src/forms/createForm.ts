@@ -17,6 +17,11 @@ export type SubmitOptions = Omit<VisitOptions, 'method' | 'data'> & {
   resetOnSuccess?: boolean | undefined
 }
 
+export type ValidateOptions = Pick<SubmitOptions, 'headers' | 'onInvalid' | 'onError'> & {
+  onSuccess?: (() => void) | undefined
+  onFinish?: (() => void) | undefined
+}
+
 /**
  * Form state machine (PLAN §14). Framework adapters wrap the instance in
  * their reactivity system; all mutations go through `this` so proxies work.
@@ -176,9 +181,12 @@ export class Form<T extends FormData_> {
       },
     })
 
-    if (outcome.status === 'redirected') {
-      // A full document navigation is underway; keep `processing` so the UI stays disabled.
-      return outcome
+    // A full document navigation keeps `processing` so the UI stays disabled. An
+    // onBefore that refused the visit never reaches onFinish, so reset here.
+    if (outcome.status !== 'redirected' && this.processing) {
+      this.processing = false
+      this.progress = null
+      this.cancelFn = null
     }
 
     return outcome
@@ -210,51 +218,86 @@ export class Form<T extends FormData_> {
 
   validating = false
 
+  private validation: AbortController | null = null
+
   /**
    * Validate through Laravel Precognition without running the controller.
    * With fields, only those rules run and only their errors change; a 204
    * clears them. The route needs the `precognitive` middleware.
+   *
+   * Runs beside navigation: it never cancels a submit or a visit, emits no
+   * router events, and a newer call supersedes an older one still in flight.
    */
   async validate(
     method: Method,
     url: string | URL,
     fields: string | string[] = [],
-    options: SubmitOptions = {},
+    options: ValidateOptions = {},
   ): Promise<VisitOutcome> {
     const only = Array.isArray(fields) ? fields : [fields]
     const headers: Record<string, string> = { ...(options.headers ?? {}), Precognition: 'true' }
     if (only.length > 0) headers['Precognition-Validate-Only'] = only.join(',')
+    const clearScoped = (): void => {
+      if (only.length > 0) this.clearErrors(...only)
+      else this.clearErrors()
+    }
 
+    this.validation?.abort()
+    const controller = (this.validation = new AbortController())
     this.validating = true
-    return this.router.visit(url, {
-      ...options,
-      method,
-      data: this.transformer(this.data),
-      headers,
-      preserveState: true,
-      preserveScroll: true,
-      useCache: false,
-      onInvalid: (errors, error) => {
+
+    try {
+      const parsed = await this.router.request(url, {
+        method,
+        data: this.transformer(this.data),
+        headers,
+        signal: controller.signal,
+      })
+      if (controller.signal.aborted) return { status: 'cancelled' }
+
+      if (
+        parsed.kind === 'error' &&
+        (parsed.error.kind === 'validation' || parsed.error.status === 422)
+      ) {
+        const errors = validationErrors(parsed.error.errors)
         const scoped =
           only.length > 0
             ? Object.fromEntries(Object.entries(errors).filter(([k]) => only.includes(k)))
             : errors
-        if (only.length > 0) this.clearErrors(...only)
-        else this.clearErrors()
+        clearScoped()
         this.setError(scoped)
-        this.lastError = error
-        options.onInvalid?.(errors, error)
-      },
-      onSuccess: (page) => {
-        if (only.length > 0) this.clearErrors(...only)
-        else this.clearErrors()
-        options.onSuccess?.(page)
-      },
-      onFinish: (visit) => {
+        this.lastError = parsed.error
+        options.onInvalid?.(errors, parsed.error)
+        return { status: 'invalid', errors, error: parsed.error }
+      }
+
+      if (parsed.kind === 'error') {
+        this.lastError = parsed.error
+        options.onError?.(parsed.error)
+        return { status: 'error', error: parsed.error }
+      }
+
+      const page = this.router.page
+      if (parsed.kind === 'empty' && page) {
+        clearScoped()
+        options.onSuccess?.()
+        return { status: 'success', page }
+      }
+
+      console.warn(
+        `[bridge] form.validate(): ${String(url)} did not answer as Precognition (got ${parsed.kind}). Add the \`precognitive\` middleware to the route.`,
+      )
+      return { status: 'cancelled' }
+    } catch (error) {
+      if (controller.signal.aborted) return { status: 'cancelled' }
+      throw error
+    } finally {
+      if (this.validation === controller) {
+        this.validation = null
         this.validating = false
-        options.onFinish?.(visit)
-      },
-    })
+      }
+      options.onFinish?.()
+    }
   }
 
   private setErrorsFromServer(errors: ValidationErrors): void {
@@ -263,6 +306,17 @@ export class Form<T extends FormData_> {
     this.errors = flat
     this.allErrors = { ...errors }
   }
+}
+
+/** Server errors as lists; a bare string (non-Laravel servers) becomes a one-item list. */
+function validationErrors(raw: unknown): ValidationErrors {
+  const out: ValidationErrors = {}
+  if (!raw || typeof raw !== 'object') return out
+  for (const [field, messages] of Object.entries(raw as Record<string, unknown>)) {
+    if (Array.isArray(messages)) out[field] = messages.map(String)
+    else if (typeof messages === 'string') out[field] = [messages]
+  }
+  return out
 }
 
 function clone<T>(value: T): T {

@@ -25,6 +25,7 @@ data: {"type":"progress","id":"export-9","value":0.6,"label":"Exporting"}
 event: bridge
 data: {"type":"navigate","url":"/customers/12","replace":false}
 
+id: 1758542401001-0
 event: bridge
 data: {"type":"end","reason":"max_duration","reconnect":true}
 

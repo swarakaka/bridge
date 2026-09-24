@@ -141,7 +141,7 @@ describe('StreamClient', () => {
     stream.close()
   })
 
-  it('reconnects with Last-Event-ID after an orderly end without resyncing', async () => {
+  it('reconnects with Last-Event-ID after an orderly end and resyncs when not replayed', async () => {
     const sse = sseFetch()
     const pageFetch = mockFetch(() => pageResponse(page()))
     bridge = bridgeWith(pageFetch)
@@ -168,7 +168,56 @@ describe('StreamClient', () => {
     await tick()
     await tick()
     expect(opens[1]).toEqual({ replayed: false, reconnect: true })
-    // An orderly `end` means nothing was missed: no resync reload.
+    // The server could not replay from 42, so events may be missing: resync (spec §6.4).
+    expect(pageFetch).toHaveBeenCalledTimes(1)
+    stream.close()
+  })
+
+  it('skips the resync after an orderly end when there was no id to replay from', async () => {
+    const sse = sseFetch()
+    const pageFetch = mockFetch(() => pageResponse(page()))
+    bridge = bridgeWith(pageFetch)
+    const stream = bridge.stream('/events', {
+      fetch: sse.fetch,
+      backoff: { initial: 1, max: 1, jitter: 0 },
+    })
+    await tick()
+    sse.send(ready())
+    sse.send('event: bridge\ndata: {"type":"end","reason":"max_duration","reconnect":true}\n\n')
+    sse.close()
+    await tick()
+    await tick()
+
+    expect(sse.requests).toHaveLength(2)
+    expect(header(sse.requests[1]!, 'Last-Event-ID')).toBeUndefined()
+    sse.send(ready())
+    await tick()
+    await tick()
+    expect(pageFetch).toHaveBeenCalledTimes(0)
+    stream.close()
+  })
+
+  it('takes the cursor from an end frame and does not resync when replayed', async () => {
+    const sse = sseFetch()
+    const pageFetch = mockFetch(() => pageResponse(page()))
+    bridge = bridgeWith(pageFetch)
+    const stream = bridge.stream('/events', {
+      fetch: sse.fetch,
+      backoff: { initial: 1, max: 1, jitter: 0 },
+    })
+    await tick()
+    sse.send(ready())
+    sse.send(
+      'id: 77\nevent: bridge\ndata: {"type":"end","reason":"max_duration","reconnect":true}\n\n',
+    )
+    sse.close()
+    await tick()
+    await tick()
+
+    expect(header(sse.requests[1]!, 'Last-Event-ID')).toBe('77')
+    sse.send(ready().replace('"replayed":false', '"replayed":true'))
+    await tick()
+    await tick()
     expect(pageFetch).toHaveBeenCalledTimes(0)
     stream.close()
   })

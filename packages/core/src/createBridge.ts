@@ -51,13 +51,13 @@ export function createBridge(config: BridgeConfig = {}): Bridge {
   const events = new Emitter<RouterEvents>()
   const store = new PageStore(initialPage)
   const http = new RequestManager({ fetch: config.fetch, credentials: config.credentials })
-  const json = new JsonClient(http)
   const history = new History({ window: win ?? undefined })
   const cache = new PageCache({
     ttl: config.cache?.ttl ?? DEFAULT_CONFIG.cache.ttl,
     staleWhileRevalidate:
       config.cache?.staleWhileRevalidate ?? DEFAULT_CONFIG.cache.staleWhileRevalidate,
   })
+  const json = new JsonClient(http, () => cache.clear())
 
   const router = new Router({
     store,

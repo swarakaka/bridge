@@ -54,7 +54,7 @@ jobs:
       - name: Install
         working-directory: packages/laravel
         run: |
-          composer require "illuminate/contracts:${{ matrix.laravel }}" "illuminate/http:${{ matrix.laravel }}" "illuminate/support:${{ matrix.laravel }}" "illuminate/view:${{ matrix.laravel }}" --no-interaction --no-update
+          composer require "laravel/framework:${{ matrix.laravel }}" --no-interaction --no-update
           composer update --prefer-dist --no-interaction --with-all-dependencies
       - name: Pint
         working-directory: packages/laravel

@@ -55,7 +55,7 @@ export type {
   ValidationErrors,
 } from './router/Visit.js'
 export { Form } from './forms/createForm.js'
-export type { FormOptions, SubmitOptions } from './forms/createForm.js'
+export type { FormOptions, SubmitOptions, ValidateOptions } from './forms/createForm.js'
 export { readEmbeddedPage, readBuild, readMeta } from './dom.js'
 export { StreamClient } from './stream/StreamClient.js'
 export type { StreamOptions, StreamState, StreamEvents } from './stream/StreamClient.js'

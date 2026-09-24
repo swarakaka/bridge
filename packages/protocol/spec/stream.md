@@ -37,7 +37,7 @@ The server sends the comment line `: hb` whenever no bytes have been written for
 
 ## 5. Identifiers, `Last-Event-ID`, and replay
 
-- Events originating from the event bus carry an `id` that is an opaque, monotonically increasing cursor within a connection. Locally generated events (`ready`, `end`, heartbeat) carry no `id`. A bus event that becomes visible after an event with a higher `id` was sent (for example a database row committed late) is sent without an `id`, so the client's `Last-Event-ID` never moves backwards.
+- Events originating from the event bus carry an `id` that is an opaque, monotonically increasing cursor within a connection. Locally generated events (`ready`, `end`, heartbeat) carry no `id`, with one exception: when the bus can replay, `end{reason:"max_duration"}` carries the connection's current cursor as its `id`, so the reconnect replays events published in the gap even if the connection delivered none. A bus event that becomes visible after an event with a higher `id` was sent (for example a database row committed late) is sent without an `id`, so the client's `Last-Event-ID` never moves backwards.
 - On reconnect the client sends `Last-Event-ID: <last id seen>`.
 - If the server can replay, it emits every event after that id (subject to current authorization) before resuming live delivery, and sets `replayed: true` in `ready`. Otherwise it sets `replayed: false`. A server MUST NOT set `replayed: true` when retention (pruning, trimming) may have dropped events after that id, or when it cannot interpret the id; the client then resyncs.
 - `id` values grant no authority. Every (re)connection is a new HTTP request and is authenticated and authorized afresh. Replayed events are filtered by the channels the connection is authorized for **now**.
@@ -49,7 +49,7 @@ Clients MUST implement:
 1. Exponential backoff with jitter after an abnormal close. Recommended: initial 1000 ms (or the last `retry:` value), factor 2, maximum 30 000 ms, jitter ±30 %.
 2. Immediate reconnect (no backoff) after `end` with `reconnect: true`.
 3. No automatic reconnect after `error` with `final: true`, or after HTTP `401`/`403` on the connection request.
-4. **Resync** when `ready.replayed` is `false` on a reconnect: reload every page prop the client watches (equivalent to `invalidate: "*"` scoped to the current page), because events may have been missed.
+4. **Resync** when `ready.replayed` is `false` on a reconnect: reload every page prop the client watches (equivalent to `invalidate: "*"` scoped to the current page), because events may have been missed. A client MAY skip the resync when the previous connection ended with `end` and it had no `id` to send as `Last-Event-ID`: the server could not replay anything, and there was nothing to miss (a bus without replay).
 
 Servers SHOULD bound connection lifetime (`maxDuration`) and end connections with `end{reason:"max_duration", reconnect:true}`; clients treat this as routine.
 

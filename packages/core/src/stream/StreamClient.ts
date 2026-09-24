@@ -71,15 +71,21 @@ export class StreamClient {
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null
   private everConnected = false
   private closed = false
+  /** Bumped by every connection attempt and by close(); a stale attempt stops at its next await. */
+  private attempt = 0
+  /** An attempt is between start and an open (or failed) response. */
+  private opening = false
   private _lastEventAt: number | null = null
   private _reconnects = 0
   private readonly fetchImpl: typeof fetch
   private readonly onWake = (): void => {
     if (this.closed) return
     if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
-    if (this._state === 'reconnecting') {
+    // Only skip a backoff wait; an attempt already under way is left alone.
+    if (this.reconnectTimer !== null) {
       this.clearReconnect()
-      void this.connect()
+      this._reconnects++
+      void this.open()
     }
   }
 
@@ -123,22 +129,18 @@ export class StreamClient {
   }
 
   async connect(): Promise<void> {
-    if (this._state === 'connecting' || this._state === 'open') return
+    if (this._state === 'connecting' || this._state === 'open' || this.opening) return
     this.closed = false
+    this.clearReconnect()
     this.setState(this.everConnected ? 'reconnecting' : 'connecting')
     if (this.everConnected) this._reconnects++
-
-    const target = await this.resolveTarget()
-
-    if (this.options.transport === 'eventsource' && typeof EventSource !== 'undefined') {
-      this.connectEventSource(target)
-      return
-    }
-    await this.connectFetch(target)
+    await this.open()
   }
 
   close(): void {
     this.closed = true
+    this.attempt++
+    this.opening = false
     this.clearReconnect()
     this.stopWatchdog()
     this.controller?.abort()
@@ -170,10 +172,42 @@ export class StreamClient {
         : (this.options.headers ?? {})
     const headers: Record<string, string> = { Accept: 'text/event-stream', ...custom }
     if (this.lastEventId) headers['Last-Event-ID'] = this.lastEventId
+    this.sentLastEventId = this.lastEventId
     return headers
   }
 
-  private async connectFetch(target: string): Promise<void> {
+  /** One connection attempt. Supersedes any earlier attempt and its transport. */
+  private async open(): Promise<void> {
+    const attempt = ++this.attempt
+    this.opening = true
+    this.controller?.abort()
+    this.controller = null
+    this.source?.close()
+    this.source = null
+
+    let target: string
+    try {
+      target = await this.resolveTarget()
+    } catch (error) {
+      if (attempt !== this.attempt) return
+      this.opening = false
+      this.emitTransportError(
+        `Could not resolve the stream URL: ${String((error as Error)?.message ?? error)}`,
+      )
+      this.scheduleReconnect()
+      return
+    }
+    if (attempt !== this.attempt) return
+
+    if (this.options.transport === 'eventsource' && typeof EventSource !== 'undefined') {
+      this.opening = false
+      this.connectEventSource(target)
+      return
+    }
+    await this.connectFetch(target, attempt)
+  }
+
+  private async connectFetch(target: string, attempt: number): Promise<void> {
     const controller = new AbortController()
     this.controller = controller
     const parser = new SseParser({
@@ -192,13 +226,15 @@ export class StreamClient {
         cache: 'no-store',
       })
     } catch (error) {
-      if (controller.signal.aborted) return
+      if (controller.signal.aborted || attempt !== this.attempt) return
+      this.opening = false
       this.emitTransportError(String((error as Error)?.message ?? error))
       this.scheduleReconnect()
       return
     }
 
-    if (controller.signal.aborted) return
+    if (controller.signal.aborted || attempt !== this.attempt) return
+    this.opening = false
 
     if (response.status === 401 || response.status === 403) {
       this.emitTransportError(`Stream refused with status ${response.status}`, response.status)
@@ -212,7 +248,6 @@ export class StreamClient {
       return
     }
 
-    const reconnect = this.everConnected
     this.everConnected = true
     this.setState('open')
     this.startWatchdog()
@@ -252,7 +287,7 @@ export class StreamClient {
         this.backoff.reset()
         this.setState('reconnecting')
         this._reconnects++
-        void this.reconnectNow()
+        void this.open()
       } else {
         this.scheduleReconnect()
       }
@@ -263,7 +298,6 @@ export class StreamClient {
       return
     }
     this.scheduleReconnect()
-    void reconnect
   }
 
   private connectEventSource(target: string): void {
@@ -293,8 +327,8 @@ export class StreamClient {
         retry: null,
       }),
     )
-    // Application events are unknown ahead of time; route the generic message
-    // event and any explicitly listened names. Consumers register names with onApp().
+    // Application events are unknown ahead of time: EventSource only dispatches
+    // names registered on it, so list them in appEventNames before connecting.
     for (const name of this.appEventNames) {
       source.addEventListener(name, (e) =>
         this.handleEvent({
@@ -313,8 +347,10 @@ export class StreamClient {
   private pendingEnd: Extract<BridgeStreamControl, { type: 'end' }> | null = null
   private finalError = false
   private sawError = false
-  /** True when the last connection ended with an `end` control event (nothing was missed). */
+  /** True when the last connection ended with an `end` control event. */
   private lastCloseOrderly = false
+  /** The Last-Event-ID sent with the current connection, if any. */
+  private sentLastEventId: string | null = null
 
   private handleEvent(event: SseEvent): void {
     this.touch()
@@ -328,7 +364,7 @@ export class StreamClient {
     }
 
     if (event.event === CONTROL_EVENT) {
-      if (!isControlEvent(data)) return
+      if (!isControlEvent(data) || !isWellFormed(data)) return
       this.handleControl(data)
       this.events.emit('*', { name: CONTROL_EVENT, data, id: event.id, control: true })
       return
@@ -348,7 +384,10 @@ export class StreamClient {
         const reconnect = this._reconnects > 0
         this.events.emit('ready', control)
         this.events.emit('open', { replayed: control.replayed, reconnect })
-        if (apply && reconnect && !control.replayed && !this.lastCloseOrderly)
+        // spec §6.4: a reconnect that was not replayed may have missed events. After an
+        // orderly end with no id to send, the bus cannot replay and nothing was missed.
+        const nothingToReplay = this.lastCloseOrderly && this.sentLastEventId === null
+        if (apply && reconnect && !control.replayed && !nothingToReplay)
           void this.deps.router.invalidate('*')
         this.lastCloseOrderly = false
         break
@@ -360,7 +399,11 @@ export class StreamClient {
         break
       case 'prop':
         this.events.emit('prop', control)
-        if (apply) this.deps.store.applyControl(control)
+        if (apply) {
+          this.deps.store.applyControl(control)
+          // Cached copies of pages still hold the old value.
+          this.deps.router.clearCache()
+        }
         break
       case 'navigate':
         this.events.emit('navigate', control)
@@ -377,10 +420,13 @@ export class StreamClient {
         this.events.emit('error', control)
         this.sawError = true
         if (control.final) this.finalError = true
+        // EventSource would reconnect by itself; the server said not to.
+        if (control.final && this.source) this.close()
         break
       case 'end':
         this.events.emit('end', control)
         this.pendingEnd = control
+        if (!control.reconnect && this.source) this.close()
         break
       default:
         break
@@ -424,19 +470,8 @@ export class StreamClient {
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null
       this._reconnects++
-      void this.reconnectNow()
+      void this.open()
     }, delay)
-  }
-
-  private async reconnectNow(): Promise<void> {
-    if (this.closed) return
-    this._state = 'reconnecting'
-    const target = await this.resolveTarget()
-    if (this.options.transport === 'eventsource' && typeof EventSource !== 'undefined') {
-      this.connectEventSource(target)
-      return
-    }
-    await this.connectFetch(target)
   }
 
   private clearReconnect(): void {
@@ -452,5 +487,24 @@ export class StreamClient {
     if (this._state === state) return
     this._state = state
     this.events.emit('state', state)
+  }
+}
+
+/** Guards the members each control type needs; a malformed event is dropped, not half-applied. */
+function isWellFormed(control: BridgeStreamControl): boolean {
+  const c = control as unknown as Record<string, unknown>
+  switch (control.type) {
+    case 'ready':
+      return typeof c.heartbeat === 'number' && Number.isFinite(c.heartbeat) && c.heartbeat > 0
+    case 'invalidate':
+      return c.keys === '*' || (Array.isArray(c.keys) && c.keys.every((k) => typeof k === 'string'))
+    case 'prop':
+      return typeof c.key === 'string'
+    case 'navigate':
+      return typeof c.url === 'string'
+    case 'end':
+      return typeof c.reconnect === 'boolean'
+    default:
+      return true
   }
 }
