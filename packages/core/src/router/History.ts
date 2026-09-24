@@ -192,7 +192,10 @@ export class History {
     else if (mode === 'replace') win.history.replaceState(placeholder, '', url)
 
     // An update leaves the entry's previous seal in place until the new one lands;
-    // reads meanwhile come from memory.
+    // reads meanwhile come from memory. The address changes now: a later write
+    // (remember) supersedes this seal and reads the address it should keep.
+    if (mode === 'update' && url !== win.location.href)
+      win.history.replaceState(win.history.state, '', url)
     if (!this.cipher?.available()) {
       this.warnUnavailable()
       if (mode === 'update') win.history.replaceState(placeholder, '', url)

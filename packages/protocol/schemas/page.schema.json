@@ -55,6 +55,28 @@
           "type": "boolean",
           "description": "Make earlier encrypted history entries unreadable before storing this page (§10)."
         },
+        "scroll": {
+          "type": "object",
+          "description": "Infinite-scroll ends per prop (§12).",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "pageName": { "type": "string", "minLength": 1 },
+              "dataPath": { "type": "string", "minLength": 1 },
+              "currentPage": {
+                "anyOf": [{ "type": "integer" }, { "type": "string" }, { "type": "null" }]
+              },
+              "previousPage": {
+                "anyOf": [{ "type": "integer" }, { "type": "string" }, { "type": "null" }]
+              },
+              "nextPage": {
+                "anyOf": [{ "type": "integer" }, { "type": "string" }, { "type": "null" }]
+              }
+            },
+            "required": ["pageName", "dataPath", "currentPage", "previousPage", "nextPage"],
+            "additionalProperties": false
+          }
+        },
         "once": {
           "type": "object",
           "description": "Once props this page considered: prop name → once key and expiry (§11).",

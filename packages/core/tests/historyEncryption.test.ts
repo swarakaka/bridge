@@ -131,6 +131,20 @@ describe('encrypted history entries', () => {
     expect(fetch).toHaveBeenCalledTimes(2)
   })
 
+  it('moves the address at once when a sealed page changes its URL, even if a write follows', async () => {
+    bridge = bridgeWith(mockFetch(() => pageResponse(secret())))
+    await bridge.router.visit('/customers/1')
+    await settle()
+
+    bridge.history.updatePage(secret({ url: '/customers/1?page=2' }))
+    bridge.router.remember('note', 1)
+    expect(window.location.search).toBe('?page=2')
+    await settle()
+    expect(window.location.search).toBe('?page=2')
+    const opened = await new HistoryCipher(window).open(stored().sealed!)
+    expect(opened).toMatchObject({ page: { url: '/customers/1?page=2' }, remember: { note: 1 } })
+  })
+
   it('keeps the latest of several quick writes', async () => {
     bridge = bridgeWith(mockFetch(() => pageResponse(secret())))
     await bridge.router.visit('/customers/1')

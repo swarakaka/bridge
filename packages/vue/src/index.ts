@@ -19,6 +19,11 @@ export type { ReactiveForm, UseFormOptions } from './composables/useForm.js'
 export { useRemember } from './composables/useRemember.js'
 export { useStream } from './composables/useStream.js'
 export { usePoll } from './composables/usePoll.js'
+export { useInfiniteScroll } from './composables/useInfiniteScroll.js'
+export type {
+  UseInfiniteScrollOptions,
+  UseInfiniteScrollReturn,
+} from './composables/useInfiniteScroll.js'
 export type { UsePollOptions, UsePollReturn } from './composables/usePoll.js'
 export { useWhenVisible } from './composables/useWhenVisible.js'
 export type { UseWhenVisibleOptions } from './composables/useWhenVisible.js'
@@ -30,6 +35,7 @@ export type { UseStreamOptions, UseStreamReturn } from './composables/useStream.
 export { BridgeLink } from './components/BridgeLink.js'
 export { Deferred } from './components/Deferred.js'
 export { WhenVisible } from './components/WhenVisible.js'
+export { InfiniteScroll } from './components/InfiniteScroll.js'
 export { BridgeHead } from './components/BridgeHead.js'
 export { BridgeForm, useFormContext, FormContextKey } from './components/BridgeForm.js'
 export type {

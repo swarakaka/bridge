@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { BridgeHead, BridgeLink, Deferred, router } from '@swarakaka/bridge-vue'
+import { BridgeHead, BridgeLink, Deferred, InfiniteScroll, router } from '@swarakaka/bridge-vue'
 import { onBeforeUnmount, ref, watch } from 'vue'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import Pagination from '@/Components/Pagination.vue'
@@ -17,29 +17,6 @@ const search = ref(props.filters.search ?? '')
 let timer: ReturnType<typeof setTimeout> | null = null
 // A pending search must not pull the user back here after they navigated away.
 onBeforeUnmount(() => timer && clearTimeout(timer))
-
-// "Load more": the server marks `customers` with Bridge::merge(), so this partial
-// reload appends the next page's rows instead of replacing them. The URL stays
-// (`?page=2` would show only page 2 on reload) and the button shows its own state.
-const loadingMore = ref(false)
-const loadMore = (): void => {
-    const next = props.customers.meta.current_page + 1
-    if (next > props.customers.meta.last_page || loadingMore.value) return
-    loadingMore.value = true
-    void router.get(
-        '/customers',
-        { ...(search.value ? { search: search.value } : {}), page: next },
-        {
-            only: ['customers'],
-            merge: true,
-            preserveState: true,
-            preserveScroll: true,
-            preserveUrl: true,
-            showProgress: false,
-            onFinish: () => (loadingMore.value = false),
-        },
-    )
-}
 
 // Partial reload: only the `customers` prop is re-fetched; state and scroll are preserved.
 watch(search, (value) => {
@@ -84,68 +61,97 @@ watch(search, (value) => {
         data-testid="search"
     />
 
-    <table class="mt-4 w-full text-sm" data-testid="customers-table">
-        <thead class="text-left text-xs uppercase text-slate-500">
-            <tr>
-                <th class="py-2">Name</th>
-                <th>Email</th>
-                <th>Company</th>
-                <th>Status</th>
-            </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-200 bg-white">
-            <tr v-for="customer in customers.data" :key="customer.id" data-testid="customer-row">
-                <td class="py-2">
-                    <BridgeLink
-                        :href="`/customers/${customer.id}`"
-                        class="text-indigo-600 hover:underline"
-                        prefetch="hover"
-                    >
-                        {{ customer.name }}
-                    </BridgeLink>
-                    <span v-if="customer.locked" class="ml-1 text-xs text-amber-600" title="Locked"
-                        >🔒</span
-                    >
-                </td>
-                <td>{{ customer.email }}</td>
-                <td>{{ customer.company }}</td>
-                <td>
-                    <span
-                        class="rounded px-2 py-0.5 text-xs"
-                        :class="
-                            customer.status === 'active'
-                                ? 'bg-emerald-100 text-emerald-700'
-                                : 'bg-slate-200 text-slate-600'
-                        "
-                    >
-                        {{ customer.status }}
-                    </span>
-                </td>
-            </tr>
-            <tr v-if="customers.data.length === 0">
-                <td colspan="4" class="py-6 text-center text-slate-400" data-testid="empty">
-                    No customers match.
-                </td>
-            </tr>
-        </tbody>
-    </table>
+    <!--
+        Infinite scroll: the server marks `customers` with Bridge::scroll(). Reaching the end
+        of the list loads the next page (appended, rows matched on id) and the address follows
+        it; opening ?page=3 directly loads earlier pages when scrolling up. The buttons are the
+        manual form, shown until the page is interactive and without IntersectionObserver.
+    -->
+    <InfiniteScroll data="customers" :buffer="200" data-testid="customers-scroll">
+        <template #previous="{ loadPrevious }">
+            <button
+                type="button"
+                class="mt-4 rounded border border-slate-300 px-3 py-1 text-sm"
+                data-testid="load-previous"
+                @click="loadPrevious"
+            >
+                Load previous customers
+            </button>
+        </template>
+        <table class="mt-4 w-full text-sm" data-testid="customers-table">
+            <thead class="text-left text-xs uppercase text-slate-500">
+                <tr>
+                    <th class="py-2">Name</th>
+                    <th>Email</th>
+                    <th>Company</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200 bg-white">
+                <tr
+                    v-for="customer in customers.data"
+                    :key="customer.id"
+                    data-testid="customer-row"
+                >
+                    <td class="py-2">
+                        <BridgeLink
+                            :href="`/customers/${customer.id}`"
+                            class="text-indigo-600 hover:underline"
+                            prefetch="hover"
+                        >
+                            {{ customer.name }}
+                        </BridgeLink>
+                        <span
+                            v-if="customer.locked"
+                            class="ml-1 text-xs text-amber-600"
+                            title="Locked"
+                            >🔒</span
+                        >
+                    </td>
+                    <td>{{ customer.email }}</td>
+                    <td>{{ customer.company }}</td>
+                    <td>
+                        <span
+                            class="rounded px-2 py-0.5 text-xs"
+                            :class="
+                                customer.status === 'active'
+                                    ? 'bg-emerald-100 text-emerald-700'
+                                    : 'bg-slate-200 text-slate-600'
+                            "
+                        >
+                            {{ customer.status }}
+                        </span>
+                    </td>
+                </tr>
+                <tr v-if="customers.data.length === 0">
+                    <td colspan="4" class="py-6 text-center text-slate-400" data-testid="empty">
+                        No customers match.
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <template #loading>
+            <p class="mt-2 text-sm text-slate-500" data-testid="loading-more">
+                Loading more customers…
+            </p>
+        </template>
+        <template #next="{ loadNext }">
+            <button
+                type="button"
+                class="mt-4 rounded border border-slate-300 px-3 py-1 text-sm"
+                data-testid="load-more"
+                @click="loadNext"
+            >
+                Load more customers
+            </button>
+        </template>
+    </InfiniteScroll>
 
     <div class="mt-4 flex items-center justify-between gap-4">
+        <!-- Links stay for keyboard users: a link replaces the list with that page. -->
         <Pagination :meta="customers.meta" :only="['customers']" />
-
-        <button
-            v-if="customers.meta.current_page < customers.meta.last_page"
-            type="button"
-            class="rounded border border-slate-300 px-3 py-1 text-sm disabled:opacity-50"
-            :disabled="loadingMore"
-            data-testid="load-more"
-            @click="loadMore"
-        >
-            {{
-                loadingMore
-                    ? 'Loading…'
-                    : `Load more (${customers.data.length} of ${customers.meta.total})`
-            }}
-        </button>
+        <span class="text-sm text-slate-500" data-testid="loaded-count">
+            {{ customers.data.length }} of {{ customers.meta.total }} shown
+        </span>
     </div>
 </template>

@@ -55,6 +55,14 @@ export type {
 } from './pages/PageStore.js'
 export { loadWhenVisible } from './pages/whenVisible.js'
 export { OnceStore, readOnceMeta } from './pages/OnceStore.js'
+export { InfiniteScroll, readScrollMeta } from './pages/infiniteScroll.js'
+export type {
+  InfiniteScrollOptions,
+  InfiniteScrollState,
+  ScrollDirection,
+  ScrollMeta,
+  ScrollPage,
+} from './pages/infiniteScroll.js'
 export type { OnceEntry } from './pages/OnceStore.js'
 export type { WhenVisibleOptions, WhenVisibleHandle } from './pages/whenVisible.js'
 export { requireResolver } from './pages/resolver.js'

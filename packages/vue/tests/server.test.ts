@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest'
 import { defineComponent, h, inject } from 'vue'
 import { createSsrRenderer, createSsrServer } from '../src/server/index.js'
-import { BridgeHead, usePage, usePoll, WhenVisible } from '../src/index.js'
+import { BridgeHead, InfiniteScroll, usePage, usePoll, WhenVisible } from '../src/index.js'
 import { page } from './helpers.js'
 
 const Layout = defineComponent({
@@ -32,6 +32,33 @@ const Index = defineComponent({
 ;(Index as unknown as { layout: unknown }).layout = Layout
 
 describe('SSR renderer', () => {
+  it('renders InfiniteScroll with its manual controls and loads nothing', async () => {
+    const List = defineComponent({
+      setup: () => () => h(InfiniteScroll, { data: 'items' }, { default: () => h('ul', 'items') }),
+    })
+    const render = createSsrRenderer({ resolve: () => List })
+    const result = await render(
+      page({
+        component: 'List',
+        props: { items: { data: [] } },
+        meta: {
+          scroll: {
+            items: {
+              pageName: 'page',
+              dataPath: 'data',
+              currentPage: 2,
+              previousPage: 1,
+              nextPage: 3,
+            },
+          },
+        },
+      }),
+    )
+    expect(result.body).toContain('data-bridge-scroll="previous"')
+    expect(result.body).toContain('<ul>items</ul>')
+    expect(result.body).toContain('data-bridge-scroll="next"')
+  })
+
   it('starts no poll while rendering on the server', async () => {
     const Queue = defineComponent({
       setup() {

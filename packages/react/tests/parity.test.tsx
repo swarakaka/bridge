@@ -13,6 +13,7 @@ import {
   useRemember,
   useFormContext,
   usePage,
+  InfiniteScroll,
   usePoll,
   useStream,
   useWhenVisible,
@@ -904,5 +905,117 @@ describe('usePoll', () => {
     }
     const render = createSsrRenderer({ resolve: () => Queue })
     expect((await render(page({ component: 'Queue' }))).body).toContain('<p>queue</p>')
+  })
+})
+
+describe('InfiniteScroll', () => {
+  class FakeObserver {
+    static instances: FakeObserver[] = []
+    disconnected = false
+    constructor(readonly callback: IntersectionObserverCallback) {
+      FakeObserver.instances.push(this)
+    }
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {
+      this.disconnected = true
+    }
+    takeRecords(): IntersectionObserverEntry[] {
+      return []
+    }
+    fire(edge: 'before' | 'after'): void {
+      const target = document.querySelector(`[data-bridge-scroll-edge="${edge}"]`)!
+      act(() =>
+        this.callback(
+          [{ isIntersecting: true, target } as IntersectionObserverEntry],
+          this as unknown as IntersectionObserver,
+        ),
+      )
+    }
+  }
+  const settle = () => act(() => new Promise((r) => setTimeout(r, 40)))
+
+  beforeEach(() => {
+    FakeObserver.instances = []
+    Object.defineProperty(window, 'IntersectionObserver', {
+      value: FakeObserver,
+      configurable: true,
+      writable: true,
+    })
+  })
+  afterEach(() => {
+    delete (window as { IntersectionObserver?: unknown }).IntersectionObserver
+  })
+
+  const listPage = (n: number): BridgePage =>
+    page({
+      component: 'List',
+      url: n === 1 ? '/customers' : `/customers?page=${n}`,
+      props: { customers: { data: [{ id: 10 - n, name: `C${10 - n}` }] } },
+      meta: {
+        merge: ['customers'],
+        matchOn: { customers: ['data.id'] },
+        scroll: {
+          customers: {
+            pageName: 'page',
+            dataPath: 'data',
+            currentPage: n,
+            previousPage: n > 1 ? n - 1 : null,
+            nextPage: n < 3 ? n + 1 : null,
+          },
+        },
+      },
+    })
+  const server = () =>
+    mockFetch((url) => pageResponse(listPage(Number(new URL(url).searchParams.get('page') ?? 1))))
+  const List: PageComponent = (props) => (
+    <InfiniteScroll data="customers" as="section" loading={(d) => <p id="loading">{d}</p>}>
+      <ul>
+        {(props.customers as { data: Array<{ id: number; name: string }> }).data.map((c) => (
+          <li key={c.id}>{c.name}</li>
+        ))}
+      </ul>
+    </InfiniteScroll>
+  )
+  const names = () => Array.from(document.querySelectorAll('li')).map((li) => li.textContent)
+
+  it('loads the next page at the bottom edge and the previous one at the top', async () => {
+    await mount({ List }, listPage(2), server())
+    expect(names()).toEqual(['C8'])
+    expect($('[data-bridge-scroll="next"]')).toBeNull()
+
+    FakeObserver.instances[0]!.fire('after')
+    await settle()
+    expect(names()).toEqual(['C8', 'C7'])
+    expect($('[role="status"]')?.textContent).toBe('Loaded page 3')
+
+    FakeObserver.instances[0]!.fire('before')
+    await settle()
+    expect(names()).toEqual(['C9', 'C8', 'C7'])
+  })
+
+  it('renders load buttons without IntersectionObserver, and stops observing on unmount', async () => {
+    delete (window as { IntersectionObserver?: unknown }).IntersectionObserver
+    await mount({ List }, listPage(2), server())
+    const next = $('[data-bridge-scroll="next"]') as HTMLButtonElement
+    expect(next.textContent).toBe('Load more')
+    await act(async () => next.click())
+    await settle()
+    expect(names()).toEqual(['C8', 'C7'])
+    expect($('[data-bridge-scroll="next"]')).toBeNull()
+  })
+
+  it('disconnects its observer when unmounted', async () => {
+    await mount({ List }, listPage(2), server())
+    act(() => app!.root.unmount())
+    expect(FakeObserver.instances[0]!.disconnected).toBe(true)
+  })
+
+  it('renders the manual controls on the server', async () => {
+    const render = createSsrRenderer({ resolve: () => List })
+    const result = await render(listPage(2))
+    expect(result.body).toContain('data-bridge-scroll="previous"')
+    expect(result.body).toContain('data-bridge-scroll="next"')
+    expect(result.body).toContain('<li>C8</li>')
   })
 })

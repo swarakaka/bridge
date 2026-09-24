@@ -66,6 +66,7 @@ export default defineConfig({
           { text: 'Always props', link: '/data/always-props' },
           { text: 'Once props', link: '/data/once-props' },
           { text: 'Merging props', link: '/data/merging-props' },
+          { text: 'Infinite scroll', link: '/data/infinite-scroll' },
           { text: 'Prefetching', link: '/data/prefetching' },
         ],
       },

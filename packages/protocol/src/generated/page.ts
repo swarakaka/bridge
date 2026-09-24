@@ -51,6 +51,20 @@ export interface BridgePage {
      */
     clearHistory?: boolean;
     /**
+     * Infinite-scroll ends per prop (§12).
+     */
+    scroll?: {
+      [k: string]:
+        | {
+            pageName: string;
+            dataPath: string;
+            currentPage: number | string | null;
+            previousPage: number | string | null;
+            nextPage: number | string | null;
+          }
+        | undefined;
+    };
+    /**
      * Once props this page considered: prop name → once key and expiry (§11).
      */
     once?: {

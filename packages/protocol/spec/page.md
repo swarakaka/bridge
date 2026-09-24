@@ -19,16 +19,16 @@ A successful page response has status `200` and body:
 }
 ```
 
-| Field       | Type           | Required | Meaning                                                                                                                                                                                 |
-| ----------- | -------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `protocol`  | integer        | yes      | Protocol version of this document. Equals the `v` of the response media type.                                                                                                           |
-| `type`      | `"page"`       | yes      | Discriminator.                                                                                                                                                                          |
-| `component` | string         | yes      | Opaque component name. Clients resolve it however they like; servers MUST NOT assume a file format.                                                                                     |
-| `url`       | string         | yes      | Path plus query (no origin) of the request as the server routed it. Clients push this to history.                                                                                       |
-| `props`     | object         | yes      | The prop bag. Always an object, possibly empty. Includes shared props.                                                                                                                  |
-| `build`     | string \| null | yes      | Current asset build identifier, or `null` when the server has none configured.                                                                                                          |
-| `deferred`  | object         | no       | Map of group name → array of prop keys that are absent from `props` and SHOULD be requested after render (§4). Omitted or empty when nothing is deferred.                               |
-| `meta`      | object         | no       | Additive extensions. Clients MUST ignore unknown members. Defined members: `merge`, `prepend`, `deepMerge` and `matchOn` (§3), `encryptHistory` and `clearHistory` (§10), `once` (§11). |
+| Field       | Type           | Required | Meaning                                                                                                                                                                                                 |
+| ----------- | -------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `protocol`  | integer        | yes      | Protocol version of this document. Equals the `v` of the response media type.                                                                                                                           |
+| `type`      | `"page"`       | yes      | Discriminator.                                                                                                                                                                                          |
+| `component` | string         | yes      | Opaque component name. Clients resolve it however they like; servers MUST NOT assume a file format.                                                                                                     |
+| `url`       | string         | yes      | Path plus query (no origin) of the request as the server routed it. Clients push this to history.                                                                                                       |
+| `props`     | object         | yes      | The prop bag. Always an object, possibly empty. Includes shared props.                                                                                                                                  |
+| `build`     | string \| null | yes      | Current asset build identifier, or `null` when the server has none configured.                                                                                                                          |
+| `deferred`  | object         | no       | Map of group name → array of prop keys that are absent from `props` and SHOULD be requested after render (§4). Omitted or empty when nothing is deferred.                                               |
+| `meta`      | object         | no       | Additive extensions. Clients MUST ignore unknown members. Defined members: `merge`, `prepend`, `deepMerge` and `matchOn` (§3), `encryptHistory` and `clearHistory` (§10), `once` (§11), `scroll` (§12). |
 
 Clients MUST ignore unknown top-level members. Servers MUST NOT emit members not defined here or in a later version of this specification.
 
@@ -185,3 +185,27 @@ Rules:
 - A partial response lists only the once props it selected.
 - JSON mode resolves once props like plain props and ignores `X-Bridge-Once`. An HTML shell's embedded page always carries the values.
 - Once values can be user-specific: a client drops its stored values when it clears history (§10) and when it receives `401`, `403` or `419`.
+
+## 12. Scroll props
+
+A scroll prop is a paginated list the client extends page by page as the user scrolls ("infinite scroll"). It is an append merge prop (§3), usually with a match path on `data.id`, and the page describes its ends in `meta.scroll`:
+
+```jsonc
+"meta": {
+  "merge": ["customers"],
+  "matchOn": { "customers": ["data.id"] },
+  "scroll": {
+    "customers": { "pageName": "page", "dataPath": "data", "currentPage": 3, "previousPage": 2, "nextPage": 4 },
+  },
+}
+```
+
+| Member         | Type                    | Meaning                                                                                          |
+| -------------- | ----------------------- | ------------------------------------------------------------------------------------------------ |
+| `pageName`     | string                  | Query parameter selecting a page (`page`, or the cursor parameter).                              |
+| `dataPath`     | string                  | Dotted path of the item list inside the prop.                                                    |
+| `currentPage`  | integer / string / null | The page in this response: a page number, or a cursor string (`null` for the first cursor page). |
+| `previousPage` | integer / string / null | The page before it, or `null` at the start.                                                      |
+| `nextPage`     | integer / string / null | The page after it, or `null` at the end.                                                         |
+
+A client loads the next page by requesting the current URL with `pageName` set to `nextPage`, `X-Bridge-Only` naming the prop, and appending; the previous page likewise with `previousPage`, prepending. The entry describes only the page in the response: the client keeps the outer ends of what it has loaded itself. JSON mode leaves `meta.scroll` out.

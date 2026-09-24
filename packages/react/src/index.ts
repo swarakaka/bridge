@@ -26,6 +26,13 @@ export type { UseFormOptions, UseJsonFormOptions, UseStreamReturn } from './hook
 export { BridgeLink, Deferred } from './components.js'
 export { WhenVisible, useWhenVisible } from './whenVisible.js'
 export { usePoll } from './poll.js'
+export { InfiniteScroll, useInfiniteScroll } from './infiniteScroll.js'
+export type {
+  InfiniteScrollProps,
+  InfiniteScrollContext,
+  UseInfiniteScrollOptions,
+  UseInfiniteScrollReturn,
+} from './infiniteScroll.js'
 export type { UsePollOptions, UsePollReturn } from './poll.js'
 export type { WhenVisibleProps, UseWhenVisibleOptions } from './whenVisible.js'
 export type { BridgeLinkProps } from './components.js'

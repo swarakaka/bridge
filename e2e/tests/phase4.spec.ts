@@ -1,7 +1,7 @@
 import { expect, test } from '../fixtures/test'
 
 test.describe('merge props and precognition', () => {
-  test('load more appends the next page instead of replacing it', async ({ page, login }) => {
+  test('reaching the end of the list appends the next page', async ({ page, login }) => {
     await login()
     await page.goto('/customers')
     await expect(page.getByTestId('customer-row')).toHaveCount(20)
@@ -9,16 +9,16 @@ test.describe('merge props and precognition', () => {
     const partial = page.waitForRequest(
       (r) => r.headers()['x-bridge-only'] === 'customers' && r.url().includes('page=2'),
     )
-    await page.getByTestId('load-more').click()
+    await page.locator('[data-bridge-scroll-edge="after"]').scrollIntoViewIfNeeded()
     await partial
 
     await expect(page.getByTestId('customer-row')).toHaveCount(40)
-    await expect(page.getByTestId('load-more')).toContainText('40 of')
-    // preserveUrl: the merged list stays at /customers.
-    await expect(page).toHaveURL(/\/customers$/)
+    await expect(page.getByTestId('loaded-count')).toContainText('40 of')
+    // The address follows the page just loaded.
+    await expect(page).toHaveURL(/\/customers\?page=2$/)
   })
 
-  test('load more does not repeat a row when a customer was created meanwhile', async ({
+  test('the next page does not repeat a row when a customer was created meanwhile', async ({
     page,
     login,
   }) => {
@@ -42,14 +42,14 @@ test.describe('merge props and precognition', () => {
     })
     expect(status).toBe(201)
 
-    await page.getByTestId('load-more').click()
-    // matchOn('data.id'): 20 + 20 rows, one of them already shown, so 39 distinct rows.
+    await page.locator('[data-bridge-scroll-edge="after"]').scrollIntoViewIfNeeded()
+    // Rows are matched on data.id: 20 + 20 rows, one of them already shown, so 39 distinct rows.
     await expect(page.getByTestId('customer-row')).toHaveCount(39)
-    const names = await page
+    const emails = await page
       .getByTestId('customer-row')
       .locator('td:nth-child(2)')
       .allTextContents()
-    expect(new Set(names).size).toBe(names.length)
+    expect(new Set(emails).size).toBe(emails.length)
   })
 
   test('fields validate live on blur through Precognition', async ({ page, login }) => {
