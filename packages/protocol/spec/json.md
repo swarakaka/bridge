@@ -37,6 +37,7 @@ Bridge does not define resource shapes. Each prop keeps the serialization Larave
 | `JsonResource`                               | its resolved array (`toArray` + `with` + `additional`)                                              |
 | `ResourceCollection` over a paginator        | `{ "data": [...], "links": {...}, "meta": {...} }` exactly as Laravel's paginated resource response |
 | `ResourceCollection` over a plain collection | array                                                                                               |
+| … with `with()` or `additional()` data       | `{ "data": [...], ...extra }` exactly as Laravel's resource response (keys merged recursively)      |
 | paginator (no resource)                      | Laravel's paginator array (`current_page`, `data`, `first_page_url`, …)                             |
 | `Arrayable`, `JsonSerializable`, Collection  | as Laravel would                                                                                    |
 | Enum                                         | its backing value                                                                                   |

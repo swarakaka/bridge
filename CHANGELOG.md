@@ -22,6 +22,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Stream tickets work with token and request guards (e.g. Sanctum), not only the session guard, and accept an appended `lastEventId`.
 - The connection limiter corrects a release that races below zero; `heartbeat_ms` is at least 100 and `poll_ms` at least 10.
 - `bridge:doctor` deletes its roundtrip channel.
+- With a lock-capable cache store, each stream holds a lease on its connection slot that the subscription renews on every heartbeat, so a worker killed mid-stream frees its slot within a few heartbeats instead of holding it for the stream's lifetime.
+- One process-wide shutdown backstop releases open streams instead of a shutdown function per stream, which accumulated in long-lived (Octane) workers.
+- The Redis bus never blocks longer than the client's read timeout (`read_timeout`, `read_write_timeout`, or `default_socket_timeout`), which made `XREAD` throw when `heartbeat_ms` exceeded it.
+- Database bus channel keys longer than the 190-character column are stored as a hash.
 - The package requires `laravel/framework` (it uses Foundation, Console, Database, Routing and more, not only the four `illuminate/*` packages it listed).
 
 ### Changed
