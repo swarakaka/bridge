@@ -51,6 +51,8 @@ Conventions enforced by tooling: Conventional Commits with scopes `laravel|core|
 
 Git: the maintainer commits and pushes; do not commit unless asked.
 
+The Laravel package is developed only in `packages/laravel` here. `swarakaka/bridge-laravel` (cloned locally at `~/githubprojects/bridge-laravel`) is a read-only split that `split-laravel.yml` overwrites on every push; never commit there. Decided 2026-09-24 so protocol, fixtures, server and client stay in one commit.
+
 ## Package layout notes (Laravel)
 
 - `Bridge\Negotiation` — `Accept` parsing and mode selection. Nothing else may inspect `Accept`.

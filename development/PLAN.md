@@ -1109,7 +1109,7 @@ Standard Laravel skeleton plus: `app/Http/Controllers/{Dashboard,Customer,Realti
 
 `benchmarks.yml` (manual): runs `benchmarks/run.sh` for a scenario and bus and uploads `benchmarks/results/` and `RESULTS.md` as an artifact.
 
-The Laravel package is published from a read-only split of `packages/laravel` (see `development/release-readiness.md`); Packagist cannot publish a package from a subdirectory of this repository. Protocol and package versions are documented in `docs/reference/versioning.md`.
+`split-laravel.yml` (push to `main`, tag `laravel-vX.Y.Z`): `git subtree split` of `packages/laravel` pushed to the read-only `swarakaka/bridge-laravel` with a `SPLIT_TOKEN` secret; the tag becomes `vX.Y.Z` there for Packagist, which cannot publish a package from a subdirectory of this repository. Protocol and package versions are documented in `docs/reference/versioning.md`.
 
 Branch protection: CI green, one review, conventional commits enforced by commitlint.
 

@@ -9,7 +9,7 @@ The page representation and the stream control events are versioned together as 
 
 ## Packages
 
-Packages follow semver independently of the protocol. The Laravel package (`swarakaka/bridge-laravel`) is tagged `laravel-vX.Y.Z`; the npm packages (`@swarakaka/bridge-protocol`, `@swarakaka/bridge-core`, `@swarakaka/bridge-vue`) are versioned together with changesets and released by pushing a `vX.Y.Z` tag. `@swarakaka/bridge-react` is pre-1.0 and experimental.
+Packages follow semver independently of the protocol. The Laravel package (`swarakaka/bridge-laravel`) is tagged `laravel-vX.Y.Z` in this repository and published as `vX.Y.Z` from its read-only split repository; the npm packages (`@swarakaka/bridge-protocol`, `@swarakaka/bridge-core`, `@swarakaka/bridge-vue`) are versioned together with changesets and released by pushing a `vX.Y.Z` tag. `@swarakaka/bridge-react` is pre-1.0 and experimental.
 
 ## JSON mode
 

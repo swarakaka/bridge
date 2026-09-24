@@ -1,0 +1,43 @@
+name: Split Laravel package
+
+# Mirrors packages/laravel into the read-only repository swarakaka/bridge-laravel,
+# which Packagist reads (it cannot publish from a monorepo subdirectory).
+#   push to main           → split main follows
+#   tag laravel-vX.Y.Z     → tag vX.Y.Z in the split repository (Packagist needs plain versions)
+# npm tags are `v*`, so the two release paths never trigger each other.
+on:
+  push:
+    branches: [main]
+    tags: ['laravel-v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: split-laravel
+  cancel-in-progress: false
+
+jobs:
+  split:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # subtree split needs the full history
+      - name: Split packages/laravel
+        # Deterministic: the same monorepo commits always give the same split commits,
+        # so tags land on commits that are also in the split repository's main.
+        run: git subtree split --prefix=packages/laravel --branch=laravel-split
+      - name: Push to swarakaka/bridge-laravel
+        env:
+          # Fine-grained token limited to swarakaka/bridge-laravel, Contents: read and write.
+          SPLIT_TOKEN: ${{ secrets.SPLIT_TOKEN }}
+        run: |
+          [ -n "$SPLIT_TOKEN" ] || { echo "::error::Set the SPLIT_TOKEN secret (see development/release-readiness.md)."; exit 1; }
+          remote="https://x-access-token:${SPLIT_TOKEN}@github.com/swarakaka/bridge-laravel.git"
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            version="${GITHUB_REF_NAME#laravel-}"
+            git push "$remote" "laravel-split:refs/tags/${version}"
+          else
+            git push "$remote" "laravel-split:refs/heads/main"
+          fi

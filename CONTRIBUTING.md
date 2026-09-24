@@ -36,7 +36,7 @@ npm packages are released by tag only; merging to `main` publishes nothing.
 3. Tag that commit with the new version of the linked packages (`packages/core/package.json`) and push the tag: `git tag v1.1.0 && git push origin v1.1.0`.
 4. `release.yml` checks that the tag is on `main`, matches the versions and leaves no changeset unapplied, runs the full CI and E2E suites on the tagged commit, then publishes every package whose version is not on npm yet (npm trusted publishing, with provenance) and pushes the per-package tags (`@swarakaka/bridge-core@1.1.0`, …).
 
-The Laravel package is released from its split repository with `laravel-vX.Y.Z` tags; see `development/release-readiness.md`.
+The Laravel package is released by tag too: move the `[Unreleased]` entries in `CHANGELOG.md` under the new version, commit, then `git tag laravel-v1.1.0 && git push origin laravel-v1.1.0`. `split-laravel.yml` mirrors `packages/laravel` into the read-only `swarakaka/bridge-laravel` (on every push to `main`) and turns the tag into `v1.1.0` there, which Packagist picks up.
 
 ## Rules of the road
 

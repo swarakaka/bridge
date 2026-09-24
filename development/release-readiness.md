@@ -40,7 +40,12 @@ npm trusted publishing: each package's trusted publisher must name `swarakaka` /
 
 - Laravel package: not published yet. `CHANGELOG.md` has the `1.0.0` section and an `[Unreleased]` section for the hardening since. Packagist reads a repository's root `composer.json`, and this repository's root is the private monorepo manifest, so publishing needs a read-only split of `packages/laravel`.
 
+The split repository `swarakaka/bridge-laravel` exists (empty). `.github/workflows/split-laravel.yml` mirrors `packages/laravel` into it with `git subtree split`: every push to `main` updates its `main`, and a monorepo tag `laravel-vX.Y.Z` becomes the tag `vX.Y.Z` there. `packages/laravel` carries its own `LICENSE` and a `.gitattributes` that keeps tests and tool configs out of Composer downloads.
+
 Remaining, by the maintainer:
 
-1. Create the split repository (for example `swarakaka/bridge-laravel`) and push `packages/laravel` to it with `git subtree split --prefix=packages/laravel` (or a split action on each push to `main`).
-2. Register the split repository on Packagist and tag it (`v1.0.0`, then the next release from `[Unreleased]`).
+1. Create a fine-grained personal access token for `swarakaka/bridge-laravel` only, with Contents: read and write, and save it as the Actions secret `SPLIT_TOKEN` in `swarakaka/bridge`.
+2. Push `main`; the split workflow fills the split repository.
+3. Decide the first Packagist version (fold `[Unreleased]` into `1.0.0`, or tag `1.0.0` on the 2026-09-22 commit and `1.1.0` on the current one), then `git tag laravel-vX.Y.Z && git push origin laravel-vX.Y.Z`.
+4. Submit `https://github.com/swarakaka/bridge-laravel` on packagist.org and connect GitHub in the Packagist profile so it updates on every push and tag.
+5. Verify with `composer require swarakaka/bridge-laravel` in a fresh Laravel 13 application.
