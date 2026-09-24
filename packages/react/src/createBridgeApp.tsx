@@ -1,15 +1,17 @@
 import { createBridge, type Bridge, type BridgeConfig } from '@swarakaka/bridge-core'
 import type { BridgePage } from '@swarakaka/bridge-protocol'
-import { createElement, useEffect, useState, type ComponentType, type ReactElement } from 'react'
+import { createElement, useEffect, useState } from 'react'
 import { createRoot, hydrateRoot, type Root } from 'react-dom/client'
 import { BridgeContext, usePageState } from './context.js'
+import {
+  createComponentLoader,
+  renderPage,
+  withLayouts,
+  type ComponentResolver,
+  type PageComponent,
+} from './page.js'
 
-export type PageComponent = ComponentType<Record<string, unknown>> & {
-  layout?: ComponentType<{ children: ReactElement }> | ComponentType<{ children: ReactElement }>[]
-}
-export type ComponentResolver = (
-  name: string,
-) => PageComponent | Promise<PageComponent | { default: PageComponent }>
+export type { ComponentResolver, PageComponent }
 
 export interface CreateBridgeAppOptions extends Omit<BridgeConfig, 'initialPage'> {
   resolve: ComponentResolver
@@ -27,20 +29,12 @@ export interface BridgeApp {
 }
 
 export async function createBridgeApp(options: CreateBridgeAppOptions): Promise<BridgeApp> {
-  const el = document.getElementById(options.id ?? 'app')
-  if (!el) throw new Error(`Bridge root element #${options.id ?? 'app'} not found.`)
+  const found = document.getElementById(options.id ?? 'app')
+  if (!found) throw new Error(`Bridge root element #${options.id ?? 'app'} not found.`)
+  const el: Element = found
   const { resolve, resolveError, id: _id, page, ...config } = options
 
-  const cache = new Map<string, PageComponent>()
-  const load = async (name: string): Promise<PageComponent> => {
-    const cached = cache.get(name)
-    if (cached) return cached
-    const resolved = await resolve(name)
-    const component =
-      (resolved as { default?: PageComponent }).default ?? (resolved as PageComponent)
-    cache.set(name, component)
-    return component
-  }
+  const { cache, load } = createComponentLoader(resolve)
   const errorCache = new Map<number, PageComponent>()
   const loadError = async (status: number): Promise<PageComponent | null> => {
     if (!resolveError) return null
@@ -68,6 +62,10 @@ export async function createBridgeApp(options: CreateBridgeAppOptions): Promise<
 
   function App() {
     const state = usePageState(bridge)
+    // Set once React has committed (hydration included): tests and progressive UI
+    // wait for it, and server-rendered markup is visible before it is interactive.
+    useEffect(() => el.setAttribute('data-bridge-hydrated', 'true'), [])
+
     const [errorComponent, setErrorComponent] = useState<{
       status: number
       component: PageComponent | null
@@ -92,26 +90,12 @@ export async function createBridgeApp(options: CreateBridgeAppOptions): Promise<
     if (!current) return null
     const component = cache.get(current.component)
     if (!component) return null
-    return withLayouts(
-      component,
-      createElement(component, {
-        ...(current.props as Record<string, unknown>),
-        key: `${current.component}-${state.key}`,
-      }),
-    )
+    return renderPage(component, current, state.key)
   }
 
   const tree = createElement(BridgeContext.Provider, { value: bridge }, createElement(App))
   const root = el.hasAttribute('data-server-rendered') ? hydrateRoot(el, tree) : createRoot(el)
   if (!el.hasAttribute('data-server-rendered')) root.render(tree)
-  el.setAttribute('data-bridge-hydrated', 'true')
   bridge.init()
   return { bridge, root, el }
-}
-
-function withLayouts(component: PageComponent, node: ReactElement): ReactElement {
-  const layout = component.layout
-  if (!layout) return node
-  const layouts = Array.isArray(layout) ? layout : [layout]
-  return layouts.reduceRight((child, Layout) => createElement(Layout, null, child), node)
 }

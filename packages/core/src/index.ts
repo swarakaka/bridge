@@ -82,3 +82,5 @@ export type {
   BridgeStreamControl,
   BridgeJsonDocument,
 } from '@swarakaka/bridge-protocol'
+export { HEAD_ATTRIBUTE, HeadManager, createHeadData, renderHead } from './head.js'
+export type { HeadData } from './head.js'

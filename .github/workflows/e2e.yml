@@ -6,6 +6,8 @@ on:
   pull_request:
     types: [labeled, synchronize, opened]
   workflow_dispatch:
+  # release.yml runs the suite on the tagged commit before publishing.
+  workflow_call:
 
 jobs:
   playwright:

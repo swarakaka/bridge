@@ -40,6 +40,11 @@ export default defineConfig({
   testDir: './tests',
   globalSetup: './global-setup.ts',
   timeout: 30_000,
+  // PHP's built-in server runs one request per worker, and a worker can take a second
+  // new connection just before it starts a page's SSE stream; that request then waits
+  // until the stream ends (max_duration). Assertions may wait a little longer than
+  // that, so such a request still completes instead of failing the test at random.
+  expect: { timeout: (Number(e2eEnv.BRIDGE_STREAM_MAX_DURATION) + 2) * 1000 },
   fullyParallel: false,
   workers: 1,
   retries: process.env.CI ? 1 : 0,

@@ -1,31 +1,61 @@
 name: Release
 
-# Runs after CI finished on main, and only if it passed, on exactly the commit CI tested.
+# npm releases are cut by pushing a tag `v<version>` for a commit on main whose
+# versions were already bumped with `pnpm changeset version` (see CONTRIBUTING.md).
+# The tagged commit must pass CI and E2E here before anything is published.
 # Kept as its own file: npm trusted publishing is configured for `release.yml`.
 on:
-  workflow_run:
-    workflows: [CI]
-    types: [completed]
-    branches: [main]
+  push:
+    tags: ['v*']
 
 permissions:
-  contents: write
-  pull-requests: write
-  id-token: write # npm trusted publishing (OIDC) and provenance
+  contents: read
 
 concurrency:
   group: release
   cancel-in-progress: false
 
 jobs:
-  changesets:
-    name: Version or publish npm packages
-    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+  verify:
+    name: Verify the tag
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+      - name: Tagged commit is on main
+        run: |
+          git fetch origin main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main \
+            || { echo "::error::$GITHUB_REF_NAME does not point to a commit on main."; exit 1; }
+      - name: Tag matches the package versions
+        run: |
+          expected="v$(node -p "require('./packages/core/package.json').version")"
+          [ "$GITHUB_REF_NAME" = "$expected" ] \
+            || { echo "::error::Tag $GITHUB_REF_NAME does not match $expected (packages/core/package.json)."; exit 1; }
+      - name: No pending changesets
+        run: |
+          pending=$(find .changeset -name '*.md' ! -name 'README.md' | wc -l)
+          [ "$pending" -eq 0 ] \
+            || { echo "::error::$pending changeset(s) not applied. Run pnpm changeset version, commit, then tag."; exit 1; }
+
+  ci:
+    needs: verify
+    uses: ./.github/workflows/ci.yml
+
+  e2e:
+    needs: verify
+    uses: ./.github/workflows/e2e.yml
+
+  publish:
+    name: Publish npm packages
+    needs: [ci, e2e]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # push the per-package tags changesets creates
+      id-token: write # npm trusted publishing (OIDC) and provenance
+    steps:
+      - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -33,15 +63,12 @@ jobs:
           cache: pnpm
           registry-url: https://registry.npmjs.org
       - run: pnpm install --frozen-lockfile
-      - uses: changesets/action@v1
-        with:
-          publish: pnpm release
-          version: pnpm changeset version
-          commit: 'chore(repo): version packages'
-          title: 'chore(repo): version packages'
+      # Builds, then publishes every package whose version is not on npm yet.
+      - run: pnpm release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # pnpm publishes through npm trusted publishing (OIDC) when it is configured and
-          # falls back to this token otherwise ("Skipped OIDC" in the log).
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # pnpm publishes through npm trusted publishing (OIDC) when it is configured
+          # and falls back to this token otherwise ("Skipped OIDC" in the log).
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: 'true'
+      - name: Push package tags
+        run: git push origin --tags

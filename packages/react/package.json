@@ -1,7 +1,7 @@
 {
   "name": "@swarakaka/bridge-react",
   "version": "0.2.0",
-  "description": "React adapter for Bridge (experimental skeleton): createBridgeApp, usePage, useProp, useForm, BridgeLink",
+  "description": "React adapter for Bridge (experimental): createBridgeApp, hooks for pages, forms, JSON mode and streams, BridgeLink, BridgeHead, and server rendering",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -16,6 +16,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "import": "./dist/server/index.js"
     }
   },
   "files": [

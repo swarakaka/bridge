@@ -32,7 +32,7 @@ Run `php artisan view:clear` after upgrading the package, otherwise cached compi
 ## Writing SSR-safe pages
 
 - Never touch `window`, `document` or timers during setup or render. Use `onMounted` for client-only work; guard with `typeof window !== 'undefined'` in computed values.
-- `useStream()` does not connect on the server.
+- `useStream()` does not connect on the server, and connects after mount on the client, so the first render shows `idle` on both sides.
 - `<BridgeHead title meta>` records the title and meta tags into the SSR head context. See [Title and meta](/basics/title-and-meta).
 - `v-html` on a component is not rendered on the server (it becomes an `innerHTML` property); put it on a native element inside the component's slot.
 
@@ -42,4 +42,16 @@ After mounting, the client sets `data-bridge-hydrated="true"` on the root elemen
 
 ## Other adapters
 
-The Laravel gateway is adapter-agnostic: it only speaks `POST /render` and expects `{ head, body }`. The React skeleton hydrates a server-rendered root but does not ship a renderer yet.
+The Laravel gateway is adapter-agnostic: it only speaks `POST /render` and expects `{ head, body }`. The HTTP server itself is `createSsrServer` from `@swarakaka/bridge-core/server`; each adapter supplies the renderer and re-exports the server:
+
+```ts
+// React: bootstrap/ssr entry
+import { createSsrRenderer, createSsrServer } from '@swarakaka/bridge-react/server'
+
+const pages = import.meta.glob('./Pages/**/*.tsx')
+await createSsrServer({
+  render: createSsrRenderer({ resolve: (name) => pages[`./Pages/${name}.tsx`]!() as never }),
+})
+```
+
+`createSsrRenderer` takes an optional `wrap(page, { page })` to put application providers around the page.

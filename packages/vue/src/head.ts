@@ -1,41 +1,15 @@
+import { HEAD_ATTRIBUTE, createHeadData, renderHead, type HeadData } from '@swarakaka/bridge-core'
 import { inject, type InjectionKey } from 'vue'
 
 /** Collected by the SSR renderer; BridgeHead writes into it on the server. */
-export interface HeadContext {
-  title: string | null
-  meta: Array<Record<string, string>>
-}
+export type HeadContext = HeadData
 
 export const HeadKey: InjectionKey<HeadContext> = Symbol('bridge-head')
-
-/** Marks <meta> tags managed by BridgeHead ("ssr" when server-rendered, "client" otherwise). */
-export const HEAD_ATTRIBUTE = 'data-bridge-head'
 
 export function useHeadContext(): HeadContext | null {
   return inject(HeadKey, null)
 }
 
-export function createHeadContext(): HeadContext {
-  return { title: null, meta: [] }
-}
+export const createHeadContext = createHeadData
 
-function escapeAttribute(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/"/g, '&quot;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-}
-
-/** Head fragments for the shell (spec: strings inserted verbatim after @bridgeHead). */
-export function renderHead(head: HeadContext): string[] {
-  const out: string[] = []
-  if (head.title !== null) out.push(`<title>${escapeAttribute(head.title)}</title>`)
-  for (const meta of head.meta) {
-    const attrs = Object.entries(meta)
-      .map(([k, v]) => `${k}="${escapeAttribute(v)}"`)
-      .join(' ')
-    out.push(`<meta ${attrs} ${HEAD_ATTRIBUTE}="ssr">`)
-  }
-  return out
-}
+export { HEAD_ATTRIBUTE, renderHead }

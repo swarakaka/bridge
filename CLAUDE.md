@@ -91,6 +91,7 @@ Git: the maintainer commits and pushes; do not commit unless asked.
 ## Hardening notes (2026-09-24)
 
 - Never use `migrate:fresh` on a SQLite file in WAL mode that other processes may have used: Laravel truncates the file and a leftover `-wal` corrupts it. E2E setup and the benchmark harness delete the file with its `-wal`/`-shm` and run `migrate`.
+- On PHP's built-in server a request sent while the page opens its SSE stream can wait until that stream ends (`max_duration`, 8 s in E2E): a worker may take two new connections and run the stream first. It is not keep-alive (the server already sends `Connection: close`). E2E's `expect.timeout` is therefore `max_duration + 2 s`; do not lower it below the stream lifetime.
 - The Redis bus sends raw commands (no connection key prefix). Tests that inspect or delete its keys must use `executeRaw`, not `Redis::connection()->del()`/`keys()`.
 - A queued `router.reload()` waits for an in-flight visit instead of cancelling it; `form.validate()` uses `router.request()`, outside the visit pipeline. Keep background requests out of `performVisit`.
 - New regression tests should fail on the old code; for Vue component-update bugs pass slots as `{ default, $stable: true }` or Vue re-renders the child anyway and hides the bug.

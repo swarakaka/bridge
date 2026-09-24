@@ -13,11 +13,9 @@ An adapter must:
 
 Nothing in the Laravel package changes for a new adapter. Mobile SDKs need only the JSON and stream specifications plus the golden fixtures to test their parsers offline.
 
-## The React skeleton
+## The React adapter
 
-`packages/react` (`@swarakaka/bridge-react`, experimental) is the reference for a second adapter. It is about 250 lines: a context providing the bridge, `usePageState` built on `useSyncExternalStore`, `usePage`, `useProp`, `useDeferred`, a `useForm` that re-renders on every mutation through a proxy, `BridgeLink` with hover prefetch, `Deferred`, and a `createBridgeApp` that resolves components, applies static `layout` properties, renders the store's error state, and hydrates when the root is server-rendered. Its tests run against the same mocked responses as the Vue adapter's.
-
-Not yet in the React skeleton: `useRemember`, `useStream`, `useJson`, `BridgeHead`, and an SSR renderer. The core APIs they wrap are available through `getBridge()`.
+`packages/react` (`@swarakaka/bridge-react`, experimental, pre-1.0) is the second adapter and has the Vue adapter's features: a context providing the bridge, `usePageState` built on `useSyncExternalStore`, `usePage`, `useProp`, `useDeferred`, `useForm` (with `remember`) and `useJson`, which re-render on every change through a proxy, `useRemember`, `useStream` (connects in an effect; `on(event, listener)` works before the connection opens), `BridgeLink` (prefetch, `except`, `headers`, visit callbacks, `activeClass`, attribute passthrough), `Deferred`, `BridgeHead`, a `createBridgeApp` that resolves components, applies static `layout` properties, renders the store's error state and hydrates a server-rendered root, and `@swarakaka/bridge-react/server` for SSR. Its tests run against the same mocked responses as the Vue adapter's, including a hydration check against its own server output.
 
 ## Server-side rendering
 

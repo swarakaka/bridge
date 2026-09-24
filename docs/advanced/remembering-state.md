@@ -14,21 +14,19 @@ const filters = useRemember('customers.filters', { search: '', status: 'all' })
 </script>
 ```
 
-```ts [React]
-// The React skeleton does not have useRemember yet; use the core router directly.
-const bridge = getBridge()
-const initial = bridge.router.restore<Filters>('customers.filters') ?? defaults
-// ... on change:
-bridge.router.remember('customers.filters', filters)
+```tsx [React]
+import { useRemember } from '@swarakaka/bridge-react'
+
+const [filters, setFilters] = useRemember('customers.filters', { search: '', status: 'all' })
 ```
 
 :::
 
-The value is written to the current history entry on every change and restored when the entry becomes active again. Keys are namespaced per history entry, so two visits to the same page do not share state. Values must be JSON-serialisable.
+The value is written to the current history entry on every change and restored after mount when the entry becomes active again (after mount, so a server-rendered page hydrates with the same markup). Keys are namespaced per history entry, so two visits to the same page do not share state. Values must be JSON-serialisable.
 
 ## Forms
 
-`useForm` remembers its values with the `remember` option:
+`useForm` (Vue and React) remembers its values with the `remember` option:
 
 ```ts
 const form = useForm({ name: '', email: '' }, { remember: 'customer-create' })

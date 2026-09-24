@@ -17,9 +17,18 @@ defineProps<{ customer: Customer }>()
 ```
 
 - `title` is applied to `document.title` when the component renders and updates reactively.
-- `meta` is an array of attribute maps rendered as `<meta …>` tags on the server; on the client it is currently ignored, which is fine for crawlers (they read the server output) and for most apps.
+- `meta` is an array of attribute maps rendered as `<meta …>` tags. On the server they are marked `data-bridge-head="ssr"`; on the client each `BridgeHead` owns its tags, replaces the server-rendered ones on hydration and removes them when it unmounts, restoring the previous title.
 
-The React skeleton has no head component yet; set `document.title` in an effect.
+The React adapter has the same component:
+
+```tsx
+import { BridgeHead } from '@swarakaka/bridge-react'
+
+;<BridgeHead
+  title={`${customer.name} · Customers`}
+  meta={[{ name: 'description', content: customer.company ?? '' }]}
+/>
+```
 
 ## Static tags in the shell
 

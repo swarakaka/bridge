@@ -34,7 +34,7 @@ Measured on 2026-09-24 (line coverage): `vitest run --coverage` for the npm pack
 
 ## Cutting 1.0
 
-- npm: done. `@swarakaka/bridge-protocol`, `-core` and `-vue` 1.0.0 and `@swarakaka/bridge-react` 0.2.0 are tagged. Pending changesets (`.changeset/*.md`) describe the next release; `release.yml` versions or publishes them after CI passes on `main`.
+- npm: done. `@swarakaka/bridge-protocol`, `-core` and `-vue` 1.0.0 and `@swarakaka/bridge-react` 0.2.0 are tagged. Pending changesets (`.changeset/*.md`) describe the next release. Releases are tag-driven: `pnpm changeset version`, commit, then push a `vX.Y.Z` tag; `release.yml` re-runs CI and E2E on the tagged commit and publishes (CONTRIBUTING.md, "Releasing").
 
 npm trusted publishing: each package's trusted publisher must name `swarakaka` / `bridge` (lowercase, as GitHub reports the repository) / `release.yml`, with "Allow npm publish" ticked. `release.yml` requests an OIDC token (`id-token: write`); pnpm exchanges it for a publish token and falls back to `NPM_TOKEN` when the exchange fails ("Skipped OIDC" in the log). Once every package publishes through OIDC, the `NPM_TOKEN` secret can be removed; tokens that bypass 2FA lose direct publishing in January 2027.
 
