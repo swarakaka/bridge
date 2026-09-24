@@ -98,6 +98,21 @@ describe('JsonForm', () => {
     expect(onInvalid).toHaveBeenCalledWith({ email: ['Invalid', 'Taken'] }, 'The email is invalid.')
   })
 
+  it('warns once when a 422 reaches a submission that passed only onError', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const { form } = setup({ email: '' }, () =>
+      jsonResponse({ message: 'Invalid.', errors: { email: ['Required'] } }, 422),
+    )
+
+    await form.post('/customers', { onError: vi.fn() })
+    await form.post('/customers', { onError: vi.fn() })
+    await form.post('/customers', { onError: vi.fn(), onInvalid: vi.fn() })
+
+    expect(warn).toHaveBeenCalledOnce()
+    expect(warn.mock.calls[0]?.[0]).toContain('form.post()')
+    warn.mockRestore()
+  })
+
   it('reports other errors, including 419 and 401, without acting on them', async () => {
     let status = 403
     const { form } = setup({ name: '' }, () => jsonResponse({ message: 'Nope.' }, status))

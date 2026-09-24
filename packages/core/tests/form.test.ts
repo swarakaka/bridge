@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { bridgeWith, mockFetch, page, pageResponse, tick } from './helpers.js'
 import type { Bridge } from '../src/index.js'
 
@@ -110,5 +110,68 @@ describe('Form helpers', () => {
     expect(form.dontRemember('password')).toBe(form)
     expect(form.rememberable()).toEqual({ email: 'a@b.c' })
     expect(form.rememberable({ email: 'x', password: 'old' })).toEqual({ email: 'x' })
+  })
+})
+
+describe('Form.setData with a callback', () => {
+  it('merges what the callback returns from the current data', () => {
+    bridge = bridgeWith(mockFetch(() => pageResponse(page())))
+    const form = bridge.form({ name: 'a', tags: ['x'] })
+
+    form.setData((data) => ({ ...data, tags: [...data.tags, 'y'] }))
+    form.setData((data) => ({ name: data.name.toUpperCase() }))
+
+    expect(form.data).toEqual({ name: 'A', tags: ['x', 'y'] })
+    expect(form.isDirty).toBe(true)
+  })
+})
+
+describe('validation errors passed only to onError', () => {
+  const invalid = () =>
+    pageResponse(
+      {
+        protocol: 1,
+        type: 'error',
+        error: { status: 422, kind: 'validation', message: 'x', errors: { name: ['Required'] } },
+      },
+      { status: 422 },
+    )
+
+  it('warns once per form when a 422 reaches a submit that passed only onError', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    bridge = bridgeWith(mockFetch(invalid))
+    const form = bridge.form({ name: '' })
+    const onError = vi.fn()
+
+    await form.post('/customers', { onError })
+    await form.post('/customers', { onError })
+
+    expect(onError).not.toHaveBeenCalled()
+    expect(form.errors).toEqual({ name: 'Required' })
+    expect(warn).toHaveBeenCalledOnce()
+    expect(warn.mock.calls[0]?.[0]).toContain('form.post()')
+    expect(warn.mock.calls[0]?.[0]).toContain('onInvalid')
+    warn.mockRestore()
+  })
+
+  it('stays quiet when onInvalid is passed, or neither callback is', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    bridge = bridgeWith(mockFetch(invalid))
+
+    await bridge.form({ name: '' }).post('/customers', { onError: vi.fn(), onInvalid: vi.fn() })
+    await bridge.form({ name: '' }).post('/customers')
+
+    expect(warn).not.toHaveBeenCalled()
+    warn.mockRestore()
+  })
+
+  it('warns for validate() too', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    bridge = bridgeWith(mockFetch(invalid), { initialPage: page({ url: '/customers/create' }) })
+
+    await bridge.form({ name: '' }).validate('post', '/customers', 'name', { onError: vi.fn() })
+
+    expect(warn.mock.calls[0]?.[0]).toContain('form.validate()')
+    warn.mockRestore()
   })
 })

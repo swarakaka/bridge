@@ -6,6 +6,7 @@ import {
   type FormOptions,
   type FormValidateOptions,
   type PrecognitionResult,
+  warnIfOnlyOnError,
 } from '../forms/FormState.js'
 import type {
   JsonClient,
@@ -128,6 +129,7 @@ export class JsonForm<T extends FormData_, R = unknown> extends FormState<T, Jso
       case 'invalid':
         this.setErrorsFromServer(outcome.errors)
         this.recordInvalid(outcome.message)
+        warnIfOnlyOnError(this, method, { onError, onInvalid })
         onInvalid?.(outcome.errors, outcome.message)
         break
       case 'error':

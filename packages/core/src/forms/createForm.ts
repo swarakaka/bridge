@@ -8,6 +8,7 @@ import {
   type FormOptions,
   type FormValidateOptions,
   type PrecognitionResult,
+  warnIfOnlyOnError,
 } from './FormState.js'
 
 export type { FormData_, FormOptions } from './FormState.js'
@@ -65,6 +66,7 @@ export class Form<T extends FormData_> extends FormState<T, PageFormTransport> {
       onInvalid: (errors, error) => {
         this.setErrorsFromServer(errors)
         this.lastError = error
+        warnIfOnlyOnError(this, method, options)
         options.onInvalid?.(errors, error)
       },
       onError: (error) => {

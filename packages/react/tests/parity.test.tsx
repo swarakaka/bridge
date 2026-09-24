@@ -185,6 +185,26 @@ describe('useJsonForm', () => {
     expect(window.location.pathname).toBe('/create')
   })
 
+  it('re-renders after setData with a callback', async () => {
+    const Create: PageComponent = () => {
+      const form = useJsonForm({ tags: ['a'] })
+      return (
+        <div>
+          <span id="tags">{form.data.tags.join(',')}</span>
+          <button
+            id="add"
+            onClick={() => form.setData((data) => ({ ...data, tags: [...data.tags, 'b'] }))}
+          />
+        </div>
+      )
+    }
+    await mount({ Create }, page({ component: 'Create', url: '/create' }))
+
+    await act(async () => ($('#add') as HTMLButtonElement).click())
+
+    expect($('#tags')?.textContent).toBe('a,b')
+  })
+
   it('cancels an in-flight submission on unmount', async () => {
     let aborted = false
     const http = mockFetch(

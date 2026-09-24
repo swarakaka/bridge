@@ -64,11 +64,13 @@ A field cannot share a name with a form member: `data`, `defaults`, `errors`, `a
 
 ## Methods
 
-`submit(method, url, options)`, `get`, `post`, `put`, `patch`, `delete`, `validate` (see [Validation](/basics/validation)), `setData`, `transform(fn)`, `reset(...fields)`, `resetAndClearErrors(...fields)`, `setDefaults()`, `setError`, `clearErrors`, `dontRemember(...fields)`, `cancel`.
+`submit(method, url, options)`, `get`, `post`, `put`, `patch`, `delete`, `validate` (see [Validation](/basics/validation)), `setData` (values, `(field, value)`, or a callback whose result is merged: `setData((data) => ({ ...data, tags: [...data.tags, tag] }))`), `transform(fn)`, `reset(...fields)`, `resetAndClearErrors(...fields)`, `setDefaults()`, `setError`, `clearErrors`, `dontRemember(...fields)`, `cancel`.
 
 To submit a form without navigating, in JSON mode, use [`useJsonForm`](/beyond/json-mode#forms-over-json-usejsonform): same fields and methods, with the response in `form.result`.
 
 Submission options are the [visit options](/basics/manual-visits) plus `resetOnSuccess`. On success the current values become the new defaults unless `resetOnSuccess` is set.
+
+Validation errors (`422`) fill `form.errors` and go to `onInvalid(errors, error)`; `onError` receives other failures (`403`, `500`, ...). When a `422` reaches a call that passed `onError` but not `onInvalid`, the form logs a console warning, once per form.
 
 ## Remembering form state
 

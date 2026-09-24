@@ -124,10 +124,16 @@ export abstract class FormState<T extends FormData_, K extends FormTransport> {
     return this.submit('delete', url, options)
   }
 
+  /**
+   * Merge values, set one field, or merge what a callback returns from the
+   * current data (`setData((data) => ({ ...data, name: 'x' }))`).
+   */
   setData(values: Partial<T>): this
+  setData(update: (data: T) => Partial<T>): this
   setData<F extends keyof T>(key: F, value: T[F]): this
-  setData(keyOrValues: keyof T | Partial<T>, value?: unknown): this {
-    if (typeof keyOrValues === 'object') Object.assign(this.data, keyOrValues)
+  setData(keyOrValues: keyof T | Partial<T> | ((data: T) => Partial<T>), value?: unknown): this {
+    if (typeof keyOrValues === 'function') Object.assign(this.data, keyOrValues(this.data))
+    else if (typeof keyOrValues === 'object') Object.assign(this.data, keyOrValues)
     else (this.data as Record<string, unknown>)[keyOrValues as string] = value
     return this
   }
@@ -260,6 +266,7 @@ export abstract class FormState<T extends FormData_, K extends FormTransport> {
           clearScoped()
           this.setError(scoped)
           this.recordInvalid(result.detail)
+          warnIfOnlyOnError(this, 'validate', options)
           options.onInvalid?.(result.errors, result.detail)
           return result.outcome
         }
@@ -325,6 +332,25 @@ export abstract class FormState<T extends FormData_, K extends FormTransport> {
     this.errors = flat
     this.allErrors = { ...errors }
   }
+}
+
+const warnedForms = new WeakSet<object>()
+
+/**
+ * Validation errors go to `onInvalid`; `onError` is for other failures. When a
+ * 422 reaches a call that passed only `onError`, say so once per form, since
+ * the handler silently never runs.
+ */
+export function warnIfOnlyOnError(
+  form: object,
+  action: string,
+  options: { onError?: unknown; onInvalid?: unknown },
+): void {
+  if (!options.onError || options.onInvalid || warnedForms.has(form)) return
+  warnedForms.add(form)
+  console.warn(
+    `[bridge] form.${action}(): the server answered 422 with validation errors. They are in form.errors and are passed to onInvalid, not onError; this call only passed onError. Handle validation errors in onInvalid.`,
+  )
 }
 
 export function clone<T>(value: T): T {
