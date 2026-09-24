@@ -1101,9 +1101,12 @@ Standard Laravel skeleton plus: `app/Http/Controllers/{Dashboard,Customer,Realti
 - `js`: Node 22/24 (pnpm 11 requires Node 22.13+ for `node:sqlite`); pnpm install (frozen), ESLint + Prettier, a drift check that `pnpm generate` leaves `packages/protocol/src/generated` unchanged, build, typecheck, Vitest; the docs site builds on Node 22.
 - `php`: PHP 8.4 × Laravel 13 with a Redis service; Pint, PHPStan, Pest with coverage (min 90 %) including the conformance suite and the real-Redis bus tests.
 - `playground`: composer + pnpm install, migrate, typecheck and `vite build`, feature tests, and a curl smoke test of the three modes.
+- `audit`: calls `audit.yml` (below).
 - `commitlint` on pull requests.
 
 `release.yml` (tag `vX.Y.Z` only): checks that the tagged commit is on `main`, matches the linked package version and has no unapplied changesets; runs `ci.yml` and `e2e.yml` on it as reusable workflows; then `changeset publish` publishes every `@swarakaka/*` version not yet on npm through npm trusted publishing (OIDC, configured for `release.yml`) with provenance, falling back to `NPM_TOKEN`, and pushes the per-package tags. Versions are bumped beforehand with `pnpm changeset version` (CONTRIBUTING.md).
+
+`audit.yml` (called by `ci.yml`, so also a release gate; weekly schedule; manual): `pnpm audit` and `composer audit --locked` (for `packages/laravel` and `playground`) against the committed lockfiles. Advisories in production dependencies fail the run; development tooling is reported without failing it, and abandoned Composer packages are reported only.
 
 `e2e.yml` (PR label `e2e`, nightly, manual): Playwright against the playground on `artisan serve` with 12 workers and the SSR server.
 

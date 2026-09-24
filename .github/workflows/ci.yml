@@ -141,6 +141,10 @@ jobs:
           check "validation 422"    test "$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $TOKEN" -H 'Accept: application/json' -X POST -d 'name=' localhost:8000/customers)" = "422"
           check "anonymous 401"     test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Accept: application/json' localhost:8000/customers)" = "401"
 
+  audit:
+    name: Audit
+    uses: ./.github/workflows/audit.yml
+
   commitlint:
     name: Conventional commits
     if: github.event_name == 'pull_request'

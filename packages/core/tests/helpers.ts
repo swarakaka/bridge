@@ -1,5 +1,5 @@
 import type { BridgePage } from '@swarakaka/bridge-protocol'
-import { vi } from 'vitest'
+import { vi, type Mock } from 'vitest'
 import { createBridge } from '../src/index.js'
 import type { Bridge, BridgeConfig } from '../src/index.js'
 
@@ -30,7 +30,7 @@ export function withUrl(response: Response, url: string): Response {
   return response
 }
 
-export interface FetchMock extends ReturnType<typeof vi.fn> {
+export interface FetchMock extends Mock<typeof fetch> {
   calls(): Array<{ url: string; init: RequestInit }>
 }
 
