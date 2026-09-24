@@ -11,6 +11,8 @@ php artisan bridge:install
 
 `bridge:install` publishes `config/bridge.php` and `resources/views/app.blade.php`. The `bridge` middleware is appended to the `web` group automatically (`bridge.middleware.auto_register`).
 
+The default stream driver, `database`, stores events in a `bridge_stream_events` table. The package loads its migration, so `php artisan migrate` creates the table. When that table is missing, `bridge:install` offers to run `migrate`; pass `--without-migrations` to skip the question.
+
 ## Your own middleware (optional)
 
 To keep the middleware in your application, for example to share props per request, generate a subclass:
