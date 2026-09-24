@@ -19,14 +19,26 @@ function escapeAttribute(value: string): string {
     .replace(/>/g, '&gt;')
 }
 
+/**
+ * Meta attributes that may be written: a conservative subset of HTML attribute
+ * names (covers name, content, property="og:…", http-equiv, charset, itemprop).
+ * Names can only be escaped away by dropping them, and the ownership marker is
+ * Bridge's own.
+ */
+function metaAttributes(meta: Record<string, string>): Array<[string, string]> {
+  return Object.entries(meta).filter(
+    ([name]) => /^[A-Za-z_:][A-Za-z0-9_:.-]*$/.test(name) && name.toLowerCase() !== HEAD_ATTRIBUTE,
+  )
+}
+
 /** Head fragments for the shell, inserted verbatim after @bridgeHead by the Laravel SSR gateway. */
 export function renderHead(head: HeadData): string[] {
   const out: string[] = []
   if (head.title !== null) out.push(`<title>${escapeAttribute(head.title)}</title>`)
   for (const meta of head.meta) {
-    const attrs = Object.entries(meta)
-      .map(([k, v]) => `${k}="${escapeAttribute(v)}"`)
-      .join(' ')
+    const attributes = metaAttributes(meta)
+    if (attributes.length === 0) continue
+    const attrs = attributes.map(([k, v]) => `${k}="${escapeAttribute(String(v))}"`).join(' ')
     out.push(`<meta ${attrs} ${HEAD_ATTRIBUTE}="ssr">`)
   }
   return out
@@ -54,7 +66,7 @@ export class HeadManager {
     this.owned.forEach((el) => el.remove())
     this.owned = (head.meta ?? []).map((attributes) => {
       const el = this.doc.createElement('meta')
-      for (const [name, value] of Object.entries(attributes)) el.setAttribute(name, value)
+      for (const [name, value] of metaAttributes(attributes)) el.setAttribute(name, String(value))
       el.setAttribute(HEAD_ATTRIBUTE, 'client')
       this.doc.head.appendChild(el)
       return el
