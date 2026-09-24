@@ -34,6 +34,7 @@ export const HEADERS = {
   except: 'X-Bridge-Except',
   component: 'X-Bridge-Component',
   location: 'X-Bridge-Location',
+  once: 'X-Bridge-Once',
   lastEventId: 'Last-Event-ID',
 } as const
 
@@ -43,8 +44,11 @@ export const CONTROL_EVENT = 'bridge' as const
 /** Element id of the embedded page object in an HTML shell. */
 export const EMBEDDED_PAGE_ID = 'bridge-page' as const
 
-/** Value of `Vary` on page and JSON responses. */
+/** Value of `Vary` on JSON responses. */
 export const VARY = 'Accept, X-Bridge-Only, X-Bridge-Except, X-Bridge-Component' as const
+
+/** Value of `Vary` on page responses: the JSON value plus `X-Bridge-Once`. */
+export const PAGE_VARY = `${VARY}, X-Bridge-Once` as const
 
 export type BridgeDocument = BridgePage | BridgeError
 

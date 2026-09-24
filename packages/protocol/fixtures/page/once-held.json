@@ -1,0 +1,13 @@
+{
+  "protocol": 1,
+  "type": "page",
+  "component": "Customers/Create",
+  "url": "/customers/create",
+  "props": {
+    "auth": { "user": { "id": 1, "name": "Ada" } }
+  },
+  "build": "3f9c1a",
+  "meta": {
+    "once": { "statuses": { "key": "customer-statuses", "expiresAt": null } }
+  }
+}

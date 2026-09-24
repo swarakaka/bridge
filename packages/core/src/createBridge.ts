@@ -8,6 +8,7 @@ import { RequestManager } from './http/RequestManager.js'
 import { JsonClient } from './json/JsonClient.js'
 import { JsonForm, type JsonFormOptions } from './json/JsonForm.js'
 import { JsonRequest, type JsonHandleOptions } from './json/JsonRequest.js'
+import { OnceStore } from './pages/OnceStore.js'
 import { PageStore } from './pages/PageStore.js'
 import { History } from './router/History.js'
 import { Router } from './router/Router.js'
@@ -22,6 +23,8 @@ export interface Bridge {
   readonly json: JsonClient
   readonly history: History
   readonly cache: PageCache
+  /** Values of once props kept for this tab (PLAN §13.2). */
+  readonly once: OnceStore
   readonly events: Emitter<RouterEvents>
   readonly config: BridgeConfig
   build: string | null
@@ -60,6 +63,7 @@ export function createBridge(config: BridgeConfig = {}): Bridge {
     staleWhileRevalidate:
       config.cache?.staleWhileRevalidate ?? DEFAULT_CONFIG.cache.staleWhileRevalidate,
   })
+  const once = new OnceStore()
   const json = new JsonClient(http, () => cache.clear())
 
   const router = new Router({
@@ -67,6 +71,7 @@ export function createBridge(config: BridgeConfig = {}): Bridge {
     http,
     history,
     cache,
+    once,
     events,
     build: () => bridge.build,
     window: win,
@@ -89,6 +94,7 @@ export function createBridge(config: BridgeConfig = {}): Bridge {
     json,
     history,
     cache,
+    once,
     events,
     config,
     build,

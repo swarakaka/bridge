@@ -14,7 +14,7 @@ Rules that matter day to day:
 - Quality values are honoured; ties are broken in the order stream, page, JSON, HTML. `Accept: */*` selects HTML by default, configurable per route with `->defaults('bridge.default_mode', 'json')`.
 - The `v` parameter is the protocol version. An unsupported version gets a `406` and the client performs a full document load.
 - A rendering route asked for `text/event-stream` answers `406`; a stream route asked for anything else answers `406`. Misconfiguration is visible rather than silently degraded.
-- Page and JSON responses carry `Vary: Accept, X-Bridge-Only, X-Bridge-Except, X-Bridge-Component`.
+- Page and JSON responses carry `Vary: Accept, X-Bridge-Only, X-Bridge-Except, X-Bridge-Component`; page responses add `X-Bridge-Once`.
 
 Read the negotiated mode when you must (rarely): `request()->bridgeMode()` or `Bridge::mode()`.
 

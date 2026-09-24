@@ -33,6 +33,17 @@ export interface BridgePage {
      * Make earlier encrypted history entries unreadable before storing this page (§10).
      */
     clearHistory?: boolean;
+    /**
+     * Once props this page considered: prop name → once key and expiry (§11).
+     */
+    once?: {
+      [k: string]:
+        | {
+            key: string;
+            expiresAt: number | null;
+          }
+        | undefined;
+    };
     [k: string]: unknown | undefined;
   };
 }

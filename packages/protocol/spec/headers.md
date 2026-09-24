@@ -18,12 +18,13 @@ Bridge prefers standard HTTP headers. Custom headers exist only where HTTP has n
 
 ### 1.2 Custom
 
-| Header               | Modes      | Semantics                                                                                                                                                                                                                                                                                                                                    |
-| -------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `X-Bridge-Build`     | page       | The client's asset build identifier. On a **GET** page request, if the server's current build differs, the server MUST respond `409 Conflict` with `X-Bridge-Location` (see [page.md](page.md) §5). Non-GET requests MUST NOT be rejected for build mismatch. Rationale: no standard header identifies a client bundle.                      |
-| `X-Bridge-Only`      | page, json | Comma-separated list of prop keys to include. Keys MAY use dot notation for nested selection (`customers.data`). Whitespace around keys MUST be ignored. Props marked `always` are included regardless. See [page.md](page.md) §3.                                                                                                           |
-| `X-Bridge-Except`    | page, json | Comma-separated list of prop keys to exclude. If both `X-Bridge-Only` and `X-Bridge-Except` are present, `X-Bridge-Only` wins and `X-Bridge-Except` MUST be ignored.                                                                                                                                                                         |
-| `X-Bridge-Component` | page       | The component the client is currently displaying. When present on a request with `X-Bridge-Only`/`X-Bridge-Except`, the server MUST compare it with the page's component; on mismatch the server MUST ignore the partial-selection headers and return a full page. Rationale: a partial response must never be merged into a different page. |
+| Header               | Modes      | Semantics                                                                                                                                                                                                                                                                                                                                                                             |
+| -------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `X-Bridge-Build`     | page       | The client's asset build identifier. On a **GET** page request, if the server's current build differs, the server MUST respond `409 Conflict` with `X-Bridge-Location` (see [page.md](page.md) §5). Non-GET requests MUST NOT be rejected for build mismatch. Rationale: no standard header identifies a client bundle.                                                               |
+| `X-Bridge-Only`      | page, json | Comma-separated list of prop keys to include. Keys MAY use dot notation for nested selection (`customers.data`). Whitespace around keys MUST be ignored. Props marked `always` are included regardless. See [page.md](page.md) §3.                                                                                                                                                    |
+| `X-Bridge-Except`    | page, json | Comma-separated list of prop keys to exclude. If both `X-Bridge-Only` and `X-Bridge-Except` are present, `X-Bridge-Only` wins and `X-Bridge-Except` MUST be ignored.                                                                                                                                                                                                                  |
+| `X-Bridge-Once`      | page       | Comma-separated list of once keys whose values the client holds and considers unexpired ([page.md](page.md) §11). For a once prop whose key is listed, the server MAY omit the value from `props` unless the prop is named in `X-Bridge-Only`. Servers MUST ignore it in other modes. Rationale: the client, not the server, knows what it has kept; no standard header carries that. |
+| `X-Bridge-Component` | page       | The component the client is currently displaying. When present on a request with `X-Bridge-Only`/`X-Bridge-Except`, the server MUST compare it with the page's component; on mismatch the server MUST ignore the partial-selection headers and return a full page. Rationale: a partial response must never be merged into a different page.                                          |
 
 Rejected alternatives: `Prefer` (RFC 7240) for partial selection (advisory semantics, stripped by some intermediaries) and query parameters (leak into history, logs, and cache keys).
 
@@ -48,11 +49,11 @@ Rejected alternatives: `Prefer` (RFC 7240) for partial selection (advisory seman
 
 ## 3. Vary summary
 
-| Mode   | Required `Vary` members                                            |
-| ------ | ------------------------------------------------------------------ |
-| html   | `Accept`                                                           |
-| page   | `Accept`, `X-Bridge-Only`, `X-Bridge-Except`, `X-Bridge-Component` |
-| json   | `Accept`, `X-Bridge-Only`, `X-Bridge-Except`, `X-Bridge-Component` |
-| stream | none (never cacheable)                                             |
+| Mode   | Required `Vary` members                                                             |
+| ------ | ----------------------------------------------------------------------------------- |
+| html   | `Accept`                                                                            |
+| page   | `Accept`, `X-Bridge-Only`, `X-Bridge-Except`, `X-Bridge-Component`, `X-Bridge-Once` |
+| json   | `Accept`, `X-Bridge-Only`, `X-Bridge-Except`, `X-Bridge-Component`                  |
+| stream | none (never cacheable)                                                              |
 
 `X-Bridge-Build` is compared, not cached against, and MUST NOT appear in `Vary`.

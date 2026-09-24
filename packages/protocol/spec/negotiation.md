@@ -51,10 +51,16 @@ Rationale: silently falling back would hide proxy and client misconfiguration.
 
 ## 5. Response `Vary`
 
-Every `page` and `json` response MUST include `Vary: Accept`. When the request may carry partial-selection headers (see [headers.md](headers.md)), the `Vary` header MUST also list `X-Bridge-Only`, `X-Bridge-Except`, and `X-Bridge-Component`. The recommended fixed value is:
+Every `page` and `json` response MUST include `Vary: Accept`. When the request may carry partial-selection headers (see [headers.md](headers.md)), the `Vary` header MUST also list `X-Bridge-Only`, `X-Bridge-Except`, and `X-Bridge-Component`; a `page` response MUST also list `X-Bridge-Once` ([page.md](page.md) §11). The recommended fixed value for `json` is:
 
 ```
 Vary: Accept, X-Bridge-Only, X-Bridge-Except, X-Bridge-Component
+```
+
+and for `page`:
+
+```
+Vary: Accept, X-Bridge-Only, X-Bridge-Except, X-Bridge-Component, X-Bridge-Once
 ```
 
 `html` responses MUST include at least `Vary: Accept`.

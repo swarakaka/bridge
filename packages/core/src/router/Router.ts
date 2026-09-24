@@ -3,6 +3,7 @@ import { PageCache } from '../cache/PageCache.js'
 import type { Emitter } from '../events/Emitter.js'
 import type { RequestManager } from '../http/RequestManager.js'
 import { parseResponse, type ParsedResponse } from '../http/responseParser.js'
+import type { OnceStore } from '../pages/OnceStore.js'
 import type { OptimisticSettle, PageStore } from '../pages/PageStore.js'
 import type { History, HistoryState, StoredHistoryState } from './History.js'
 import { createPoll, type PollHandle, type PollOptions } from './poll.js'
@@ -22,6 +23,8 @@ export interface RouterDependencies {
   http: RequestManager
   history: History
   cache: PageCache
+  /** Values of once props (PLAN §13.2). */
+  once: OnceStore
   events: Emitter<RouterEvents>
   build: () => string | null
   window: Window | null
@@ -80,7 +83,11 @@ export class Router {
   /** Registers history listeners and records the initial entry. Call once after the page is available. */
   init(): void {
     const page = this.d.store.page
-    if (page) this.applyHistoryMeta(page)
+    if (page) {
+      this.applyHistoryMeta(page)
+      // An embedded page always carries its once values: remember them.
+      this.d.once.complete(page)
+    }
     // Always record the page we booted with: after a full reload the entry still
     // holds the page from before it, which back/forward would otherwise restore.
     if (page && this.d.window) this.d.history.push(page, this.d.store.current.key, true)
@@ -232,6 +239,7 @@ export class Router {
         headers: options.headers,
         component: this.d.store.page?.component,
         build: this.d.build(),
+        once: this.d.once.heldKeys(),
         prefetch: true,
       })
       const parsed = await parseResponse(response)
@@ -282,8 +290,10 @@ export class Router {
     if (this.d.window && this.d.store.serverPage) this.d.history.updatePage(this.d.store.serverPage)
   }
 
+  /** Drops cached pages and stored once values; call it when the user changes (logout). */
   clearCache(): void {
     this.d.cache.clear()
+    this.d.once.clear()
   }
 
   /** Removes cached pages carrying any of these tags (set by `prefetch({ cacheTags })`). */
@@ -438,25 +448,29 @@ export class Router {
     if (cacheable) {
       const lookup = this.d.cache.get(cacheKey)
       if (lookup.state === 'fresh') {
-        await this.prepare(lookup.entry.page)
+        const { page, missing } = this.d.once.complete(lookup.entry.page)
+        await this.prepare(page)
         if (visit.cancelled) {
           this.finish(visit, options)
           return { status: 'cancelled' }
         }
-        this.applyPage(lookup.entry.page, visit)
+        this.applyPage(page, visit)
+        this.reloadMissingOnce(missing)
         this.settleOptimistic(visit, 'server')
         this.flushInvalidated(options)
         this.finish(visit, options)
-        options.onSuccess?.(lookup.entry.page)
-        return { status: 'success', page: lookup.entry.page }
+        options.onSuccess?.(page)
+        return { status: 'success', page }
       }
       if (lookup.state === 'stale') {
-        await this.prepare(lookup.entry.page)
+        const { page } = this.d.once.complete(lookup.entry.page)
+        await this.prepare(page)
         if (visit.cancelled) {
           this.finish(visit, options)
           return { status: 'cancelled' }
         }
-        this.applyPage(lookup.entry.page, visit)
+        // The revalidating request below fetches anything the store could not fill.
+        this.applyPage(page, visit)
         visit.preserveState = true
         visit.preserveScroll = true
         visit.replace = true
@@ -477,6 +491,7 @@ export class Router {
         except: visit.except,
         component: this.d.store.page?.component,
         build: this.d.build(),
+        once: this.d.once.heldKeys(),
         signal: visit.controller.signal,
         forceFormData: options.forceFormData,
         queryStringArrayFormat: options.queryStringArrayFormat,
@@ -525,16 +540,19 @@ export class Router {
         return { status: 'redirected' }
 
       case 'page': {
-        if (cacheKey && visit.method === 'get') this.d.cache.set(cacheKey, parsed.page)
+        // Record once values the server sent and fill in the ones it left out.
+        const { page, missing } = this.d.once.complete(parsed.page)
+        if (cacheKey && visit.method === 'get') this.d.cache.set(cacheKey, page)
         if (visit.method !== 'get') this.d.cache.clear()
-        await this.prepare(parsed.page)
+        await this.prepare(page)
         if (visit.cancelled) return { status: 'cancelled' }
-        this.applyPage(parsed.page, visit)
+        this.applyPage(page, visit)
+        this.reloadMissingOnce(missing)
         this.settleOptimistic(visit, 'server')
         this.flushInvalidated(options)
-        this.d.events.emit('success', { visit, page: parsed.page })
-        options.onSuccess?.(parsed.page)
-        return { status: 'success', page: parsed.page }
+        this.d.events.emit('success', { visit, page })
+        options.onSuccess?.(page)
+        return { status: 'success', page }
       }
 
       case 'error':
@@ -575,7 +593,11 @@ export class Router {
       return { status: 'invalid', errors, error }
     }
 
-    if (error.status === 401 || error.status === 403 || error.status === 419) this.d.cache.clear()
+    if (error.status === 401 || error.status === 403 || error.status === 419) {
+      // The user or their rights changed: cached pages and once values may belong to someone else.
+      this.d.cache.clear()
+      this.d.once.clear()
+    }
 
     if (error.kind === 'unauthenticated' && error.redirect) {
       this.d.events.emit('error', { visit, error })
@@ -694,13 +716,14 @@ export class Router {
             only: keys,
             component: page.component,
             build: this.d.build(),
+            once: this.d.once.heldKeys(),
             signal: controller.signal,
           })
           const parsed = await parseResponse(response)
           const current = this.d.store.page
           if (parsed.kind === 'page' && current && current.component === parsed.page.component) {
             this.applyHistoryMeta(parsed.page)
-            this.d.store.setPage(parsed.page, { partial: true })
+            this.d.store.setPage(this.d.once.complete(parsed.page).page, { partial: true })
             this.d.history.updatePage(this.d.store.serverPage!)
           } else if (parsed.kind === 'invalid') {
             console.warn(
@@ -753,6 +776,15 @@ export class Router {
     if (page.meta?.clearHistory !== true) return
     this.d.history.clear()
     this.d.cache.clear()
+    this.d.once.clear()
+  }
+
+  /**
+   * Once props the server left out (this client announced them) but the store
+   * no longer has, for example after it was cleared while the request ran.
+   */
+  private reloadMissingOnce(missing: string[]): void {
+    if (missing.length > 0) void this.reload({ only: missing, showProgress: false })
   }
 
   /**

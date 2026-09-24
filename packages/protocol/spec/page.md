@@ -28,7 +28,7 @@ A successful page response has status `200` and body:
 | `props`     | object         | yes      | The prop bag. Always an object, possibly empty. Includes shared props.                                                                                    |
 | `build`     | string \| null | yes      | Current asset build identifier, or `null` when the server has none configured.                                                                            |
 | `deferred`  | object         | no       | Map of group name → array of prop keys that are absent from `props` and SHOULD be requested after render (§4). Omitted or empty when nothing is deferred. |
-| `meta`      | object         | no       | Additive extensions. Clients MUST ignore unknown members. Defined members: `merge` (§3), `encryptHistory` and `clearHistory` (§10).                       |
+| `meta`      | object         | no       | Additive extensions. Clients MUST ignore unknown members. Defined members: `merge` (§3), `encryptHistory` and `clearHistory` (§10), `once` (§11).         |
 
 Clients MUST ignore unknown top-level members. Servers MUST NOT emit members not defined here or in a later version of this specification.
 
@@ -68,6 +68,7 @@ Servers may mark props with delivery hints. The hints are not visible on the wir
 | lazy     | excluded                                  | included                       | key simply absent |
 | deferred | excluded; key listed in `deferred[group]` | included                       | `deferred` member |
 | always   | included                                  | included even if not named     | key present       |
+| once     | included unless held (§11)                | included                       | `meta.once` entry |
 
 After rendering a page with a non-empty `deferred`, the client SHOULD issue one partial request per group with `X-Bridge-Only: <keys of group>` and `X-Bridge-Component: <component>`, in parallel, and abort them if the user navigates away.
 
@@ -126,3 +127,34 @@ Client obligations:
 - `clearHistory` replaces the key. A client SHOULD also make other browsing contexts of the same origin replace theirs, and SHOULD drop cached page objects.
 
 A server that asks for `clearHistory` on a response that is a redirect (for example after logging a user out) SHOULD carry the request over to the next page object it returns to that client (typically through the session).
+
+## 11. Once props
+
+A once prop is sent to a client once and then reused by it until it expires, for values that rarely change (plan lists, countries, translations).
+
+The page object lists every once prop it considered in `meta.once`, whether or not the value is in `props`:
+
+```jsonc
+"meta": {
+  "once": {
+    "plans": { "key": "plans", "expiresAt": null },
+    "statuses": { "key": "customer-statuses", "expiresAt": 1790000000000 },
+  },
+}
+```
+
+| Member      | Type           | Meaning                                                                                                    |
+| ----------- | -------------- | ---------------------------------------------------------------------------------------------------------- |
+| `key`       | string         | The once key: the prop name unless the server chose another, so several props or pages can share a value.  |
+| `expiresAt` | integer / null | When a value sent with this response stops being reusable, in milliseconds since the epoch; `null`: never. |
+
+Keys contain no commas or whitespace.
+
+Rules:
+
+- A client that keeps once values sends the keys it holds and considers unexpired in `X-Bridge-Once` on page requests ([headers.md](headers.md)).
+- For a once prop whose key is listed, the server omits the value from `props` and keeps the `meta.once` entry, unless the prop is named in `X-Bridge-Only` (an explicit reload is a refresh) or the application forces a fresh value.
+- When a value is present in `props`, the client stores it under its key with that `expiresAt`. When it is absent and listed, the client fills it from its store before rendering; it MUST NOT extend a stored expiry from a response that did not carry the value. If it has nothing to fill, it requests the prop with a partial reload.
+- A partial response lists only the once props it selected.
+- JSON mode resolves once props like plain props and ignores `X-Bridge-Once`. An HTML shell's embedded page always carries the values.
+- Once values can be user-specific: a client drops its stored values when it clears history (§10) and when it receives `401`, `403` or `419`.

@@ -45,6 +45,8 @@ export type {
   OptimisticTarget,
 } from './pages/PageStore.js'
 export { loadWhenVisible } from './pages/whenVisible.js'
+export { OnceStore, readOnceMeta } from './pages/OnceStore.js'
+export type { OnceEntry } from './pages/OnceStore.js'
 export type { WhenVisibleOptions, WhenVisibleHandle } from './pages/whenVisible.js'
 export { requireResolver } from './pages/resolver.js'
 export type { PagesOption } from './pages/resolver.js'
@@ -105,6 +107,7 @@ export {
   CONTROL_EVENT,
   EMBEDDED_PAGE_ID,
   VARY,
+  PAGE_VARY,
   isPage,
   isError,
   isControlEvent,

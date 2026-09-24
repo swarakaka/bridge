@@ -14,6 +14,8 @@ export interface HttpRequest {
   component?: string | null | undefined
   build?: string | null | undefined
   prefetch?: boolean | undefined
+  /** Once keys the client holds, sent as `X-Bridge-Once` (spec/page.md §11). */
+  once?: string[] | undefined
   signal?: AbortSignal | undefined
   onProgress?: ((progress: UploadProgress) => void) | undefined
   /** Force multipart + XHR (used for uploads); auto-detected from data otherwise. */
@@ -73,6 +75,7 @@ export class RequestManager {
       headers[HEADERS.component] = request.component
     }
     if (request.prefetch) headers['Purpose'] = 'prefetch'
+    if (request.once && request.once.length > 0) headers[HEADERS.once] = request.once.join(',')
 
     let url =
       request.url instanceof URL ? new URL(request.url.href) : new URL(request.url, currentHref())

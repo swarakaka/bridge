@@ -64,6 +64,7 @@ export default defineConfig({
           { text: 'Load when visible', link: '/data/load-when-visible' },
           { text: 'Polling', link: '/data/polling' },
           { text: 'Always props', link: '/data/always-props' },
+          { text: 'Once props', link: '/data/once-props' },
           { text: 'Merging props', link: '/data/merging-props' },
           { text: 'Prefetching', link: '/data/prefetching' },
         ],

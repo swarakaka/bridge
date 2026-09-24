@@ -7,6 +7,7 @@ use App\Http\Requests\StoreCustomerRequest;
 use App\Http\Resources\CustomerResource;
 use App\Models\Customer;
 use Bridge\Bridge;
+use Bridge\Props\Once;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -40,7 +41,7 @@ class CustomerController extends Controller
     public function create()
     {
         return Bridge::render('Customers/Create', [
-            'statuses' => ['active', 'inactive'],
+            'statuses' => $this->statuses(),
         ]);
     }
 
@@ -76,7 +77,7 @@ class CustomerController extends Controller
 
         return Bridge::render('Customers/Edit', [
             'customer' => CustomerResource::make($customer),
-            'statuses' => ['active', 'inactive'],
+            'statuses' => $this->statuses(),
         ]);
     }
 
@@ -143,5 +144,14 @@ class CustomerController extends Controller
         }
 
         return array_reverse($entries);
+    }
+
+    /**
+     * Bridge::once(): sent to a client once, then left out while it holds the value.
+     * One key shares the value between the Create and Edit pages.
+     */
+    private function statuses(): Once
+    {
+        return Bridge::once(fn () => ['active', 'inactive'], key: 'customer-statuses');
     }
 }

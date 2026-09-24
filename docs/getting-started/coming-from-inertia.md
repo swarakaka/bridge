@@ -54,4 +54,4 @@ Bridge borrows Inertia's developer experience: controllers return pages, page co
 
 **Polling works the same way** (`usePoll(interval, reloadOptions, { autoStart, keepAlive })` with `start`/`stop`), with one difference: hidden tabs pause polls instead of slowing them down, and catch up when visible. Prefer a stream where one is available. See [Polling](/data/polling).
 
-**No "once" props yet.** They are a candidate for a later release.
+**Once props work the same way** (`Bridge::once(fn, key:, ttl:)`, `->fresh()`), with the client announcing held keys in `X-Bridge-Once`. Stored values are kept in memory for the tab and dropped on `401`/`403`/`419` and when history is cleared. See [Once props](/data/once-props).

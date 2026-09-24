@@ -35,6 +35,19 @@
         "clearHistory": {
           "type": "boolean",
           "description": "Make earlier encrypted history entries unreadable before storing this page (§10)."
+        },
+        "once": {
+          "type": "object",
+          "description": "Once props this page considered: prop name → once key and expiry (§11).",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "key": { "type": "string", "pattern": "^[^,\\s]+$" },
+              "expiresAt": { "type": ["integer", "null"] }
+            },
+            "required": ["key", "expiresAt"],
+            "additionalProperties": false
+          }
         }
       },
       "additionalProperties": true

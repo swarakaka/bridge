@@ -12,7 +12,7 @@ Defaults are conservative because most Bridge responses are private:
 | HTML shell, static, authenticated   | `private, max-age=300, must-revalidate` | `bridge.shell.embed = false`  |
 | Stream                              | `no-cache, no-transform`                | never cacheable               |
 
-Every page and JSON response carries `Vary: Accept, X-Bridge-Only, X-Bridge-Except, X-Bridge-Component`, so a cache can never serve a page object to a browser navigation or a partial response as a full one.
+Every page and JSON response carries `Vary: Accept, X-Bridge-Only, X-Bridge-Except, X-Bridge-Component` (page responses add `X-Bridge-Once`), so a cache can never serve a page object to a browser navigation, a partial response as a full one, or a page without [once props](/data/once-props) to a client that needs them.
 
 ## Opting in
 
