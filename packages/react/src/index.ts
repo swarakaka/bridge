@@ -25,6 +25,13 @@ export {
 export type { UseFormOptions, UseJsonFormOptions, UseStreamReturn } from './hooks.js'
 export { BridgeLink, Deferred } from './components.js'
 export type { BridgeLinkProps } from './components.js'
+export { BridgeForm, useFormContext } from './form.js'
+export type {
+  BridgeFormProps,
+  BridgeFormInstance,
+  BridgeFormFields,
+  BridgeFormOptions,
+} from './form.js'
 export { BridgeHead, HeadContext } from './head.js'
 export type { BridgeHeadProps } from './head.js'
 export { router, getBridge } from '@swarakaka/bridge-core'

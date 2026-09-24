@@ -93,20 +93,27 @@ export function setupForm<T extends Record<string, unknown>>(
   // The reactive proxy has the instance's shape; `reactive` only unwraps refs, which forms never hold.
   const form = reactive(instance) as unknown as FormState<T, FormTransport>
 
-  if (remember) {
-    const key = `form:${remember}`
-    onMounted(() => {
-      const restored = bridge.router.restore<T>(key)
-      if (restored) form.setData(form.rememberable(restored))
-    })
-    watch(
-      () => form.data,
-      () => bridge.router.remember(key, JSON.parse(JSON.stringify(form.rememberable()))),
-      { deep: true },
-    )
-  }
-
+  rememberForm(bridge, form, remember)
   return flatten(form, members)
+}
+
+/** Restores after mount and writes on change, leaving out `dontRemember` fields. */
+export function rememberForm<T extends Record<string, unknown>>(
+  bridge: Bridge,
+  form: FormState<T, FormTransport>,
+  remember: string | undefined,
+): void {
+  if (!remember) return
+  const key = `form:${remember}`
+  onMounted(() => {
+    const restored = bridge.router.restore<T>(key)
+    if (restored) form.setData(form.rememberable(restored))
+  })
+  watch(
+    () => form.data,
+    () => bridge.router.remember(key, JSON.parse(JSON.stringify(form.rememberable()))),
+    { deep: true },
+  )
 }
 
 export interface FormEndpoint {

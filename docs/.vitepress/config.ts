@@ -49,6 +49,7 @@ export default defineConfig({
           { text: 'Links', link: '/basics/links' },
           { text: 'Manual visits', link: '/basics/manual-visits' },
           { text: 'Forms', link: '/basics/forms' },
+          { text: 'Form component', link: '/basics/form-component' },
           { text: 'File uploads', link: '/basics/file-uploads' },
           { text: 'Validation', link: '/basics/validation' },
           { text: 'Shared data', link: '/basics/shared-data' },

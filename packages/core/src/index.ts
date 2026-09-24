@@ -34,7 +34,8 @@ export type {
   JsonValidateOptions,
 } from './json/JsonForm.js'
 export type { JsonHandleOptions, JsonCallOptions } from './json/JsonRequest.js'
-export { hasFiles, objectToFormData } from './http/formData.js'
+export { hasFiles, objectToFormData, formDataToObject, parseFieldName } from './http/formData.js'
+export { readFormElement, writeFormElement, fileFieldNames } from './forms/dom.js'
 export { PageStore, readMergeKeys, appendProp } from './pages/PageStore.js'
 export type { PageState, PageListener, SetPageOptions } from './pages/PageStore.js'
 export { requireResolver } from './pages/resolver.js'
@@ -72,7 +73,12 @@ export type {
   ValidateOptions,
 } from './forms/createForm.js'
 export { FormState } from './forms/FormState.js'
-export type { FormData_, FormTransport, FormValidateOptions } from './forms/FormState.js'
+export type {
+  FormData_,
+  FormTransport,
+  FormValidateOptions,
+  SubmitResetOptions,
+} from './forms/FormState.js'
 export { readEmbeddedPage, readBuild, readMeta } from './dom.js'
 export { StreamClient } from './stream/StreamClient.js'
 export type { StreamOptions, StreamState, StreamEvents } from './stream/StreamClient.js'

@@ -8,14 +8,13 @@ import {
   type FormOptions,
   type FormValidateOptions,
   type PrecognitionResult,
+  type SubmitResetOptions,
   warnIfOnlyOnError,
 } from './FormState.js'
 
 export type { FormData_, FormOptions } from './FormState.js'
 
-export type SubmitOptions = Omit<VisitOptions, 'method' | 'data'> & {
-  resetOnSuccess?: boolean | undefined
-}
+export type SubmitOptions = Omit<VisitOptions, 'method' | 'data'> & SubmitResetOptions
 
 /** Page-visit transport types for `FormState`. */
 export interface PageFormTransport {
@@ -67,14 +66,16 @@ export class Form<T extends FormData_> extends FormState<T, PageFormTransport> {
         this.setErrorsFromServer(errors)
         this.lastError = error
         warnIfOnlyOnError(this, method, options)
+        this.completeFailure(options)
         options.onInvalid?.(errors, error)
       },
       onError: (error) => {
         this.lastError = error
+        this.completeFailure(options)
         options.onError?.(error)
       },
       onSuccess: (page) => {
-        this.completeSuccess(options.resetOnSuccess)
+        this.completeSuccess(options)
         options.onSuccess?.(page)
       },
       onFinish: (visit) => {

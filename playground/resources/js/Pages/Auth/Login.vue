@@ -1,11 +1,9 @@
 <script setup lang="ts">
-import { BridgeHead, useForm } from '@swarakaka/bridge-vue'
+import { BridgeForm, BridgeHead } from '@swarakaka/bridge-vue'
 import AppLayout from '@/Layouts/AppLayout.vue'
 
 defineOptions({ layout: AppLayout })
-const props = defineProps<{ hint: { email: string; password: string } }>()
-
-const form = useForm({ email: props.hint.email, password: '', remember: false })
+defineProps<{ hint: { email: string; password: string } }>()
 </script>
 
 <template>
@@ -15,12 +13,20 @@ const form = useForm({ email: props.hint.email, password: '', remember: false })
         <p class="mt-1 text-sm text-slate-500">
             Seeded user: {{ hint.email }} / {{ hint.password }}
         </p>
-        <form class="mt-6 space-y-4" data-testid="login-form" @submit.prevent="form.post('/login')">
+        <!-- Plain inputs: <BridgeForm> reads them by name; the password is cleared after a failed attempt. -->
+        <BridgeForm
+            v-slot="form"
+            action="/login"
+            class="mt-6 space-y-4"
+            data-testid="login-form"
+            :reset-on-error="['password']"
+            disable-while-processing
+        >
             <div>
                 <label for="email" class="block text-sm font-medium">Email</label>
                 <input
                     id="email"
-                    v-model="form.data.email"
+                    :value="hint.email"
                     name="email"
                     type="email"
                     class="mt-1 w-full rounded border border-slate-300 px-3 py-2"
@@ -37,7 +43,6 @@ const form = useForm({ email: props.hint.email, password: '', remember: false })
                 <label for="password" class="block text-sm font-medium">Password</label>
                 <input
                     id="password"
-                    v-model="form.data.password"
                     name="password"
                     type="password"
                     class="mt-1 w-full rounded border border-slate-300 px-3 py-2"
@@ -51,7 +56,7 @@ const form = useForm({ email: props.hint.email, password: '', remember: false })
                 </p>
             </div>
             <label class="flex items-center gap-2 text-sm"
-                ><input v-model="form.data.remember" type="checkbox" /> Remember me</label
+                ><input type="checkbox" name="remember" value="1" /> Remember me</label
             >
             <button
                 type="submit"
@@ -61,6 +66,6 @@ const form = useForm({ email: props.hint.email, password: '', remember: false })
             >
                 Sign in
             </button>
-        </form>
+        </BridgeForm>
     </div>
 </template>

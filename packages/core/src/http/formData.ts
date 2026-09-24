@@ -73,3 +73,79 @@ function append(form: FormData, key: string, value: unknown): void {
   }
   form.append(key, String(value))
 }
+
+/**
+ * Splits a field name into path segments: `a[b][0]`, `a.b`, `a[]` (the empty
+ * segment appends to a list) and `a\.b` (a literal dot) are all understood.
+ */
+export function parseFieldName(name: string): string[] {
+  const segments: string[] = []
+  let current = ''
+  let pending = true
+  for (let i = 0; i < name.length; i++) {
+    const ch = name[i]!
+    if (ch === '\\' && name[i + 1] === '.') {
+      current += '.'
+      pending = true
+      i++
+    } else if (ch === '.') {
+      if (pending) segments.push(current)
+      current = ''
+      pending = true
+    } else if (ch === '[') {
+      const end = name.indexOf(']', i)
+      if (end === -1) {
+        current += name.slice(i)
+        break
+      }
+      if (pending) segments.push(current)
+      segments.push(name.slice(i + 1, end))
+      current = ''
+      pending = false
+      i = end
+    } else {
+      current += ch
+      pending = true
+    }
+  }
+  if (pending) segments.push(current)
+  return segments
+}
+
+/**
+ * The inverse of `objectToFormData`: nested objects and lists from field names
+ * (see `parseFieldName`). A repeated name without `[]` keeps the last value; an
+ * empty file input (a nameless, empty `File`) becomes `null`.
+ */
+export function formDataToObject(data: FormData): Record<string, unknown> {
+  const root: Record<string, unknown> = {}
+  for (const [name, raw] of data.entries()) {
+    const value = typeof raw !== 'string' && raw.name === '' && raw.size === 0 ? null : raw
+    assign(root, parseFieldName(name), value)
+  }
+  return root
+}
+
+function assign(root: Record<string, unknown>, segments: string[], value: unknown): void {
+  let cursor: Record<string, unknown> | unknown[] = root
+  segments.forEach((segment, i) => {
+    const last = i === segments.length - 1
+    const list = Array.isArray(cursor)
+    const key: string | number =
+      list && segment === ''
+        ? (cursor as unknown[]).length
+        : list && /^\d+$/.test(segment)
+          ? Number(segment)
+          : segment
+    const target = cursor as Record<string | number, unknown>
+    if (last) {
+      target[key] = value
+      return
+    }
+    const next = segments[i + 1]!
+    if (typeof target[key] !== 'object' || target[key] === null) {
+      target[key] = next === '' || /^\d+$/.test(next) ? [] : {}
+    }
+    cursor = target[key] as Record<string, unknown> | unknown[]
+  })
+}

@@ -3,6 +3,7 @@ import { act, createContext, createElement, useContext, useEffect } from 'react'
 import { createBridge, getBridge, PageCache } from '@swarakaka/bridge-core'
 import type { BridgePage } from '@swarakaka/bridge-protocol'
 import {
+  BridgeForm,
   BridgeHead,
   BridgeLink,
   createBridgeApp,
@@ -10,9 +11,10 @@ import {
   useJson,
   useJsonForm,
   useRemember,
+  useFormContext,
   useStream,
 } from '../src/index.js'
-import type { BridgeApp, PageComponent } from '../src/index.js'
+import type { BridgeApp, BridgeFormInstance, PageComponent } from '../src/index.js'
 import { createSsrRenderer } from '../src/server/index.js'
 
 function page(overrides: Partial<BridgePage> = {}): BridgePage {
@@ -525,5 +527,134 @@ describe('server rendering', () => {
     expect($('#app')?.getAttribute('data-bridge-hydrated')).toBe('true')
     expect($('#layout h1')?.textContent).toBe('Customers')
     errors.mockRestore()
+  })
+})
+
+describe('BridgeForm', () => {
+  const loginPage = () => pageResponse(page({ component: 'Login', url: '/login' }))
+  const invalid = (errors: Record<string, string[]>) =>
+    pageResponse(
+      {
+        protocol: 1,
+        type: 'error',
+        error: { status: 422, kind: 'validation', message: 'x', errors },
+      },
+      422,
+    )
+  const field = (name: string) => document.querySelector<HTMLInputElement>(`[name="${name}"]`)!
+  // React tracks input values; the native setter plus an input event is what typing does.
+  const typeInto = (name: string, value: string) =>
+    act(() => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(
+        field(name),
+        value,
+      )
+      field(name).dispatchEvent(new Event('input', { bubbles: true }))
+    })
+  const submitForm = () =>
+    act(async () => {
+      document.querySelector('form')!.requestSubmit()
+    })
+
+  const Fields = ({ form }: { form: BridgeFormInstance }) => (
+    <>
+      <input name="email" defaultValue="ada@example.com" />
+      <input name="password" type="password" defaultValue="" />
+      <p id="error">{form.errors.email ?? ''}</p>
+      <span id="dirty">{String(form.isDirty)}</span>
+      <button id="reset" type="button" onClick={() => form.reset()} />
+    </>
+  )
+
+  it('reads defaults, tracks typing, submits the values and renders errors', async () => {
+    let fail = true
+    const http = mockFetch(() => (fail ? invalid({ email: ['Nope'] }) : loginPage()))
+    const success = vi.fn()
+    const Login: PageComponent = () => (
+      <BridgeForm action="/login" onSuccess={success} options={{ preserveState: true }}>
+        {(form) => <Fields form={form} />}
+      </BridgeForm>
+    )
+    await mount({ Login }, page({ component: 'Login', url: '/login' }), http)
+    expect($('#dirty')?.textContent).toBe('false')
+
+    await typeInto('password', 'secret')
+    expect($('#dirty')?.textContent).toBe('true')
+
+    await submitForm()
+    await flush()
+    expect($('#error')?.textContent).toBe('Nope')
+    expect(JSON.parse(String(http.mock.calls.at(-1)![1].body))).toEqual({
+      email: 'ada@example.com',
+      password: 'secret',
+    })
+
+    await act(async () => ($('#reset') as HTMLButtonElement).click())
+    expect(field('password').value).toBe('')
+
+    fail = false
+    await typeInto('email', 'grace@example.com')
+    await submitForm()
+    await flush()
+    expect(success).toHaveBeenCalledOnce()
+    expect($('#dirty')?.textContent).toBe('false')
+    expect(field('email').defaultValue).toBe('grace@example.com')
+  })
+
+  it('submits in JSON mode, shares the form through context and a ref, and is null outside', async () => {
+    const http = mockFetch(
+      () =>
+        new Response(JSON.stringify({ data: { token: 'abc' } }), {
+          status: 201,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+    )
+    const seen: Array<BridgeFormInstance | null> = []
+    const Child = () => {
+      const form = useFormContext()
+      seen.push(form)
+      return <span id="token">{String((form?.result as { token?: string })?.token ?? '')}</span>
+    }
+    let handle: BridgeFormInstance | null = null
+    const Tokens: PageComponent = () => (
+      <>
+        <BridgeForm action="/tokens" json ref={(r) => void (handle = r)}>
+          <input name="name" defaultValue="ci" />
+          <Child />
+        </BridgeForm>
+        <Child />
+      </>
+    )
+    await mount({ Tokens }, page({ component: 'Tokens', url: '/tokens' }), http)
+
+    await act(async () => void (await handle!.submit()))
+    await flush()
+
+    const [, init] = http.mock.calls.at(-1)!
+    expect((init.headers as Record<string, string>).Accept).toBe('application/json')
+    expect(JSON.parse(String(init.body))).toEqual({ name: 'ci' })
+    expect($('#token')?.textContent).toBe('abc')
+    expect(seen.some((form) => form === null)).toBe(true)
+  })
+
+  it('resets listed fields after errors and is inert while processing', async () => {
+    let release: (r: Response) => void = () => undefined
+    const http = mockFetch(() => new Promise<Response>((resolve) => (release = resolve)))
+    const Login: PageComponent = () => (
+      <BridgeForm action="/login" resetOnError={['password']} disableWhileProcessing>
+        {(form) => <Fields form={form} />}
+      </BridgeForm>
+    )
+    await mount({ Login }, page({ component: 'Login', url: '/login' }), http)
+    await typeInto('password', 'bad')
+
+    await submitForm()
+    expect(document.querySelector('form')!.hasAttribute('inert')).toBe(true)
+    await act(async () => release(invalid({ password: ['Wrong'] })))
+    await flush()
+
+    expect(document.querySelector('form')!.hasAttribute('inert')).toBe(false)
+    expect(field('password').value).toBe('')
+    expect(field('email').value).toBe('ada@example.com')
   })
 })

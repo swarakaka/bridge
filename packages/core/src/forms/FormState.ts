@@ -5,9 +5,17 @@ import type { ValidationErrors } from '../router/Visit.js'
 
 export type FormData_ = Record<string, unknown>
 
-export interface FormOptions {
-  /** Reset to defaults after a successful submit. */
-  resetOnSuccess?: boolean | undefined
+/** What a submission does to the values afterwards; per form (`FormOptions`) or per submit. */
+export interface SubmitResetOptions {
+  /** Reset to defaults after a success: `true` for every field, or a list of fields. */
+  resetOnSuccess?: boolean | string[] | undefined
+  /** Reset after a validation error or other error response: `true` or a list of fields. */
+  resetOnError?: boolean | string[] | undefined
+  /** After a success, make the submitted values the new defaults (default `true`). */
+  setDefaultsOnSuccess?: boolean | undefined
+}
+
+export interface FormOptions extends SubmitResetOptions {
   /** How long `recentlySuccessful` stays true, in ms. */
   recentlySuccessfulFor?: number | undefined
 }
@@ -498,16 +506,33 @@ export abstract class FormState<T extends FormData_, K extends FormTransport> {
     this.progress = null
   }
 
-  /** Success bookkeeping: errors cleared, success flags, then reset or new defaults. */
-  protected completeSuccess(resetOnSuccess: boolean | undefined): void {
+  /**
+   * Success bookkeeping: errors cleared, success flags, then the values. `resetOnSuccess: true`
+   * restores every default; a field list resets those fields first, so the new defaults
+   * (`setDefaultsOnSuccess`, default true) take their old values.
+   */
+  protected completeSuccess(options: SubmitResetOptions): void {
     this.clearErrors()
     this.wasSuccessful = true
     this.recentlySuccessful = true
     this.recentlyTimer = setTimeout(() => {
       this.recentlySuccessful = false
     }, this.options.recentlySuccessfulFor ?? 2000)
-    if (resetOnSuccess ?? this.options.resetOnSuccess) this.reset()
-    else this.setDefaults()
+    const reset = options.resetOnSuccess ?? this.options.resetOnSuccess
+    if (reset === true) {
+      this.reset()
+      return
+    }
+    if (Array.isArray(reset)) this.reset(...(reset as Array<keyof T & string>))
+    if (options.setDefaultsOnSuccess ?? this.options.setDefaultsOnSuccess ?? true)
+      this.setDefaults()
+  }
+
+  /** After a validation error or other error response: `resetOnError`. */
+  protected completeFailure(options: SubmitResetOptions): void {
+    const reset = options.resetOnError ?? this.options.resetOnError
+    if (reset === true) this.reset()
+    else if (Array.isArray(reset)) this.reset(...(reset as Array<keyof T & string>))
   }
 
   protected setErrorsFromServer(errors: ValidationErrors): void {

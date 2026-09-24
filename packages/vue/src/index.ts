@@ -26,6 +26,12 @@ export type { UseStreamOptions, UseStreamReturn } from './composables/useStream.
 export { BridgeLink } from './components/BridgeLink.js'
 export { Deferred } from './components/Deferred.js'
 export { BridgeHead } from './components/BridgeHead.js'
+export { BridgeForm, useFormContext, FormContextKey } from './components/BridgeForm.js'
+export type {
+  BridgeFormInstance,
+  BridgeFormFields,
+  BridgeFormOptions,
+} from './components/BridgeForm.js'
 export { router, getBridge } from '@swarakaka/bridge-core'
 export type {
   Bridge,

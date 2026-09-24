@@ -66,7 +66,7 @@ A field cannot share a name with a form member: `data`, `defaults`, `errors`, `a
 
 `submit(method, url, options)` (or `submit(options)` with an endpoint from `useForm(method, url, data)`), `get`, `post`, `put`, `patch`, `delete`, `validate`, `touch`, `touched`, `valid`, `invalid` (see [Validation](/basics/validation#live-validation-with-precognition)), `setData` (values, `(field, value)`, or a callback whose result is merged: `setData((data) => ({ ...data, tags: [...data.tags, tag] }))`), `transform(fn)`, `reset(...fields)`, `resetAndClearErrors(...fields)`, `setDefaults()`, `setError`, `clearErrors`, `dontRemember(...fields)`, `cancel`.
 
-To submit a form without navigating, in JSON mode, use [`useJsonForm`](/beyond/json-mode#forms-over-json-usejsonform): same fields and methods, with the response in `form.result`.
+For forms written as plain inputs, without `v-model` or state per field, use the [`<BridgeForm>` component](/basics/form-component). To submit a form without navigating, in JSON mode, use [`useJsonForm`](/beyond/json-mode#forms-over-json-usejsonform): same fields and methods, with the response in `form.result`.
 
 Submission options are the [visit options](/basics/manual-visits) plus `resetOnSuccess`. On success the current values become the new defaults unless `resetOnSuccess` is set.
 

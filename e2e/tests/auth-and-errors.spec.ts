@@ -15,6 +15,9 @@ test.describe('authentication', () => {
     await page.getByLabel('Password').fill('nope')
     await page.getByTestId('submit').click()
     await expect(page.getByTestId('error-email')).toContainText('do not match')
+    // <BridgeForm reset-on-error="['password']">: the password is cleared, the email kept.
+    await expect(page.getByLabel('Password')).toHaveValue('')
+    await expect(page.getByLabel('Email')).toHaveValue('ada@example.com')
   })
 
   test('an unauthenticated page request navigates to login in-app', async ({ page }) => {

@@ -58,7 +58,7 @@ export function useDeferred<T = unknown>(key: string): { loading: boolean; value
  * Methods in `quiet` change nothing visible (or are safe to call during
  * render) and do not re-render.
  */
-function useHandle<H extends object>(
+export function useHandle<H extends object>(
   create: () => H,
   quiet: ReadonlySet<PropertyKey> = new Set(),
 ): H & { refresh(): void } {
@@ -111,7 +111,7 @@ export interface UseFormOptions extends FormOptions {
 }
 
 /** Form methods that do not re-render: safe to chain during render (`useForm(...).dontRemember('password')`). */
-const QUIET_FORM_METHODS: ReadonlySet<PropertyKey> = new Set([
+export const QUIET_FORM_METHODS: ReadonlySet<PropertyKey> = new Set([
   'dontRemember',
   'rememberable',
   'touched',
@@ -214,7 +214,7 @@ export function useJsonForm<T extends Record<string, unknown>, R = unknown>(
 }
 
 /** Restores after mount and writes on change, leaving out `dontRemember` fields. */
-function useFormRemember<T extends Record<string, unknown>>(
+export function useFormRemember<T extends Record<string, unknown>>(
   form: FormState<T, FormTransport>,
   remember: string | undefined,
 ): void {

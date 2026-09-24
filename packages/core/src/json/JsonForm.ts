@@ -6,6 +6,7 @@ import {
   type FormOptions,
   type FormValidateOptions,
   type PrecognitionResult,
+  type SubmitResetOptions,
   warnIfOnlyOnError,
 } from '../forms/FormState.js'
 import type {
@@ -22,18 +23,18 @@ export interface JsonFormOptions extends FormOptions, JsonHandleOptions {}
 export type JsonSubmitOptions<R = unknown> = Omit<
   JsonRequestOptions,
   'signal' | 'data' | 'mutation'
-> & {
-  resetOnSuccess?: boolean | undefined
-  /** Return `false` to skip the request. */
-  onBefore?: (() => boolean | void) | undefined
-  onStart?: (() => void) | undefined
-  onSuccess?: ((result: R | null, meta: JsonMeta) => void) | undefined
-  onInvalid?: ((errors: ValidationErrors, message: string) => void) | undefined
-  onError?: ((error: JsonError) => void) | undefined
-  onException?: ((error: unknown) => void) | undefined
-  onCancel?: (() => void) | undefined
-  onFinish?: ((outcome: JsonOutcome<R>) => void) | undefined
-}
+> &
+  SubmitResetOptions & {
+    /** Return `false` to skip the request. */
+    onBefore?: (() => boolean | void) | undefined
+    onStart?: (() => void) | undefined
+    onSuccess?: ((result: R | null, meta: JsonMeta) => void) | undefined
+    onInvalid?: ((errors: ValidationErrors, message: string) => void) | undefined
+    onError?: ((error: JsonError) => void) | undefined
+    onException?: ((error: unknown) => void) | undefined
+    onCancel?: (() => void) | undefined
+    onFinish?: ((outcome: JsonOutcome<R>) => void) | undefined
+  }
 
 /** JSON-mode transport types for `FormState`. */
 export interface JsonFormTransport<R> {
@@ -77,6 +78,8 @@ export class JsonForm<T extends FormData_, R = unknown> extends FormState<T, Jso
   ): Promise<JsonOutcome<R>> {
     const {
       resetOnSuccess,
+      resetOnError,
+      setDefaultsOnSuccess,
       onBefore,
       onStart,
       onProgress,
@@ -123,17 +126,19 @@ export class JsonForm<T extends FormData_, R = unknown> extends FormState<T, Jso
         this.result = outcome.data
         this.meta = outcome.meta
         this.httpStatus = outcome.httpStatus
-        this.completeSuccess(resetOnSuccess)
+        this.completeSuccess({ resetOnSuccess, setDefaultsOnSuccess })
         onSuccess?.(outcome.data, outcome.meta)
         break
       case 'invalid':
         this.setErrorsFromServer(outcome.errors)
         this.recordInvalid(outcome.message)
         warnIfOnlyOnError(this, method, { onError, onInvalid })
+        this.completeFailure({ resetOnError })
         onInvalid?.(outcome.errors, outcome.message)
         break
       case 'error':
         this.recordError(outcome.error)
+        this.completeFailure({ resetOnError })
         onError?.(outcome.error)
         break
       case 'exception':
