@@ -19,6 +19,27 @@ Closures are resolved per request and container-injected. Page props win over sh
 
 Props shared while the application boots (service providers) apply to every request. Props shared later, from middleware or a controller, apply only to the request that shared them: Bridge drops them once the request is handled, so a long-lived worker such as Octane never carries one user's props into the next request.
 
+## From middleware
+
+`php artisan bridge:middleware` generates an application middleware (see [server-side setup](/installation/server-side#your-own-middleware-optional)). Return per-request shares from its `share()` method:
+
+```php
+use Bridge\Http\Middleware\HandleBridgeRequests as Middleware;
+use Illuminate\Http\Request;
+
+class HandleBridgeRequests extends Middleware
+{
+    public function share(Request $request): array
+    {
+        return [
+            'auth.user' => fn () => $request->user()?->only('id', 'name'),
+        ];
+    }
+}
+```
+
+These are request shares: Bridge drops them once the request is handled.
+
 ## Defaults
 
 Bridge shares two props out of the box:

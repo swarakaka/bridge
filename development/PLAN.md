@@ -1035,7 +1035,7 @@ src/
   Stream/Listeners/PublishStreamableEvents.php
   Support/Version.php  Support/Headers.php (constants)  Support/RequestMacros.php
   Testing/BridgeTestingMacros.php  AssertablePage.php  AssertableStream.php
-  Console/InstallCommand.php  DoctorCommand.php  PruneStreamEventsCommand.php
+  Console/InstallCommand.php  MiddlewareCommand.php  DoctorCommand.php  PruneStreamEventsCommand.php
   Ssr/SsrGateway.php  HttpSsrGateway.php  NullSsrGateway.php          (Phase 5)
 tests/
   Unit/Negotiation/*  Unit/Props/*  Unit/Errors/*  Unit/Stream/Bus/*
@@ -1277,6 +1277,8 @@ Recorded as phases ship. Each entry names the section it refines.
 - **§10.2, §10.3 JSON-mode client.** Added `JsonClient`/`JsonRequest` in core and `useJson` in the Vue adapter so a component can call the application's JSON mode (the same routes, `Accept: application/json`) without a page visit; before this the playground used raw `fetch`. The name follows the mode names already used by the composables (`usePage`, `useStream`), not Inertia's `useHttp`. The Bridge envelope is unwrapped (`data`, `meta`); a 2xx body that is not an envelope is exposed as `data` unchanged so non-Bridge JSON routes work too. Error kinds are derived from the HTTP status using the table in `spec/errors.md` §2 because the JSON representation is Laravel-native and carries no `kind`. `useJson` does not react to `csrf`/`unauthenticated` (no reload, no redirect): the caller decides, since JSON calls are not navigations.
 
 - **§10.3, §28 Zero-config page resolution and `withApp` (2026-09-24).** New package `@swarakaka/bridge-vite` (`packages/vite`, in the `fixed` version group), a Vite plugin that rewrites `createBridgeApp(...)` and `createSsrRenderer(...)` calls imported from `@swarakaka/bridge-vue`/`-react` (and their `/server` entries) at build time: a call without `resolve` gets one built on `import.meta.glob('./Pages/**/*.<ext>')` relative to the calling file, and a `pages` option (`'./Dir'` or `{ path, extension, lazy, transform }`) is replaced by the same resolver. It has to be a build step because `import.meta.glob` only works on literal patterns in application source. `resolve` is therefore optional in the adapters' types; without the plugin a missing `resolve` (or a leftover `pages`) throws a message naming the plugin. `withApp(app, { ssr, page })` customises the application before it mounts or renders: the Vue app (register plugins), or for React the element tree (return it wrapped in providers). The same callback can be passed to `createBridgeApp` and `createSsrRenderer`; `setup` (Vue) and `wrap` (React server) remain for full control. Modelled on Inertia's developer experience; the implementation is Bridge's own.
+
+- **§9.2 Application middleware (2026-09-24).** `HandleBridgeRequests` is no longer `final`: applications may extend it and override `share(Request): array`, whose result is shared as request props (dropped after the request, per the §6.5 hardening entry). `php artisan bridge:middleware {name=HandleBridgeRequests}` generates the subclass in `app/Http/Middleware` from `packages/laravel/stubs/middleware.stub`; the app appends it to `web` in `bootstrap/app.php`. Auto-registration skips the package class when the `web` group already contains a subclass (the app's `withMiddleware` callback runs before providers boot), so negotiation never runs twice. Only `share()` is a hook; the build version stays in `bridge.build.version`/`Bridge::setVersion()` and the shell in `bridge.shell.view`. Modelled on Inertia's `inertia:middleware`.
 
 ### 2.0 (2026-09-24)
 

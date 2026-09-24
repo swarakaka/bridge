@@ -62,6 +62,7 @@ The Laravel package is developed only in `packages/laravel` here. `swarakaka/bri
 - `Bridge\Errors` — `ErrorMapper` (exception → `ErrorEnvelope`) and `ExceptionRenderer` (registered with Laravel's handler; only takes over page/JSON modes).
 - `Bridge\Http\Middleware\HandleBridgeRequests` is appended to the `web` group through the HTTP kernel (`callAfterResolving(Kernel)`), because the kernel re-syncs groups to the router on construction; pushing into the router directly is overwritten.
 - Controllers in the playground contain no mode-specific code. Keep it that way.
+- `HandleBridgeRequests` is extendable (`share(Request)` hook); `bridge:middleware` generates the app subclass from `stubs/middleware.stub`. Auto-registration skips `web` when the group already holds a subclass (`AppMiddlewareTestCase` covers it, in `tests/AppMiddleware`).
 
 ## Package layout notes (client)
 

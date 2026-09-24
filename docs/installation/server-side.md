@@ -11,6 +11,26 @@ php artisan bridge:install
 
 `bridge:install` publishes `config/bridge.php` and `resources/views/app.blade.php`. The `bridge` middleware is appended to the `web` group automatically (`bridge.middleware.auto_register`).
 
+## Your own middleware (optional)
+
+To keep the middleware in your application, for example to share props per request, generate a subclass:
+
+```bash
+php artisan bridge:middleware
+```
+
+It creates `app/Http/Middleware/HandleBridgeRequests.php`, which extends the package middleware. Append it to the `web` group in `bootstrap/app.php`:
+
+```php
+->withMiddleware(function (Middleware $middleware): void {
+    $middleware->web(append: [
+        \App\Http\Middleware\HandleBridgeRequests::class,
+    ]);
+})
+```
+
+Bridge stops adding its own middleware to `web` once the group contains a subclass, so it never runs twice. Keep it last in the group so the session, CSRF and authentication run before it. See [shared data](/basics/shared-data#from-middleware) for the `share()` method.
+
 ## The root template
 
 The shell is a Blade view that marks where the client mounts. Set `bridge.shell.view` to `app` to use the published one:

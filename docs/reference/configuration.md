@@ -21,7 +21,7 @@
 | `ssr.timeout`              | `2.0`                    | Seconds before falling back to client rendering.                                                        |
 | `ssr.cooldown_s`           | `10`                     | After a connection failure or timeout, skip SSR for this many seconds.                                  |
 | `ssr.bundle`               | `bootstrap/ssr/ssr.js`   | Bundle started by `bridge:ssr`.                                                                         |
-| `middleware.auto_register` | `true`                   | Append the `bridge` middleware to the `web` group.                                                      |
+| `middleware.auto_register` | `true`                   | Append the `bridge` middleware to the `web` group (skipped when the group has a subclass).              |
 
 ## Streams
 
@@ -44,6 +44,7 @@
 | Command               | Purpose                                                           |
 | --------------------- | ----------------------------------------------------------------- |
 | `bridge:install`      | Publish config and shell view.                                    |
+| `bridge:middleware`   | Create `app/Http/Middleware/HandleBridgeRequests.php`.            |
 | `bridge:doctor`       | Check PHP output settings, the bus and stream time-to-first-byte. |
 | `bridge:stream:prune` | Trim the database bus. Schedule it.                               |
 | `bridge:ssr`          | Start the SSR server from `ssr.bundle`.                           |
