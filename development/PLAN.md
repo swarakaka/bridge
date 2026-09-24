@@ -985,8 +985,8 @@ Bridge/
 ├── package.json                 pnpm workspace root, scripts (build, test, lint, play)
 ├── pnpm-workspace.yaml
 ├── tsconfig.base.json  .editorconfig  .prettierrc  eslint.config.js  phpstan.neon  pint.json
-├── README.md  LICENSE (MIT)  SECURITY.md  CONTRIBUTING.md  CHANGELOG.md  CODE_OF_CONDUCT.md
-└── .changeset/                  changesets for npm packages; Laravel package version tracked in CHANGELOG
+├── README.md  LICENSE (MIT)  SECURITY.md  CONTRIBUTING.md  CHANGELOG.md (empty)  CODE_OF_CONDUCT.md
+└── .changeset/                  version bumps for the npm packages (one fixed version; changelogs kept empty)
 ```
 
 Changes from the brief's proposal: a separate `core/` package (required for React/mobile reuse), no root `tests/` (tests live with their packages; E2E has its own `e2e/` with different tooling), `protocol/` promoted to the contract that both sides test against.
@@ -1286,6 +1286,7 @@ Recorded as phases ship. Each entry names the section it refines.
 - **§20.4 Stream limits, low-level fixes.** `ConnectionLimiter` uses per-stream leases under a cache lock when the store supports locks: subscriptions take a lease of three heartbeats plus 5 s and renew it each heartbeat; producers keep one for the stream lifetime; other stores keep the counter. A single process-wide shutdown function replaces one per stream. The Redis bus caps `XREAD BLOCK` half a second below the client read timeout. Database channel keys over 190 characters are hashed. `spec/json.md` §2 now lists resource collections with `with()`/`additional()`, which keep Laravel's `{data, ...}` shape; the recursive merge of resource extras matches Laravel's own `ResourceResponse`.
 - **§10.4 React adapter.** No longer a skeleton: it matches the Vue adapter (`useStream`, `useJson`, `useRemember`, `useForm({ remember })`, `BridgeHead`, a full `BridgeLink`, and `@swarakaka/bridge-react/server`). Pieces both adapters need moved into core: `createSsrServer` lives in `@swarakaka/bridge-core/server` (the Vue server entry re-exports it), and head rendering and client-side meta ownership (`renderHead`, `HeadManager`) are in the core entry. The React package stays pre-1.0 and experimental.
 - **§31 Releases by tag.** npm releases run only on a `vX.Y.Z` tag (see §31).
+- **§31 One version for all packages, no changelogs.** Every package shares one version: the four npm packages are a changesets `fixed` group (React leaves 0.x), and the Laravel package uses the same numbers. The first public release is 1.0.1: an earlier 1.0.0 was published to npm and withdrawn, and npm never reuses a published `name@version`. Changelogs are not maintained (maintainer decision, 2026-09-24): the `CHANGELOG.md` files are kept empty and changesets run with `"changelog": false`; the git history and tags are the record of changes.
 - **§9, §30 Package requirements.** `swarakaka/bridge-laravel` requires `laravel/framework: ^13.0` instead of four `illuminate/*` split packages: the source also uses Foundation (no split package exists), Console, Database, Routing, Auth, Session, Validation, Pagination, Cache and Redis, which only resolved in CI because Testbench pulls in the framework. The built SSR bundle (`playground/bootstrap/ssr`) is ignored and untracked, and `.nvmrc` pins Node 22.13 to match `engines`.
 
 ### Phase 5 (2026-09-22)

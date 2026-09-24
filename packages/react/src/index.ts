@@ -1,6 +1,6 @@
 /**
- * @swarakaka/bridge-react — React bindings over @swarakaka/bridge-core (experimental,
- * pre-1.0). Server rendering: `@swarakaka/bridge-react/server`.
+ * @swarakaka/bridge-react — React bindings over @swarakaka/bridge-core (experimental: the API
+ * may still change in a minor release). Server rendering: `@swarakaka/bridge-react/server`.
  */
 export { createBridgeApp } from './createBridgeApp.js'
 export type {

@@ -24,7 +24,7 @@ public function index()
 
 Bridge is inspired by Inertia's developer experience but is designed as `Laravel → Bridge Protocol → Client`, so the Laravel package has no Vue-specific assumptions and React, mobile, and CLI clients can consume the same backend.
 
-> **Status: 1.0.** The npm packages `@swarakaka/bridge-protocol`, `-core` and `-vue` are at 1.0.0; `@swarakaka/bridge-react` (0.2.0) is experimental. The Laravel package is versioned in [`CHANGELOG.md`](CHANGELOG.md); its Packagist release is still pending (see [`development/release-readiness.md`](development/release-readiness.md)). [`development/PLAN.md`](development/PLAN.md) holds the design, the phase breakdown and every deviation made since.
+> **Status: 1.0.1, the first public release.** All packages share one version: `swarakaka/bridge-laravel` on Packagist and `@swarakaka/bridge-protocol`, `-core`, `-vue` and `-react` on npm (the React adapter is experimental). Release steps are in [`CONTRIBUTING.md`](CONTRIBUTING.md#releasing-maintainers). [`development/PLAN.md`](development/PLAN.md) holds the design, the phase breakdown and every deviation made since.
 
 ## Packages
 
@@ -62,7 +62,7 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/) with
 
 - [Technical implementation plan](development/PLAN.md)
 - [Protocol specification](packages/protocol/spec/README.md)
-- [Contributing](CONTRIBUTING.md) · [Security policy](SECURITY.md) · [Changelog](CHANGELOG.md)
+- [Contributing](CONTRIBUTING.md) · [Security policy](SECURITY.md)
 
 ## License
 

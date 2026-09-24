@@ -1,9 +1,16 @@
 {
   "$schema": "https://unpkg.com/@changesets/config@3.0.0/schema.json",
-  "changelog": "@changesets/cli/changelog",
+  "changelog": false,
   "commit": false,
-  "fixed": [],
-  "linked": [["@swarakaka/bridge-protocol", "@swarakaka/bridge-core", "@swarakaka/bridge-vue"]],
+  "fixed": [
+    [
+      "@swarakaka/bridge-protocol",
+      "@swarakaka/bridge-core",
+      "@swarakaka/bridge-vue",
+      "@swarakaka/bridge-react"
+    ]
+  ],
+  "linked": [],
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
