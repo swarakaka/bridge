@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest'
 import { defineComponent, h, inject } from 'vue'
 import { createSsrRenderer, createSsrServer } from '../src/server/index.js'
-import { BridgeHead, usePage, WhenVisible } from '../src/index.js'
+import { BridgeHead, usePage, usePoll, WhenVisible } from '../src/index.js'
 import { page } from './helpers.js'
 
 const Layout = defineComponent({
@@ -32,6 +32,17 @@ const Index = defineComponent({
 ;(Index as unknown as { layout: unknown }).layout = Layout
 
 describe('SSR renderer', () => {
+  it('starts no poll while rendering on the server', async () => {
+    const Queue = defineComponent({
+      setup() {
+        const poll = usePoll(10, { only: ['queue'] })
+        return () => h('p', String(poll.active.value))
+      },
+    })
+    const render = createSsrRenderer({ resolve: () => Queue })
+    expect((await render(page({ component: 'Queue', props: {} }))).body).toContain('<p>false</p>')
+  })
+
   it('renders the WhenVisible fallback without observing or loading', async () => {
     const Show = defineComponent({
       setup: () => () =>

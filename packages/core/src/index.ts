@@ -63,6 +63,7 @@ export {
 } from './router/Scroll.js'
 export { Router } from './router/Router.js'
 export type { RouterDependencies, ReloadOptions, OptimisticVisits } from './router/Router.js'
+export type { PollHandle, PollOptions } from './router/poll.js'
 export { isSameOrigin, relativeUrl, mergeQuery, toUrl, stripHash } from './router/url.js'
 export type { QueryStringArrayFormat } from './router/url.js'
 export type { Method } from './router/url.js'

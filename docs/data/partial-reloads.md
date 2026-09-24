@@ -38,4 +38,6 @@ If the URL now renders a different component (a redirect to another page, a role
 
 ## Coalescing
 
-Reload calls made within 50 ms are merged into one request with the union of keys. Stream invalidations rely on this: five `invalidate` events arriving together become one round trip.
+Reload calls made within 50 ms are merged into one request with the union of keys. Stream invalidations rely on this: five `invalidate` events arriving together become one round trip. [Polling](/data/polling) ticks join the same request.
+
+Pass `showProgress: false` to mark a reload as background work (`visit.showProgress`); a merged request shows progress if any of its callers wanted it.

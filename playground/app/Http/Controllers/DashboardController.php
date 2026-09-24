@@ -12,6 +12,8 @@ class DashboardController extends Controller
     {
         return Bridge::render('Dashboard', [
             'recentCustomers' => CustomerResource::collection(Customer::latest('id')->limit(5)->get()),
+            // Reloaded every few seconds by usePoll() on the page.
+            'serverTime' => now()->format('H:i:s'),
             'stats' => Bridge::defer(fn () => [
                 'customers' => Customer::count(),
                 'active' => Customer::where('status', 'active')->count(),

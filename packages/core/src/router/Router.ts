@@ -5,6 +5,7 @@ import type { RequestManager } from '../http/RequestManager.js'
 import { parseResponse, type ParsedResponse } from '../http/responseParser.js'
 import type { OptimisticSettle, PageStore } from '../pages/PageStore.js'
 import type { History, HistoryState, StoredHistoryState } from './History.js'
+import { createPoll, type PollHandle, type PollOptions } from './poll.js'
 import { captureScroll, resetScroll, restoreScroll } from './Scroll.js'
 import { isSameOrigin, relativeUrl, toUrl } from './url.js'
 import type {
@@ -36,6 +37,8 @@ export interface ReloadOptions {
   except?: string[] | undefined
   headers?: Record<string, string> | undefined
   preserveScroll?: boolean | undefined
+  /** `false` marks the reload as background work (`visit.showProgress`); combined reloads show progress if any caller wants it. */
+  showProgress?: boolean | undefined
   onSuccess?: ((page: BridgePage) => void) | undefined
   onFinish?: (() => void) | undefined
 }
@@ -46,6 +49,7 @@ interface PendingReload {
   except: Set<string>
   headers: Record<string, string>
   preserveScroll: boolean
+  showProgress: boolean
   resolvers: Array<(outcome: VisitOutcome) => void>
   callbacks: ReloadOptions[]
 }
@@ -152,6 +156,7 @@ export class Router {
         except: new Set(),
         headers: {},
         preserveScroll: true,
+        showProgress: false,
         resolvers: [],
         callbacks: [],
       })
@@ -161,12 +166,32 @@ export class Router {
       options.except?.forEach((k) => pending.except.add(k))
       Object.assign(pending.headers, options.headers ?? {})
       if (options.preserveScroll === false) pending.preserveScroll = false
+      if (options.showProgress !== false) pending.showProgress = true
       pending.resolvers.push(resolve)
       pending.callbacks.push(options)
 
       if (this.reloadTimer) clearTimeout(this.reloadTimer)
       this.reloadTimer = setTimeout(() => void this.flushReload(), this.d.reloadDebounce)
     })
+  }
+
+  /**
+   * Reloads the current page every `interval` ms (PLAN §11.1):
+   * `router.poll(5000, { only: ['queue'] })`. Pauses in hidden tabs unless
+   * `keepAlive`, and stops when another page is shown unless `bindToPage: false`.
+   * Streams push changes without polling; prefer them where they are deployed.
+   */
+  poll(
+    interval: number,
+    reload: ReloadOptions | (() => ReloadOptions) = {},
+    options: PollOptions = {},
+  ): PollHandle {
+    return createPoll(
+      { router: this, store: this.d.store, window: this.d.window },
+      interval,
+      reload,
+      options,
+    )
   }
 
   /** Reload the given prop keys ("*" reloads everything present on the page). */
@@ -332,6 +357,7 @@ export class Router {
         headers: pending.headers,
         preserveState: true,
         preserveScroll: pending.preserveScroll,
+        showProgress: pending.showProgress,
         replace: true,
         useCache: false,
         onSuccess: (p) => pending.callbacks.forEach((c) => c.onSuccess?.(p)),

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { BridgeHead, BridgeLink, Deferred, useDeferred } from '@swarakaka/bridge-vue'
+import { BridgeHead, BridgeLink, Deferred, useDeferred, usePoll } from '@swarakaka/bridge-vue'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import type { Customer } from '@/types'
 
@@ -7,11 +7,16 @@ defineOptions({ layout: AppLayout })
 
 defineProps<{
     recentCustomers: Customer[]
+    serverTime: string
     stats?: { customers: number; active: number; inactive: number }
     signups?: Array<{ day: string; count: number }>
 }>()
 
 const { loading: statsLoading } = useDeferred('stats')
+
+// Polling: reload only `serverTime` every 3 s while this page is shown (paused in hidden tabs).
+// For data that changes on the server, a stream pushes updates instead; see the Realtime page.
+usePoll(3000, { only: ['serverTime'] })
 </script>
 
 <template>
@@ -20,6 +25,11 @@ const { loading: statsLoading } = useDeferred('stats')
     <p class="mt-1 text-sm text-slate-500">
         Shared props, a deferred <code>stats</code> group and a deferred <code>charts</code> group
         loaded after first render.
+    </p>
+    <p class="mt-2 text-sm text-slate-500">
+        Server time
+        <time class="font-mono text-slate-700" data-testid="server-time">{{ serverTime }}</time
+        >, polled every 3 s.
     </p>
 
     <section

@@ -52,4 +52,6 @@ Bridge borrows Inertia's developer experience: controllers return pages, page co
 
 **`<WhenVisible>` works the same way** (`data`, `buffer`, `always`, `as`, and reload options in `reload` rather than `params`), and loads `Bridge::lazy()` props. See [Load when visible](/data/load-when-visible).
 
-**No polling or "once" props yet.** Streams cover most polling use cases; once props are a candidate for a later release.
+**Polling works the same way** (`usePoll(interval, reloadOptions, { autoStart, keepAlive })` with `start`/`stop`), with one difference: hidden tabs pause polls instead of slowing them down, and catch up when visible. Prefer a stream where one is available. See [Polling](/data/polling).
+
+**No "once" props yet.** They are a candidate for a later release.

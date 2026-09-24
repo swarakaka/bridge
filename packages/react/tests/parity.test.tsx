@@ -13,6 +13,7 @@ import {
   useRemember,
   useFormContext,
   usePage,
+  usePoll,
   useStream,
   useWhenVisible,
   WhenVisible,
@@ -850,5 +851,58 @@ describe('WhenVisible', () => {
     const render = createSsrRenderer({ resolve: () => Show })
     const result = await render(page({ component: 'Show' }))
     expect(result.body).toContain('<section id="activity"><p id="fallback">loading…</p></section>')
+  })
+})
+
+describe('usePoll', () => {
+  const wait = (ms: number) => act(() => new Promise((r) => setTimeout(r, ms)))
+
+  it('reloads while mounted, stops on stop() and on unmount, and waits without autoStart', async () => {
+    let n = 0
+    const only: string[] = []
+    const http = mockFetch((_, init) => {
+      only.push((init.headers as Record<string, string>)['X-Bridge-Only'] ?? '')
+      return pageResponse(page({ component: 'Queue', props: { queue: ++n } }))
+    })
+    let controls: { start(): void; stop(): void; active: boolean } | null = null
+    const Queue: PageComponent = (props) => {
+      controls = usePoll(30, { only: ['queue'] }, { autoStart: false })
+      return <p id="queue">{`${String(props.queue)} ${String(controls.active)}`}</p>
+    }
+    await mount({ Queue }, page({ component: 'Queue', props: { queue: 0 } }), http)
+
+    await wait(150)
+    expect(only).toEqual([])
+    expect($('#queue')?.textContent).toBe('0 false')
+
+    act(() => controls!.start())
+    await wait(300)
+    expect(only.length).toBeGreaterThanOrEqual(2)
+    expect(only.every((o) => o === 'queue')).toBe(true)
+    expect($('#queue')?.textContent).toMatch(/^[1-9]\d* true$/)
+
+    act(() => controls!.stop())
+    // A tick already waiting in the router's reload debounce still goes out.
+    await wait(100)
+    const stopped = only.length
+    await wait(200)
+    expect(only.length).toBe(stopped)
+
+    act(() => controls!.start())
+    await wait(200)
+    act(() => app!.root.unmount())
+    await wait(100)
+    const unmounted = only.length
+    await wait(200)
+    expect(only.length).toBe(unmounted)
+  })
+
+  it('starts no poll while rendering on the server', async () => {
+    const Queue: PageComponent = () => {
+      usePoll(10, { only: ['queue'] })
+      return <p>queue</p>
+    }
+    const render = createSsrRenderer({ resolve: () => Queue })
+    expect((await render(page({ component: 'Queue' }))).body).toContain('<p>queue</p>')
   })
 })
