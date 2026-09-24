@@ -1,5 +1,5 @@
 import { execSync } from 'node:child_process'
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { database, e2eEnv, playground } from './playwright.config'
 
@@ -31,9 +31,13 @@ export default function globalSetup(): void {
       stdio: 'inherit',
     })
   }
-  if (!existsSync(database)) writeFileSync(database, '')
+  // Start from new files. `migrate:fresh` only truncates a SQLite file, and with WAL
+  // mode a leftover -wal/-shm from an interrupted run is then replayed onto the empty
+  // file, which corrupts it ("file is not a database").
+  for (const file of [database, `${database}-wal`, `${database}-shm`]) rmSync(file, { force: true })
+  writeFileSync(database, '')
   const env = { ...process.env, ...e2eEnv }
-  execSync('php artisan migrate:fresh --seed --force', { cwd: playground, env, stdio: 'inherit' })
+  execSync('php artisan migrate --seed --force', { cwd: playground, env, stdio: 'inherit' })
   if (
     !existsSync(`${playground}/public/build/manifest.json`) ||
     !existsSync(`${playground}/bootstrap/ssr/ssr.js`)

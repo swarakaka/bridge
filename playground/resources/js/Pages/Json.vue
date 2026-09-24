@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { BridgeHead, useJson, type Method } from '@swarakaka/bridge-vue'
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import AppLayout from '@/Layouts/AppLayout.vue'
 
 defineOptions({ layout: AppLayout })
@@ -40,6 +40,10 @@ const jsonBody = computed(() => {
     return json.data === null ? '' : JSON.stringify(json.data, null, 2)
 })
 
+// Filled after mount: the server has no window, and the first client render must match it.
+const origin = ref('')
+onMounted(() => (origin.value = window.location.origin))
+
 const curl = computed(() => {
     const parts = ['curl -i', `-H 'Accept: ${accept.value}'`]
     if (token.value) parts.push(`-H 'Authorization: Bearer ${token.value}'`)
@@ -49,9 +53,7 @@ const curl = computed(() => {
             `-H 'Content-Type: application/json'`,
             `-d '${body.value}'`,
         )
-    parts.push(
-        `${typeof window === 'undefined' ? '' : window.location.origin}${endpoint.value.path}`,
-    )
+    parts.push(`${origin.value}${endpoint.value.path}`)
     return parts.join(' \\\n  ')
 })
 

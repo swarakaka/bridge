@@ -1,6 +1,7 @@
 import type { Method } from '@swarakaka/bridge-core'
 import { defineComponent, h, onBeforeUnmount, onMounted, type PropType } from 'vue'
 import { useBridge } from '../injection.js'
+import { pageStateRef } from '../state.js'
 
 /**
  * Anchor that navigates through the router. `prefetch="hover"` (default)
@@ -25,6 +26,7 @@ export const BridgeLink = defineComponent({
   emits: ['before', 'start', 'finish', 'success', 'invalid', 'error'],
   setup(props, { slots, emit, attrs }) {
     const bridge = useBridge()
+    const pageState = pageStateRef(bridge)
     let hoverTimer: ReturnType<typeof setTimeout> | null = null
 
     const doPrefetch = (): void => {
@@ -87,7 +89,8 @@ export const BridgeLink = defineComponent({
 
     return () => {
       const isAnchor = props.as === 'a'
-      const current = bridge.store.page?.url ?? ''
+      // Read through the reactive mirror so the class follows navigation.
+      const current = pageState.value.page?.url ?? ''
       const active = props.activeClass && current.split('?')[0] === props.href.split('?')[0]
       return h(
         props.as,

@@ -1,9 +1,10 @@
 import { defineComponent, onBeforeUnmount, watchEffect, type PropType } from 'vue'
-import { useHeadContext } from '../head.js'
+import { HEAD_ATTRIBUTE, useHeadContext } from '../head.js'
 
 /**
- * Minimal head management: sets document.title on the client and records
- * title/meta into the SSR head context on the server.
+ * Minimal head management. On the server it records title/meta into the SSR
+ * head context. On the client it sets document.title and owns its own
+ * <meta> tags, replacing the server-rendered ones on hydration.
  */
 export const BridgeHead = defineComponent({
   name: 'BridgeHead',
@@ -18,13 +19,29 @@ export const BridgeHead = defineComponent({
       server.meta.push(...props.meta)
       return () => null
     }
+    if (typeof document === 'undefined') return () => null
 
-    const original = typeof document === 'undefined' ? '' : document.title
+    const original = document.title
+    let owned: HTMLMetaElement[] = []
+
+    // Server-rendered tags are recreated below by whichever component declared them.
+    document.head.querySelectorAll(`meta[${HEAD_ATTRIBUTE}="ssr"]`).forEach((el) => el.remove())
+
     watchEffect(() => {
-      if (typeof document !== 'undefined' && props.title) document.title = props.title
+      if (props.title) document.title = props.title
+      owned.forEach((el) => el.remove())
+      owned = props.meta.map((attributes) => {
+        const el = document.createElement('meta')
+        for (const [name, value] of Object.entries(attributes)) el.setAttribute(name, value)
+        el.setAttribute(HEAD_ATTRIBUTE, 'client')
+        document.head.appendChild(el)
+        return el
+      })
     })
     onBeforeUnmount(() => {
-      if (typeof document !== 'undefined' && !props.title) document.title = original
+      owned.forEach((el) => el.remove())
+      owned = []
+      if (props.title) document.title = original
     })
     return () => null
   },

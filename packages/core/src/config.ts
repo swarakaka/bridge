@@ -16,6 +16,12 @@ export interface BridgeConfig {
   /** Called with a page before it is applied (adapters load the component here). */
   prepare?: ((page: BridgePage) => Promise<void> | void) | undefined
   fetch?: typeof fetch | undefined
+  /**
+   * Register as the instance behind `getBridge()` and the `router` proxy
+   * (default true). Server renderers create one instance per request and pass
+   * false, so concurrent renders never see each other's instance.
+   */
+  global?: boolean | undefined
   credentials?: RequestCredentials | undefined
   window?: Window | undefined
 }

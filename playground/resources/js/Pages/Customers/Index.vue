@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { BridgeHead, BridgeLink, Deferred, router } from '@swarakaka/bridge-vue'
-import { ref, watch } from 'vue'
+import { onBeforeUnmount, ref, watch } from 'vue'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import Pagination from '@/Components/Pagination.vue'
 import type { Customer, Paginated } from '@/types'
@@ -15,6 +15,8 @@ const props = defineProps<{
 
 const search = ref(props.filters.search ?? '')
 let timer: ReturnType<typeof setTimeout> | null = null
+// A pending search must not pull the user back here after they navigated away.
+onBeforeUnmount(() => timer && clearTimeout(timer))
 
 // "Load more": the server marks `customers` with Bridge::merge(), so this partial
 // reload appends the next page's rows instead of replacing them.

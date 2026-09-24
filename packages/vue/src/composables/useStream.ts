@@ -1,5 +1,14 @@
 import type { StreamClient, StreamEvents, StreamOptions, StreamState } from '@swarakaka/bridge-core'
-import { getCurrentScope, onScopeDispose, ref, shallowRef, type Ref, type ShallowRef } from 'vue'
+import {
+  getCurrentInstance,
+  getCurrentScope,
+  onMounted,
+  onScopeDispose,
+  ref,
+  shallowRef,
+  type Ref,
+  type ShallowRef,
+} from 'vue'
 import { useBridge } from '../injection.js'
 
 export interface UseStreamOptions extends StreamOptions {
@@ -24,12 +33,17 @@ export interface UseStreamReturn {
 export function useStream(url: string, options: UseStreamOptions = {}): UseStreamReturn {
   const bridge = useBridge()
   const { closeOnDispose, ...streamOptions } = options
-  // Never open connections while rendering on the server.
+  // Never connect while rendering on the server. In a component, connect once
+  // mounted so the first client render shows the same state as the server
+  // markup ('idle') and hydration matches.
   const server = typeof window === 'undefined'
+  const instance = getCurrentInstance()
+  const autoConnect = streamOptions.autoConnect !== false && !server
   const stream = bridge.stream(url, {
     ...streamOptions,
-    autoConnect: server ? false : streamOptions.autoConnect,
+    autoConnect: autoConnect && !instance,
   })
+  if (autoConnect && instance) onMounted(() => void stream.connect())
 
   const state = ref<StreamState>(stream.state)
   const lastEventAt = ref<number | null>(stream.lastEventAt)

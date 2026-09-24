@@ -41,7 +41,7 @@ describe('SSR renderer', () => {
     expect(result.body).toContain('<p id="url">/customers</p>')
     expect(result.head).toEqual([
       '<title>Customers · Bridge</title>',
-      '<meta name="description" content="List">',
+      '<meta name="description" content="List" data-bridge-head="ssr">',
     ])
   })
 

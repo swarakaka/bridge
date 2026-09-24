@@ -106,7 +106,7 @@ export function createBridge(config: BridgeConfig = {}): Bridge {
     },
   }
 
-  current = bridge
+  if (config.global !== false) current = bridge
   return bridge
 }
 

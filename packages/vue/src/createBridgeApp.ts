@@ -104,9 +104,12 @@ export async function createBridgeApp(options: CreateBridgeAppOptions): Promise<
 
         if (pageState.error) {
           if (currentErrorStatus !== pageState.error.status) {
-            currentErrorStatus = pageState.error.status
+            const status = pageState.error.status
+            currentErrorStatus = status
             currentErrorComponent = null
-            void loadError(pageState.error.status).then((component) => {
+            void loadError(status).then((component) => {
+              // A different error (or a page) may have replaced this one meanwhile.
+              if (currentErrorStatus !== status) return
               currentErrorComponent = component
               state.value = { ...state.value }
             })

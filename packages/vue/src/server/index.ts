@@ -26,7 +26,12 @@ export function createSsrRenderer(options: CreateSsrRendererOptions) {
 
   return async function render(page: BridgePage): Promise<SsrRenderResult> {
     const component = await loader.load(page.component)
-    const bridge = createBridge({ initialPage: page, window: undefined, build: page.build })
+    const bridge = createBridge({
+      initialPage: page,
+      window: undefined,
+      build: page.build,
+      global: false,
+    })
     const head = createHeadContext()
     const app = createSSRApp({ render: () => h(createStaticApp(bridge, component, page)) })
     const plugin = createBridgePlugin(bridge)
@@ -59,8 +64,8 @@ export async function createSsrServer(
     options.port ??
     Number(
       process.env.BRIDGE_SSR_PORT ??
-        new URL(process.env.BRIDGE_SSR_URL ?? 'http://127.0.0.1:13714').port ??
-        13714,
+        // `port` is '' (not nullish) when the URL has none.
+        (new URL(process.env.BRIDGE_SSR_URL ?? 'http://127.0.0.1:13714').port || 13714),
     )
   const host = options.host ?? '127.0.0.1'
 

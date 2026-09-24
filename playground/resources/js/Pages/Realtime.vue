@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { BridgeHead, router, useProp, useForm } from '@swarakaka/bridge-vue'
+import { BridgeHead, router, useProp, useForm, type Bridge } from '@swarakaka/bridge-vue'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import { useAppStream } from '@/composables/useAppStream'
@@ -69,11 +69,15 @@ const trigger = (url: string): void => {
 // One-off producer stream (progress of a fake export) on a separate connection.
 const exportProgress = ref<{ value: number; label: string } | null>(null)
 const exportRows = ref<number | null>(null)
+let exportStream: ReturnType<Bridge['stream']> | null = null
+onBeforeUnmount(() => exportStream?.close())
 const runExport = async (): Promise<void> => {
+    // One export at a time: a second click restarts it instead of opening another connection.
+    exportStream?.close()
     exportProgress.value = { value: 0, label: 'Starting' }
     exportRows.value = null
     const bridge = (await import('@swarakaka/bridge-vue')).getBridge()
-    const s = bridge.stream('/realtime/export', { handleControl: false })
+    const s = (exportStream = bridge.stream('/realtime/export', { handleControl: false }))
     s.on('progress', (p) => (exportProgress.value = { value: p.value ?? 0, label: p.label ?? '' }))
     s.on('export.done', (d) => (exportRows.value = (d as { rows: number }).rows))
     s.on('end', () => s.close())

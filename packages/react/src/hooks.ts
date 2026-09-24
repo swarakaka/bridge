@@ -58,9 +58,9 @@ export function useForm<T extends Record<string, unknown>>(
         if (typeof value === 'function') {
           return (...args: unknown[]) => {
             const result = (value as (...a: unknown[]) => unknown).apply(target, args)
-            if (result instanceof Promise) return result.finally(refresh)
+            // Re-render now (processing/validating flip synchronously) and again when done.
             refresh()
-            return result
+            return result instanceof Promise ? result.finally(refresh) : result
           }
         }
         return value

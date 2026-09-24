@@ -1,0 +1,149 @@
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { defineComponent, h, nextTick, type Component } from 'vue'
+import { createBridge, getBridge } from '@swarakaka/bridge-core'
+import { BridgeHead, BridgeLink, createBridgeApp, useStream } from '../src/index.js'
+import { createSsrRenderer } from '../src/server/index.js'
+import type { BridgeApp } from '../src/index.js'
+import { embed, flush, mockFetch, page, pageResponse } from './helpers.js'
+
+let app: BridgeApp | null = null
+afterEach(() => {
+  app?.bridge.destroy()
+  app?.app?.unmount()
+  app = null
+  document.body.innerHTML = ''
+  document.head.innerHTML = ''
+  document.title = ''
+})
+
+describe('hydration-safe useStream', () => {
+  it('renders the idle state first and connects once mounted', async () => {
+    const fetch = vi.fn(
+      async () =>
+        new Response(new ReadableStream({ start() {} }), {
+          status: 200,
+          headers: { 'Content-Type': 'text/event-stream' },
+        }),
+    ) as unknown as typeof globalThis.fetch
+    const renders: string[] = []
+    const Realtime = defineComponent({
+      setup() {
+        const { state } = useStream('/events', { fetch })
+        return () => {
+          renders.push(state.value)
+          return h('span', { id: 'state' }, state.value)
+        }
+      },
+    })
+    embed(page({ component: 'Realtime', props: {} }))
+    app = await createBridgeApp({
+      resolve: () => Realtime,
+      fetch: mockFetch(() => pageResponse(page())),
+    })
+    await flush()
+
+    // The server renders 'idle'; the first client render must match it.
+    expect(renders[0]).toBe('idle')
+    expect(fetch).toHaveBeenCalledTimes(1)
+    expect(document.getElementById('state')!.textContent).toBe('open')
+  })
+})
+
+describe('error components', () => {
+  it('does not show an error component that finished loading after a newer error', async () => {
+    const releases = new Map<number, (c: Component) => void>()
+    const errorFor = (status: number) =>
+      defineComponent({ setup: () => () => h('p', { id: 'error' }, `component ${status}`) })
+    embed(page())
+    app = await createBridgeApp({
+      resolve: () => defineComponent({ setup: () => () => h('div', 'page') }),
+      resolveError: (status) => new Promise<Component>((r) => releases.set(status, r)),
+      fetch: mockFetch(() => pageResponse(page())),
+    })
+
+    app.bridge.store.setError({ status: 404, kind: 'not_found', message: 'Missing' })
+    await nextTick()
+    app.bridge.store.setError({ status: 500, kind: 'server', message: 'Boom' })
+    await nextTick()
+    releases.get(404)!(errorFor(404))
+    await flush()
+    expect(document.getElementById('error')).toBeNull()
+
+    releases.get(500)!(errorFor(500))
+    await flush()
+    expect(document.getElementById('error')!.textContent).toBe('component 500')
+  })
+})
+
+describe('BridgeLink', () => {
+  it('updates its active class after navigation inside a persistent layout', async () => {
+    // A layout that re-renders with the same link props and a stable compiled slot
+    // (`$stable`, as compiled templates imply): Vue skips updating the link itself.
+    const Layout = defineComponent({
+      setup:
+        (_, { slots }) =>
+        () =>
+          h('div', [
+            h(
+              BridgeLink,
+              { href: '/customers/1', activeClass: 'active', id: 'link' },
+              { default: () => 'Show', $stable: true },
+            ),
+            slots.default?.(),
+          ]),
+    })
+    const Page = defineComponent({ layout: Layout, setup: () => () => h('p', 'page') })
+    embed(page())
+    app = await createBridgeApp({
+      resolve: () => Page,
+      fetch: mockFetch(() => pageResponse(page({ url: '/customers/1', props: {} }))),
+    })
+    const link = () => document.getElementById('link')!
+
+    expect(link().classList.contains('active')).toBe(false)
+    await app.bridge.router.visit('/customers/1')
+    await nextTick()
+    expect(link().classList.contains('active')).toBe(true)
+  })
+})
+
+describe('BridgeHead on the client', () => {
+  it('owns its meta tags, replaces server-rendered ones and restores the title', async () => {
+    document.head.innerHTML = '<meta name="description" content="Old" data-bridge-head="ssr">'
+    document.title = 'App'
+    const WithHead = defineComponent({
+      setup: () => () =>
+        h(BridgeHead, { title: 'Customers', meta: [{ name: 'description', content: 'List' }] }),
+    })
+    const Plain = defineComponent({ setup: () => () => h('div', 'plain') })
+    embed(page())
+    app = await createBridgeApp({
+      resolve: (name) => (name === 'Plain' ? Plain : WithHead),
+      fetch: mockFetch(() => pageResponse(page({ component: 'Plain', url: '/plain', props: {} }))),
+    })
+    await nextTick()
+
+    const metas = () => Array.from(document.head.querySelectorAll('meta[name="description"]'))
+    expect(document.title).toBe('Customers')
+    expect(metas().map((m) => m.getAttribute('content'))).toEqual(['List'])
+
+    await app.bridge.router.visit('/plain')
+    await flush()
+    expect(metas()).toHaveLength(0)
+    expect(document.title).toBe('App')
+  })
+})
+
+describe('SSR renderer', () => {
+  it('does not replace the global bridge instance', async () => {
+    const own = createBridge({ initialPage: page(), window: undefined })
+    const render = createSsrRenderer({
+      resolve: () => defineComponent({ setup: () => () => h('div', 'x') }),
+    })
+
+    await render(page())
+
+    expect(getBridge()).toBe(own)
+    own.destroy()
+  })
+})

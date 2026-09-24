@@ -66,6 +66,7 @@ const Create: PageComponent = () => {
         onChange={(e) => form.setData('name', e.target.value)}
       />
       {form.errors.name ? <p id="error">{form.errors.name}</p> : null}
+      <span id="processing">{String(form.processing)}</span>
     </form>
   )
 }
@@ -135,5 +136,35 @@ describe('React adapter', () => {
     })
     await flush()
     expect(document.querySelector('#error')?.textContent).toBe('Name is required.')
+  })
+
+  it('shows processing while a submit is in flight', async () => {
+    let release: (r: Response) => void = () => undefined
+    const fetch = vi.fn(
+      (input: RequestInfo | URL) =>
+        new Promise<Response>((resolve) => {
+          release = (r) => {
+            Object.defineProperty(r, 'url', { value: String(input) })
+            resolve(r)
+          }
+        }),
+    ) as unknown as typeof globalThis.fetch
+    await mount(fetch, page({ component: 'Customers/Create', url: '/customers/create', props: {} }))
+    const processing = () => document.querySelector('#processing')?.textContent
+
+    await act(async () => {
+      document
+        .querySelector('form')!
+        .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+    })
+    expect(processing()).toBe('true')
+
+    await act(async () =>
+      release(
+        pageResponse(page({ component: 'Customers/Show', url: '/customers/2', props: { id: 2 } })),
+      ),
+    )
+    await flush()
+    expect(document.querySelector('#show')?.textContent).toBe('2')
   })
 })

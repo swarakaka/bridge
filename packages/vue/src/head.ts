@@ -8,6 +8,9 @@ export interface HeadContext {
 
 export const HeadKey: InjectionKey<HeadContext> = Symbol('bridge-head')
 
+/** Marks <meta> tags managed by BridgeHead ("ssr" when server-rendered, "client" otherwise). */
+export const HEAD_ATTRIBUTE = 'data-bridge-head'
+
 export function useHeadContext(): HeadContext | null {
   return inject(HeadKey, null)
 }
@@ -32,7 +35,7 @@ export function renderHead(head: HeadContext): string[] {
     const attrs = Object.entries(meta)
       .map(([k, v]) => `${k}="${escapeAttribute(v)}"`)
       .join(' ')
-    out.push(`<meta ${attrs}>`)
+    out.push(`<meta ${attrs} ${HEAD_ATTRIBUTE}="ssr">`)
   }
   return out
 }

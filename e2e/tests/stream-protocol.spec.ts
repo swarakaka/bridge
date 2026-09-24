@@ -39,7 +39,11 @@ function parse(text: string): Frame[] {
     })
 }
 
-async function readStream(response: Response, ms: number): Promise<string> {
+async function readStream(
+  response: Response,
+  ms: number,
+  onText?: (text: string) => void,
+): Promise<string> {
   const reader = response.body!.getReader()
   const decoder = new TextDecoder()
   let text = ''
@@ -52,6 +56,7 @@ async function readStream(response: Response, ms: number): Promise<string> {
     if (race === null) break
     if (race.done) break
     text += decoder.decode(race.value, { stream: true })
+    onText?.(text)
   }
   await reader.cancel().catch(() => undefined)
   return text
@@ -95,8 +100,12 @@ test.describe('stream protocol', () => {
     expect(response.headers.get('cache-control')).toContain('no-cache')
     expect(response.headers.get('x-accel-buffering')).toBe('no')
 
-    // Publish while connected, using the bearer token against the same routes.
-    setTimeout(() => {
+    // Publish while connected, using the bearer token against the same routes. The
+    // subscription is live only after `ready`, so wait for it instead of a fixed delay.
+    let published = false
+    const publishOnReady = (text: string): void => {
+      if (published || !text.includes('"type":"ready"')) return
+      published = true
       void fetch(`${base}/realtime/notify`, {
         method: 'POST',
         headers: {
@@ -106,9 +115,9 @@ test.describe('stream protocol', () => {
         },
         body: JSON.stringify({ message: 'via protocol test', level: 'info' }),
       })
-    }, 500)
+    }
 
-    const frames = parse(await readStream(response, 10_000))
+    const frames = parse(await readStream(response, 10_000, publishOnReady))
     expect(frames[0]).toEqual({ retry: '3000' })
     expect(frames[1]!.data).toMatchObject({
       type: 'ready',
