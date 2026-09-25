@@ -16,7 +16,7 @@ class RealtimeController extends Controller
     public function page(Request $request)
     {
         return Bridge::render('Realtime', [
-            'customersCount' => fn () => Customer::count(),
+            'customersCount' => Bridge::watch(fn () => Customer::count(), Customer::class),
             'unreadCount' => 0,
             'channels' => ['customers', 'user.'.$request->user()->id],
             'heartbeatMs' => (int) config('bridge.stream.heartbeat_ms'),
@@ -69,6 +69,18 @@ class RealtimeController extends Controller
     public function invalidate(Request $request)
     {
         Bridge::to('customers')->invalidate(['customersCount', 'customers']);
+
+        return Bridge::redirect()->route('realtime');
+    }
+
+    /**
+     * Reports "some customers changed" without changing any, as a bulk update
+     * that fires no model events would: every prop watching customers or one
+     * customer reloads, except in this tab, whose redirect already did.
+     */
+    public function touch(Request $request)
+    {
+        Bridge::to('customers')->touch('customers.*');
 
         return Bridge::redirect()->route('realtime');
     }

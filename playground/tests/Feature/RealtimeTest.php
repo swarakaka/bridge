@@ -86,6 +86,37 @@ class RealtimeTest extends TestCase
         $this->withHeaders(['Accept' => 'application/json'])->get('/realtime')->assertJsonMode()->assertJsonPath('data.customersCount', 3);
     }
 
+    public function test_customer_changes_reach_watched_props_with_the_hashed_client(): void
+    {
+        $this->withHeaders(['Accept' => 'application/json', 'X-Bridge-Client' => 'Zm9vYmFyYmF6cXV4cXV1eA.4'])
+            ->post('/customers', ['name' => 'Watched', 'email' => 'watched@example.com'])
+            ->assertCreated();
+        $id = Customer::query()->where('email', 'watched@example.com')->value('id');
+        $this->flushHeaders()->withHeaders(['Accept' => 'application/json'])->post('/realtime/touch')->assertOk();
+
+        config(['bridge.stream.max_duration_s' => 0]);
+        $frames = $this->frames($this->flushHeaders()->withHeaders(['Accept' => 'text/event-stream', 'Last-Event-ID' => '0'])->get('/events')->streamedContent());
+        $watch = array_values(array_filter($frames, fn ($f) => ($f['data']['type'] ?? null) === 'invalidate'));
+
+        $this->assertSame([
+            ['type' => 'invalidate', 'keys' => [], 'tags' => ['customers', "customers.{$id}"], 'client' => 'ZnlfgKAmTkeQjF2rdZN7Lg.4'],
+            ['type' => 'invalidate', 'keys' => [], 'tags' => ['customers.*']],
+        ], array_column($watch, 'data'));
+    }
+
+    public function test_pages_list_their_watched_props(): void
+    {
+        $customer = Customer::factory()->create();
+        $page = ['Accept' => 'application/vnd.bridge+json; v=1'];
+
+        $this->withHeaders($page)->get("/customers/{$customer->id}")
+            ->assertOk()
+            ->assertJsonPath('meta.watch', ['customer' => ["customers.{$customer->id}"]]);
+        $this->withHeaders($page)->get('/customers')->assertJsonPath('meta.watch', ['customers' => ['customers']]);
+        $this->withHeaders($page)->get('/')->assertJsonPath('meta.watch', ['recentCustomers' => ['customers']]);
+        $this->withHeaders(['Accept' => 'application/json'])->get('/customers')->assertJsonMissingPath('meta.watch');
+    }
+
     public function test_tickets_open_the_stream_without_a_session(): void
     {
         $url = $this->withHeaders(['Accept' => 'application/json'])->post('/realtime/ticket')->assertOk()->json('url');

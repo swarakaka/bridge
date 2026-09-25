@@ -41,12 +41,20 @@
 | `stream.drivers.redis`            | `connection: default, maxlen: 1000, retain_minutes: 60`                         | Redis connection, per-channel length, and how long an idle channel's key lives after its last publish.                                 |
 | `stream.drivers.database`         | `table: bridge_stream_events, poll_ms: 1000, retain_minutes: 60, lookback: 200` | Table, poll interval, retention pruned by `bridge:stream:prune`, and ids re-checked behind the cursor for rows committed out of order. |
 
+## Watched props
+
+| Key              | Default             | Meaning                                                                                                                               |
+| ---------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `watch.tags`     | `BRIDGE_WATCH_TAGS` | `table` (default) names model tags after the table, `class` after the morph class. See [Watched props](/realtime/watched-props#tags). |
+| `watch.channels` | `['bridge.watch']`  | Channels of models with `StreamsChanges` and no `streamOn()`.                                                                         |
+| `watch.max_tags` | `50`                | Changed records of one model per message; beyond it the message carries `<tag>.*`.                                                    |
+
 ## Commands
 
-| Command               | Purpose                                                           |
-| --------------------- | ----------------------------------------------------------------- |
-| `bridge:install`      | Publish config and shell view.                                    |
-| `bridge:middleware`   | Create `app/Http/Middleware/HandleBridgeRequests.php`.            |
-| `bridge:doctor`       | Check PHP output settings, the bus and stream time-to-first-byte. |
-| `bridge:stream:prune` | Trim the database bus. Schedule it.                               |
-| `bridge:ssr`          | Start the SSR server from `ssr.bundle`.                           |
+| Command               | Purpose                                                                                                        |
+| --------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `bridge:install`      | Publish config and shell view.                                                                                 |
+| `bridge:middleware`   | Create `app/Http/Middleware/HandleBridgeRequests.php`.                                                         |
+| `bridge:doctor`       | Check PHP output settings, the bus and stream time-to-first-byte; list watched models on the default channels. |
+| `bridge:stream:prune` | Trim the database bus. Schedule it.                                                                            |
+| `bridge:ssr`          | Start the SSR server from `ssr.bundle`.                                                                        |

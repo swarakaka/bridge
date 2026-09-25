@@ -1,4 +1,5 @@
 import { HEADERS, PAGE_ACCEPT } from '@swarakaka/bridge-protocol'
+import type { ClientIdentity } from './clientIdentity.js'
 import { readXsrfToken } from './csrf.js'
 import { hasFiles, objectToFormData } from './formData.js'
 import type { HttpResponse } from './responseParser.js'
@@ -43,6 +44,8 @@ export interface RequestManagerOptions {
   fetch?: typeof fetch | undefined
   credentials?: RequestCredentials | undefined
   xsrfCookie?: (() => string | null) | undefined
+  /** Sends `X-Bridge-Client` on every request and logs when each settles (PLAN §20.6). */
+  identity?: ClientIdentity | undefined
 }
 
 /**
@@ -53,11 +56,13 @@ export class RequestManager {
   private readonly fetchImpl: typeof fetch
   private readonly credentials: RequestCredentials
   private readonly xsrfCookie: () => string | null
+  readonly identity: ClientIdentity | undefined
 
   constructor(options: RequestManagerOptions = {}) {
     this.fetchImpl = options.fetch ?? ((input, init) => fetch(input, init))
     this.credentials = options.credentials ?? 'same-origin'
     this.xsrfCookie = options.xsrfCookie ?? (() => readXsrfToken())
+    this.identity = options.identity
   }
 
   prepare(request: HttpRequest): PreparedRequest {
@@ -116,11 +121,23 @@ export class RequestManager {
 
   async send(request: HttpRequest): Promise<HttpResponse> {
     const prepared = this.prepare(request)
+    // Browsers keep the header when they follow a same-origin redirect, so the
+    // page after 303 counts as the response to the request that made the change.
+    const numbered = this.identity?.begin()
+    if (numbered) prepared.headers[HEADERS.client] = numbered.header
 
-    if (prepared.multipart && request.onProgress && typeof XMLHttpRequest !== 'undefined') {
-      return this.sendXhr(prepared, request)
+    try {
+      const response =
+        prepared.multipart && request.onProgress && typeof XMLHttpRequest !== 'undefined'
+          ? await this.sendXhr(prepared, request)
+          : await this.sendFetch(prepared, request)
+      return numbered ? { ...response, seq: numbered.seq } : response
+    } finally {
+      if (numbered) this.identity!.settle(numbered.seq)
     }
+  }
 
+  private async sendFetch(prepared: PreparedRequest, request: HttpRequest): Promise<HttpResponse> {
     const response = await this.fetchImpl(prepared.url.href, {
       method: prepared.method,
       headers: prepared.headers,

@@ -436,8 +436,14 @@ export class StreamClient {
       }
       case 'invalidate':
         this.events.emit('invalidate', control)
-        if (apply)
-          void this.deps.router.invalidate(control.keys === '*' ? '*' : Array.from(control.keys))
+        if (!apply) break
+        // Watch tags (spec §3.1) select props through the page's meta.watch.
+        if (control.keys !== '*' && control.tags && control.tags.length > 0)
+          void this.deps.router.invalidateTags(Array.from(control.tags), {
+            keys: Array.from(control.keys),
+            client: control.client,
+          })
+        else void this.deps.router.invalidate(control.keys === '*' ? '*' : Array.from(control.keys))
         break
       case 'prop':
         this.events.emit('prop', control)
@@ -539,7 +545,12 @@ function isWellFormed(control: BridgeStreamControl): boolean {
     case 'ready':
       return typeof c.heartbeat === 'number' && Number.isFinite(c.heartbeat) && c.heartbeat > 0
     case 'invalidate':
-      return c.keys === '*' || (Array.isArray(c.keys) && c.keys.every((k) => typeof k === 'string'))
+      return (
+        (c.keys === '*' || (Array.isArray(c.keys) && c.keys.every((k) => typeof k === 'string'))) &&
+        (c.tags === undefined ||
+          (Array.isArray(c.tags) && c.tags.every((t) => typeof t === 'string'))) &&
+        (c.client === undefined || typeof c.client === 'string')
+      )
     case 'prop':
       return typeof c.key === 'string'
     case 'navigate':

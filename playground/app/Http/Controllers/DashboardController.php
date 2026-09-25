@@ -11,14 +11,14 @@ class DashboardController extends Controller
     public function __invoke()
     {
         return Bridge::render('Dashboard', [
-            'recentCustomers' => CustomerResource::collection(Customer::latest('id')->limit(5)->get()),
+            'recentCustomers' => Bridge::watch(fn () => CustomerResource::collection(Customer::latest('id')->limit(5)->get()), Customer::class),
             // Reloaded every few seconds by usePoll() on the page.
             'serverTime' => now()->format('H:i:s'),
             'stats' => Bridge::defer(fn () => [
                 'customers' => Customer::count(),
                 'active' => Customer::where('status', 'active')->count(),
                 'inactive' => Customer::where('status', 'inactive')->count(),
-            ]),
+            ])->watch(Customer::class),
             'signups' => Bridge::defer(fn () => Customer::query()
                 ->selectRaw("strftime('%Y-%m-%d', created_at) as day, count(*) as count")
                 ->groupBy('day')

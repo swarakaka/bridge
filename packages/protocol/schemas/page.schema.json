@@ -77,6 +77,15 @@
             "additionalProperties": false
           }
         },
+        "watch": {
+          "type": "object",
+          "description": "Watched props: prop name → the watch tags it is built from (§13).",
+          "additionalProperties": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^[^*,\\s]+$" },
+            "minItems": 1
+          }
+        },
         "once": {
           "type": "object",
           "description": "Once props this page considered: prop name → once key and expiry (§11).",

@@ -30,14 +30,15 @@ class CustomerController extends Controller
             // `meta.scroll` tells the client which pages come before and after, and rows are
             // matched on `data.id`: a customer created meanwhile shifts the pages by one row,
             // and the row already shown is replaced instead of appearing twice.
+            // ->watch(): any customer change reloads the loaded pages in every open tab.
             'customers' => Bridge::scroll(fn () => CustomerResource::collection(
                 Customer::query()->search($filters['search'])->latest('id')->paginate(min(200, max(1, (int) $request->integer('per_page', 20))))->withQueryString(),
-            )),
+            ))->watch(Customer::class),
             'filters' => $filters,
             'stats' => Bridge::defer(fn () => [
                 'total' => Customer::count(),
                 'active' => Customer::where('status', 'active')->count(),
-            ]),
+            ])->watch(Customer::class),
         ]);
     }
 
@@ -56,6 +57,7 @@ class CustomerController extends Controller
             $customer->update(['avatar_path' => $request->file('avatar')->store('avatars', 'public')]);
         }
 
+        // Watched props reload through StreamsChanges; the event is for stream listeners.
         CustomerChanged::dispatch($customer->refresh(), 'created');
 
         return Bridge::redirect()
@@ -68,9 +70,10 @@ class CustomerController extends Controller
     public function show(Customer $customer)
     {
         return Bridge::render('Customers/Show', [
-            'customer' => CustomerResource::make($customer),
+            // Bridge::watch() on the record: reloads when this customer changes, not others.
+            'customer' => Bridge::watch(CustomerResource::make($customer), $customer),
             // Bridge::lazy(): left out of the page; <WhenVisible> requests it when scrolled to.
-            'activity' => Bridge::lazy(fn () => $this->activity($customer)),
+            'activity' => Bridge::lazy(fn () => $this->activity($customer))->watch($customer),
         ]);
     }
 

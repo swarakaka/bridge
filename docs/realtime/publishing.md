@@ -50,6 +50,10 @@ class CustomerCreated implements ShouldStream
 - **`prop`** pushes a value straight into the page. Use it on per-user or per-tenant channels for small, frequent values (counters, statuses).
 - **Application events** are for things that are not props: toasts, sounds, live logs. Their payload is yours.
 
+## Watched props
+
+Instead of listing prop keys in `invalidate` wherever data changes, props can name the data they are built from (`Bridge::watch($value, Customer::class)`) and models report their own changes. See [Watched props](/realtime/watched-props); `Bridge::to($channels)->touch(...)` reports changes that fire no model events.
+
 ## Ordering and delivery
 
 Events on one channel are delivered in publish order. With the Redis and database drivers they are retained briefly (`maxlen`, `retain_minutes`) so reconnecting clients can replay; the `sync` driver delivers only in-process and the `null` driver discards.

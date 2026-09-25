@@ -1,0 +1,16 @@
+{
+  "protocol": 1,
+  "type": "page",
+  "component": "Customers/Show",
+  "url": "/customers/21",
+  "props": {
+    "auth": { "user": { "id": 1, "name": "Ada" } },
+    "customer": { "id": 21, "name": "Acme", "email": "hello@acme.test" }
+  },
+  "build": "3f9c1a",
+  "meta": {
+    "watch": {
+      "customer": ["customers.21"]
+    }
+  }
+}

@@ -1,6 +1,6 @@
 # Bridge — Technical Implementation Plan
 
-**Status:** v1 plan, 2026-09-22, extended since: post-1.0 features are designed in their sections (§11.1, §12.1, §13.1–13.4, §14.1–14.3, §15.1, §23.1) and every change is recorded in "Implementation notes and deviations". Source of requirements: the original design brief (`development/propmts.md`, removed 2026-09-23; available in git history). Its 20 open questions are answered in Appendix A.
+**Status:** v1 plan, 2026-09-22, extended since: post-1.0 features are designed in their sections (§11.1, §12.1, §13.1–13.4, §14.1–14.3, §15.1, §20.6, §23.1) and every change is recorded in "Implementation notes and deviations". Source of requirements: the original design brief (`development/propmts.md`, removed 2026-09-23; available in git history). Its 20 open questions are answered in Appendix A.
 **Audience:** the developer (or Claude Code session) that will run "Implement Phase 1".
 
 ---
@@ -68,7 +68,7 @@ Bridge is a **server-driven application protocol for Laravel** with first-party 
 The decisive design choices, each justified later in the plan:
 
 1. **Protocol before client.** `packages/protocol` is a language-neutral spec (Markdown + JSON Schema + fixtures). The Laravel package produces it, the TypeScript core consumes it, and both test suites validate against the same fixtures. Vue, React, and mobile are thin adapters over that core.
-2. **Standard HTTP negotiation.** Mode is selected from `Accept` alone, with proper q-value parsing. Only four custom request headers exist (`X-Bridge-Build`, `X-Bridge-Only`, `X-Bridge-Except`, `X-Bridge-Component`) and one custom response header (`X-Bridge-Location`). The `X-Bridge: true` marker from the brief is **not** needed and is dropped.
+2. **Standard HTTP negotiation.** Mode is selected from `Accept` alone, with proper q-value parsing. Custom request headers exist only where HTTP cannot express the intent: `X-Bridge-Build`, `X-Bridge-Only`, `X-Bridge-Except` and `X-Bridge-Component` (v1), `X-Bridge-Once` (§13.2) and `X-Bridge-Client` (§20.6, planned). There is one custom response header (`X-Bridge-Location`). Appendix B lists them all. The `X-Bridge: true` marker from the brief is **not** needed and is dropped.
 3. **Three-layer model.** Controller → `Page` value object (domain representation: component + prop bag) → `Representer` per mode (transport). Errors follow the same path through one `ErrorEnvelope`.
 4. **No Bridge resource layer.** Props resolve `JsonResource`, `ResourceCollection`, paginators, `Arrayable`, `JsonSerializable`, closures, and Bridge's `lazy`/`defer`/`always` wrappers. JSON mode reuses Laravel's native shapes so it feels like a normal Laravel API.
 5. **Validation errors are returned as 422 in Page and JSON mode, never as redirect-back-with-flash.** This removes the session dependency, gives stateless clients the same behaviour as browsers, and makes one `ErrorEnvelope` serve all modes. Plain HTML (no Bridge client) keeps Laravel's default redirect behaviour.
@@ -961,6 +961,67 @@ Future (out of v1): a standalone relay (`bridge-relay`, Go or Node) that subscri
 5. `visibilitychange` to visible and `online` events trigger immediate reconnect if not open; hidden tabs keep the stream by default (`pauseWhenHidden: false`).
 6. `end{reconnect:true}` reconnects without backoff.
 
+### 20.6 Watched props (implemented, 2026-09-25)
+
+Today a page stays current only if the application publishes an `invalidate` naming the page's prop keys (§8.4), usually from an event such as the playground's `CustomerChanged`. The publisher has to know every prop key on every page that shows the data (`['customers', 'customersCount', 'recentCustomers', 'stats']`), and a new page that shows customers is stale until someone adds its key there. A watched prop turns this around: the prop declares the data it is built from, a model change publishes *what changed*, and each client works out which of its props are affected. The server keeps no record of who is viewing what.
+
+- **Server API.** A new modifier `->watch(string|Model ...$sources)` on `PropHint` (§13.3), with the shorthand `Bridge::watch($value, ...$sources)` for a plain prop. A source is a model class (any record of that model: `Customer::class`), a model instance (that record: `$customer`), or a string tag for data that is not a model (`'reports'`). Examples:
+  - `'customers' => Bridge::watch(fn () => CustomerResource::collection(...), Customer::class)`
+  - `'customer' => Bridge::watch(CustomerResource::make($customer), $customer)`
+  - `Bridge::defer(fn, 'charts')->watch(Order::class)`
+  - `Bridge::scroll($paginator)->watch(Customer::class)`
+
+  Several sources may be listed. `watch` composes with every delivery and with `merge` and `once`: an invalidation reload names the prop in `X-Bridge-Only`, which already resolves lazy and deferred props, re-sends held once values (§13.2), and replaces merge props (§12). Infinite-scroll props re-fetch their loaded range through `router.handleInvalidation` (§13.4).
+- **Tags.** Sources become strings: a model class becomes `<tag>` and an instance becomes `<tag>.<key>`. Two naming styles are supported, chosen with `bridge.watch.tags`:
+  - `'table'` (the default): the table name (`customers`, `customers.12`). It does not send PHP class names to the browser.
+  - `'class'`: `getMorphClass()`. That is the morph-map alias when one is registered (`customer.12`), otherwise the class name (`App\Models\Customer.12`). The docs recommend a morph map with this style.
+
+  A model can override the style with `bridgeTag(): string`. String tags, and tags produced by either style, must not contain `*`, `,` or whitespace. A tag breaking this rule throws when it is built. Both sides of a watch use the same rule, so a source and the changes of its model always produce the same tag. Tags only link a change to a prop. They never grant access: the reload they trigger goes through the controller and its policies like any partial reload.
+- **Publishing from models.** A trait `Bridge\Stream\Concerns\StreamsChanges` on a model records a change on `created`, `updated`, `deleted`, `restored` and `forceDeleted`, with the tags `<tag>` and `<tag>.<key>`. The channels come from the model's optional `streamOn(): array` (for example `["tenant.{$this->tenant_id}"]`). Without it they come from `bridge.watch.channels`, whose default is `['bridge.watch']`. The docs say plainly that the default channel reaches every subscriber, which multi-tenant apps must not rely on. `bridge:doctor` lists models that use the default channels. Changes are buffered by a scoped `WatchChanges` service, not published one by one:
+  - **After commit.** A change made inside a database transaction is published only after the outermost transaction commits (Laravel's after-commit callbacks), and dropped on rollback. A reload that runs before the commit would read the old data.
+  - **One message per channel.** The buffer is flushed when the request terminates, after each queued job (`JobProcessed`/`JobFailed`), and when an Artisan command finishes. Octane gets a new buffer per request because the service is scoped. A flush sends one `invalidate` per channel with the deduplicated tags, so a request that saves 20 customers publishes one message per channel, not 20.
+  - **Collapse.** When a channel has more than `bridge.watch.max_tags` instance tags for one `<tag>` (default 50), they are replaced by `<tag>.*` ("some record of this model"). This keeps bulk jobs from sending huge messages.
+- **Publishing by hand.** Changes that fire no model events (`Customer::query()->update([...])`, raw queries, external systems) are published with `Bridge::to($channels)->touch(string|Model ...$sources)`. It goes through the same buffer when one is active and publishes at once otherwise. `touch(Customer::class)` sends `<tag>` only, so watchers of one record (`customers.12`) do not react to it. After bulk changes to records, pass the string `'customers.*'` instead. Eloquent's `$touches` already re-saves parent models, so a changed `Contact` can refresh props that watch its `Customer`.
+- **The client that made the change.** Without a guard, a tab that saves a customer reloads its watched props twice: once from its own visit (the redirect after the `POST`), and again when the invalidation arrives on the stream. Bridge must not send that second reload. The server cannot leave the tab out, because a stream belongs to a user, not to a tab. So the tab recognises its own changes and drops the reload only for props that are already newer than the change:
+  - **Request identity.** Each client instance creates a random secret token at start (128 bits, in memory only) and numbers its requests. Every page visit, reload, deferred load, prefetch and `JsonClient` request sends a new request header `X-Bridge-Client: <token>.<seq>`. `fetch` keeps the header when it follows a redirect, so the `GET` after a `303` carries the same `<seq>` as the `POST`.
+  - **Echo.** `WatchChanges` reads the header of the current HTTP request and adds `client: "<hash>.<seq>"` to the invalidations it flushes, where `<hash>` is the first 16 bytes of SHA-256 of the token, base64url-encoded. The raw token is never published. Other subscribers therefore cannot copy it, and a forged header can only affect the sender's own tab. Queued jobs, commands and requests without the header publish no `client`: a job may finish after the tab's own response, so every tab must reload.
+  - **Client rule.** The router records, for each top-level prop, the `seq` of the response that last delivered its value. Once values filled from the store and optimistic values do not count as deliveries. It also records when each of its recent requests started and settled (a bounded log of the last 100). When an `invalidate` arrives whose `client` hash is its own and whose `seq` is `N`:
+    1. If request `N` is still in flight, the invalidation waits until it settles. The router already holds reloads behind visits in the same way.
+    2. A matched prop is skipped when its value came from the response to request `N` itself, or from a request that started after `N` settled.
+    3. Every other matched prop is reloaded.
+
+    A `useJsonForm` save or a `204` success delivers no props, so the tab reloads them once, which is correct. A redirect visit delivers fresh props, so the tab sends nothing. A request `N` missing from the log, or cancelled, reloads everything that matched.
+  - **Protocol.** `X-Bridge-Client` joins `spec/headers.md` and Appendix B. It carries no mode and does not change the response, so it is not in `Vary`. §1 point 2 lists it with the other custom request headers. Clients that do not send it (mobile, scripts, old clients) keep receiving every invalidation, and old clients ignore the `client` member.
+- **Wire, page.** `meta.watch` maps each watched prop that is present in the response or held as a once value to its tags: `{ "customers": ["customers"], "customer": ["customers.12"] }`. It is a per-prop member, so partial responses update it through `mergePartialMeta` like `meta.scroll` and `meta.once`. JSON mode strips it, as it strips the other client-state members. The HTML shell embeds it with the page.
+- **Wire, stream.** `invalidate` gains two optional members: `tags: string[]` and `client: string` (above). `keys` stays required and is `[]` in messages published by `WatchChanges`, so an old client does nothing with them (it clears its page cache and finds no present key). This was checked against `Router.invalidate`. A tag invalidation replays and is re-authorized like any bus event (§8.3). A reconnect without replay already resyncs every prop, watched ones included (§20.5). Protocol 1 is kept.
+- **Client.** When the router receives an `invalidate` with `tags`, it reads the current page's `meta.watch` and selects each prop with a matching tag. A published tag matches a watched tag when they are equal, or when the published tag is `<tag>.*` and the watched tag is `<tag>` or starts with `<tag>.`. Publishers always send `<tag>` next to `<tag>.<key>`, so class-level watchers need no extra rule. The router then applies the own-change rule above and calls `router.invalidate(keys ∪ selectedProps)`. That one path already provides the 50 ms coalescing, invalidation handlers, the optimistic-update rules (§14.3), cache clearing and the "prop not on this page" check. Matching and the own-change rule are pure helpers in core `pages/watch.ts`. No adapter changes are needed: `useStream` with `handleControl` (the default) is enough. A watched prop does nothing without a connected stream subscribed to the model's channels. In development the router therefore warns once per page when it applies a page with `meta.watch` and no `StreamClient` with `handleControl` is open. Channel coverage cannot be checked in the browser, so the docs state that the stream route must subscribe to every channel the models publish on (`streamOn()` or `bridge.watch.channels`).
+- **Load.** One change makes every other open page that watches it send one partial reload at the same moment. A client option `watchSpread` (ms, default 0) delays tag invalidations by a random time up to that value, so busy apps can spread the reloads. Reloads remain ordinary requests, so the app's rate limits and caching apply.
+- **Security.** Tags reveal table names (or class names with the `'class'` style and no morph map) and record keys to every subscriber of the channel, never data. Apps with sensitive keys use UUIDs or override `bridgeTag()`. `client` reveals a token hash, which lets a subscriber tell that two changes came from the same tab and nothing more. Channel authorization is unchanged, so an unauthorized user never receives a tag. `docs/security` gains a paragraph, and the §23 review list gains "watch tags on shared channels".
+- **Considered and rejected.**
+  - *Automatic sources from the queries run while resolving a prop* (the `retrieved` event): it would miss new records (a created customer was never retrieved), would tag every record on a page, and would add a listener to every model load.
+  - *Pushing the new value (`prop` events)*: the publisher would have to resolve each prop once per subscriber, with that user's authorization, in a process that has no request.
+  - *A server-side registry of open pages*: it needs state per connection and cleanup, and it breaks with replay across workers.
+  - *Leaving the origin tab out on the server*: streams are per user, not per tab. A tab-scoped stream would need one connection per tab plus a registry mapping tabs to connections.
+  - *Skipping every own-origin invalidation*: this is wrong after JSON saves and `204`s, and when a prop was delivered by a request that overlapped the change.
+- **Not included.**
+  - Watched props in JSON mode (`meta.watch` is stripped; a mobile SDK can adopt it and `X-Bridge-Client` later without a protocol change).
+  - Wildcards other than a trailing `.*`.
+  - Relation-aware tags beyond `$touches`.
+  - Carrying `X-Bridge-Client` into jobs dispatched by the request.
+- **Tests and docs.**
+  - **Laravel:** `meta.watch` for each delivery × merge × once, JSON stripping, partial responses; both tag styles, with and without a morph map, plus `bridgeTag()`; `streamOn()` and the default channels; publishing after commit and not on rollback; one message per channel per request, per job and per command; the collapse at `max_tags`; `to()->touch()` inside and outside a buffer; refusal of invalid tags; `client` from the header (hashed, absent in jobs and without the header); fixtures `page/watch.json`, `stream/invalidate-tags.json` and `stream/invalidate-client.json` in both conformance suites. `spec/page.md` gains "Watched props", `spec/stream.md` gains `tags`, `client` and the matching rule, `spec/headers.md` gains `X-Bridge-Client`, and the schemas type them.
+  - **Core:** `tests/watch.test.ts`: tag matching including `.*`, union with `keys`, coalescing with a `keys` invalidation, props not on the page ignored, an infinite-scroll prop handed to its handler, a held once prop refreshed, an optimistic held key, `watchSpread` with fake timers, the development warning, and an old-client message with `keys: []` doing nothing. It also covers the own-change rule:
+    - no reload after a redirect visit;
+    - one reload after a JSON save and after a `204`;
+    - waiting for an in-flight origin request;
+    - reloading when a delivering request overlapped the change;
+    - a foreign or absent `client`;
+    - the header on every request type, and kept across a redirect.
+  - **Playground:** `Customer` uses `StreamsChanges` with `streamOn()` → `['customers']`. The list, count, recent and stats props on Dashboard and Customers become watched. `Customers/Show`'s `customer` prop watches the record. `CustomerChanged` keeps only its application event (`customer.created` etc.) and drops the hand-written key list.
+  - **E2E:** two browsers; B edits customer 12 and A's list and A's `Customers/Show` for 12 update. B sends exactly one `GET` after its save (the redirect) and no invalidation reload. A on `Customers/Show` for 13 sends no request when 12 changes. A bulk "archive all" action uses `touch('customers.*')`.
+  - **Docs:** `docs/realtime/watched-props.md`, cross-linked from `publishing.md` and `channels.md`. Appendix C gains `watch.tags`, `watch.channels` and `watch.max_tags`.
+- **Decisions (2026-09-25, maintainer).** The name is `watch`. Both tag styles are supported, with the table name as the default. `streamOn()` is optional, with configurable default channels. The tab that made a change must not reload twice, which the `X-Bridge-Client` mechanism above ensures.
+
 ---
 
 ## 21. Authentication
@@ -1435,6 +1496,16 @@ Recorded as phases ship. Each entry names the section it refines.
 
 ### Post-1.0 (2026-09-23)
 
+- **§20.6 Watched props (2026-09-25).** Implemented with the maintainer's decisions (`watch`, both tag styles, optional `streamOn()`, no second reload in the tab that made a change). These choices and deviations were made during implementation:
+  1. **Buffering.** `WatchChanges` always buffers and is a singleton. It is flushed after each request (`terminating`), after each queued job (`JobProcessed`, `JobExceptionOccurred`) and when an Artisan command finishes (`CommandFinished`). It reads the request, bus and database from `Container::getInstance()` at call time, so Octane's sandboxes are respected. A scoped instance could be forgotten before a job's flush ran. `touch()` never publishes at once, unlike the design's "publishes at once otherwise"; long-running processes call `WatchChanges::flush()`.
+  2. **Tags.** A watched record has the tag `<tag>.<key>` only, and a change publishes `<tag>` and `<tag>.<key>`. The design's third matching rule (a published `<tag>.<key>` meets a watched `<tag>`) was dropped: publishers always send `<tag>`, and tags may contain dots (schema-qualified tables, morph aliases). `always` props may be watched.
+  3. **Protocol.** `invalidate.keys` lost `minItems: 1` in the schema. The spec now says it may be empty only when `tags` is present. The `client` pattern is `^[A-Za-z0-9_-]{22}\.[0-9]{1,15}$`.
+  4. **Client.** Core has a synchronous SHA-256 (`http/clientIdentity.ts`), because Web Crypto is asynchronous and missing outside secure contexts. `RequestManager` numbers every request it sends, including JSON mode, prefetches, deferred loads and `router.request()`. Stream connections are not numbered. A response carries its number as `seq`.
+  5. **Router.** It records per top-level prop which request delivered it, and forgets that on history restores, patches and cache hits. `router.invalidateTags(tags, { keys, client })` waits for an own request until it settled and no user visit is being applied (polled, 30 s cap). `watchSpread` is a `BridgeConfig` option. The warning about a missing stream fires 3 s after a page with `meta.watch` shows.
+  6. **Doctor.** `bridge:doctor` lists `StreamsChanges` models under `app/Models` without `streamOn()` as warnings, not failures.
+  7. **PHPStan.** It also analyses `tests/Fixtures/Models`, so the trait is analysed without an ignore.
+  8. **Playground and E2E.** The planned bulk "archive all" action was replaced by a non-destructive "Touch customers.*" button on the Realtime page (`POST /realtime/touch`): archiving would change data other specs rely on. The own-change E2E saves with the star button on `Customers/Show`. A save from the Edit page never raced the redirect, because PHP's built-in server sends the `303` only after the terminating callbacks ran, so the message arrived while the Edit page (nothing watched) was still shown. `CustomerChanged` keeps its application event and no longer publishes an invalidation.
+- **§20.6 Planned (2026-09-25).** Watched props are designed in §20.6. A prop declares the models or tags it is built from (`->watch(Customer::class)`, `Bridge::watch($value, $customer)`). Models with `StreamsChanges` publish their changes as tags after commit, one buffered `invalidate` per channel per request, job or command. The client maps tags to props through `meta.watch`. The tab that made a change skips reloads that would repeat what its own response already delivered, through the new `X-Bridge-Client` request header echoed as a hashed `client` member. All of it is additive within protocol 1. Maintainer decisions are recorded at the end of the section.
 - **§9, §30 Minimum versions.** The package now requires PHP 8.4 and Laravel 13 only (`illuminate/*: ^13.0`, Testbench 11, Pest 4); Laravel 11 and 12 and PHP 8.2/8.3 were dropped, so the CI matrix is PHP 8.4 × Laravel 13 and the CSRF setup no longer documents the `ValidateCsrfToken` swap. The `method_exists` guards in `BridgeServiceProvider` stay because they type-narrow the kernel and handler contracts, not Laravel versions.
 - **§10.2, §10.3 JSON-mode client.** Added `JsonClient`/`JsonRequest` in core and `useJson` in the Vue adapter so a component can call the application's JSON mode (the same routes, `Accept: application/json`) without a page visit; before this the playground used raw `fetch`. The name follows the mode names already used by the composables (`usePage`, `useStream`). The Bridge envelope is unwrapped (`data`, `meta`); a 2xx body that is not an envelope is exposed as `data` unchanged so non-Bridge JSON routes work too. Error kinds are derived from the HTTP status using the table in `spec/errors.md` §2 because the JSON representation is Laravel-native and carries no `kind`. `useJson` does not react to `csrf`/`unauthenticated` (no reload, no redirect): the caller decides, since JSON calls are not navigations.
 
@@ -1596,6 +1667,7 @@ Rejected: `application/vnd.bridge.page+json` / `.event+json` (unnecessary splitt
 | `X-Bridge-Except`                         | custom        | Comma-separated prop keys to exclude.                                                    | yes                       |
 | `X-Bridge-Component`                      | custom        | Component the client currently shows; guards partial merges.                             | yes                       |
 | `X-Bridge-Once`                           | custom        | Once keys the client holds (§13.2); held values are left out. Page mode only.            | yes (page)                |
+| `X-Bridge-Client`                         | custom        | `<token>.<seq>` of the sending tab (§20.6, planned); echoed hashed on watch invalidations. | no                        |
 
 ### Response headers
 
@@ -1649,6 +1721,12 @@ return [
             'redis' => ['connection' => 'default', 'maxlen' => 1000, 'retain_minutes' => 60],
             'database' => ['connection' => null, 'table' => 'bridge_stream_events', 'poll_ms' => 1000, 'lookback' => 200, 'retain_minutes' => 60],
         ],
+    ],
+
+    'watch' => [                                        // §20.6
+        'tags' => env('BRIDGE_WATCH_TAGS', 'table'),    // table | class (morph class)
+        'channels' => ['bridge.watch'],                 // models without streamOn()
+        'max_tags' => 50,                               // record tags per model and message, then `<tag>.*`
     ],
 ];
 ```

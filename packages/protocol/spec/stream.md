@@ -18,18 +18,46 @@ Stream mode delivers server-sent events over a long-lived HTTP response. It is s
 
 All control events are `event: bridge`. The `data` object always has `type`. The schema is `schemas/stream-control.schema.json`.
 
-| `type`         | Members                                                                                                                       | Emitted when                                             | Default client behaviour                                                                                       |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `ready`        | `protocol` (int), `replayed` (bool), `heartbeat` (ms), `maxDuration` (ms \| null)                                             | First event on every connection.                         | If `replayed` is `false` and this connection is a reconnect, resync (§6).                                      |
-| `invalidate`   | `keys`: string[] \| `"*"`                                                                                                     | Named page props are stale.                              | Partial reload of the listed keys (coalesced); `"*"` reloads all. Ignore keys not present on the current page. |
-| `prop`         | `key` (string), `value` (any), `mode`: `replace` \| `merge` \| `append` \| `prepend` (default `replace`)                      | Server pushes a prop value.                              | Apply to the page store if `key` exists on the current page.                                                   |
-| `notification` | `level`: `info` \| `success` \| `warning` \| `error`; `message` (string); `title` (string \| null); `meta` (object, optional) | User-facing message.                                     | Emit to the application.                                                                                       |
-| `navigate`     | `url` (string), `replace` (bool, default false)                                                                               | Server-initiated navigation.                             | Visit `url` if same-origin; otherwise ignore unless the application opted in.                                  |
-| `progress`     | `id` (string), `value` (number 0–1 \| null), `label` (string \| null)                                                         | Long-running operation progress.                         | Emit to the application.                                                                                       |
-| `error`        | `status`, `kind`, `message`, `final` (bool)                                                                                   | Stream-level error.                                      | Emit; if `final`, do not reconnect.                                                                            |
-| `end`          | `reason`: `max_duration` \| `server_shutdown` \| `unauthorized` \| `closed`; `reconnect` (bool)                               | Orderly close; server closes the connection right after. | Reconnect immediately (no backoff) when `reconnect` is `true`.                                                 |
+| `type`         | Members                                                                                                                       | Emitted when                                               | Default client behaviour                                                                                                                              |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ready`        | `protocol` (int), `replayed` (bool), `heartbeat` (ms), `maxDuration` (ms \| null)                                             | First event on every connection.                           | If `replayed` is `false` and this connection is a reconnect, resync (§6).                                                                             |
+| `invalidate`   | `keys`: string[] \| `"*"`; `tags`: string[] (optional, §3.1); `client`: string (optional, §3.2)                               | Named page props, or data behind watched props, are stale. | Partial reload of the listed keys and of the props watching a listed tag (coalesced); `"*"` reloads all. Ignore keys not present on the current page. |
+| `prop`         | `key` (string), `value` (any), `mode`: `replace` \| `merge` \| `append` \| `prepend` (default `replace`)                      | Server pushes a prop value.                                | Apply to the page store if `key` exists on the current page.                                                                                          |
+| `notification` | `level`: `info` \| `success` \| `warning` \| `error`; `message` (string); `title` (string \| null); `meta` (object, optional) | User-facing message.                                       | Emit to the application.                                                                                                                              |
+| `navigate`     | `url` (string), `replace` (bool, default false)                                                                               | Server-initiated navigation.                               | Visit `url` if same-origin; otherwise ignore unless the application opted in.                                                                         |
+| `progress`     | `id` (string), `value` (number 0–1 \| null), `label` (string \| null)                                                         | Long-running operation progress.                           | Emit to the application.                                                                                                                              |
+| `error`        | `status`, `kind`, `message`, `final` (bool)                                                                                   | Stream-level error.                                        | Emit; if `final`, do not reconnect.                                                                                                                   |
+| `end`          | `reason`: `max_duration` \| `server_shutdown` \| `unauthorized` \| `closed`; `reconnect` (bool)                               | Orderly close; server closes the connection right after.   | Reconnect immediately (no backoff) when `reconnect` is `true`.                                                                                        |
 
 Clients MUST ignore control events with an unknown `type`.
+
+### 3.1 Watch tags
+
+`invalidate` MAY carry `tags`: watch tags ([page.md](page.md) §13) of data that changed. `keys` MUST then still be present and MAY be empty; without `tags`, `keys` MUST NOT be empty. A client that does not know `tags` reloads nothing for an empty `keys`, which is the safe fallback.
+
+A published tag is `<tag>`, `<tag>.<key>`, or `<tag>.*` ("some record of this kind"). A client selects every prop of the current page whose `meta.watch` entry contains a tag that the published tag matches:
+
+- the two are equal, or
+- the published tag is `<tag>.*` and the watched tag is `<tag>` or starts with `<tag>.`.
+
+Servers publishing a change to one record SHOULD send both `<tag>` and `<tag>.<key>`, so props watching the whole kind and props watching the record both match. The selected props are reloaded like the props named in `keys`, and the two sets are coalesced into one reload.
+
+### 3.2 Changes made by the client itself
+
+A client that just made a change usually already shows its result (a redirect after a form submission returned a fresh page). To avoid a second reload, an `invalidate` published for a change made during a request that carried `X-Bridge-Client` ([headers.md](headers.md)) MAY carry `client: "<hash>.<seq>"`:
+
+- `<seq>` is the request number from the header, unchanged.
+- `<hash>` is the base64url encoding, without padding, of the first 16 bytes of SHA-256 over the header's token (its ASCII bytes). Servers MUST NOT publish the token itself.
+
+Servers MUST NOT add `client` for changes made outside that request (queued jobs, commands, later requests).
+
+A client that receives an `invalidate` whose `<hash>` equals the hash of its own token, and whose `<seq>` is `N`:
+
+1. MUST wait until request `N` has settled and its response, if any, has been applied.
+2. MAY skip a prop selected by the message when the value it shows was delivered by the response to request `N` itself (including a redirect followed by that request), or by a request it started after request `N` settled.
+3. MUST reload every other selected prop, and MUST reload them all when it does not know request `N`.
+
+Values restored from history, filled from a once store, set by optimistic updates or patched in from other responses do not count as delivered. Clients that do not implement this section reload every selected prop.
 
 ## 4. Heartbeat
 
@@ -80,6 +108,10 @@ data: {"type":"ready","protocol":1,"replayed":false,"heartbeat":15000,"maxDurati
 id: 1758542400123-0
 event: bridge
 data: {"type":"invalidate","keys":["customers"]}
+
+id: 1758542400555-0
+event: bridge
+data: {"type":"invalidate","keys":[],"tags":["customers","customers.12"],"client":"ZnlfgKAmTkeQjF2rdZN7Lg.7"}
 
 id: 1758542400987-0
 event: customer.created

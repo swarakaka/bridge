@@ -25,7 +25,20 @@ export interface StreamReady {
 }
 export interface StreamInvalidate {
   type: "invalidate";
-  keys: [string, ...string[]] | "*";
+  /**
+   * Prop keys, or "*". Empty only when `tags` is present (spec/stream.md §3.1).
+   */
+  keys: string[] | "*";
+  /**
+   * Watch tags of data that changed (spec/stream.md §3.1): `<tag>`, `<tag>.<key>` or `<tag>.*`.
+   *
+   * @minItems 1
+   */
+  tags?: [string, ...string[]];
+  /**
+   * `<hash>.<seq>` of the client request that made the change (spec/stream.md §3.2).
+   */
+  client?: string;
 }
 export interface StreamProp {
   type: "prop";

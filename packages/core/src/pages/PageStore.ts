@@ -3,7 +3,7 @@ import { getDeep, hasDeep, isPlainObject, mergeValue, setDeep, type MergeMode } 
 
 /** `meta` members that describe individual props: lists of keys, and maps keyed by prop. */
 const PROP_LISTS = ['merge', 'prepend', 'deepMerge'] as const
-const PROP_MAPS = ['matchOn', 'once', 'scroll'] as const
+const PROP_MAPS = ['matchOn', 'once', 'scroll', 'watch'] as const
 
 /**
  * The `meta` of a page after merging a partial response (spec/page.md §3). A

@@ -10,6 +10,11 @@ export interface BridgeConfig {
   cache?: { ttl?: number | undefined; staleWhileRevalidate?: number | undefined } | undefined
   /** Coalescing window for reload() calls in ms. */
   reloadDebounce?: number | undefined
+  /**
+   * Watched props (PLAN §20.6): reloads for another client's change wait a
+   * random time up to this many ms, so many open pages do not reload at once.
+   */
+  watchSpread?: number | undefined
   /** Prefer full-document reloads over an in-page error display for non-validation errors. */
   hardReloadOnError?: boolean | undefined
   /** Allow `navigate` control events and redirects to other origins to be followed. */
@@ -35,6 +40,7 @@ export interface BridgeConfig {
 export const DEFAULT_CONFIG = {
   cache: { ttl: 30_000, staleWhileRevalidate: 30_000 },
   reloadDebounce: 50,
+  watchSpread: 0,
   hardReloadOnError: false,
   allowExternalNavigate: false,
 } as const

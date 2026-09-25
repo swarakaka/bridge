@@ -9,8 +9,10 @@ use Bridge\Stream\StreamMessage;
 use Illuminate\Foundation\Events\Dispatchable;
 
 /**
- * Dispatched after create/update/delete. Bridge publishes it to the bus;
- * every browser subscribed to `customers` invalidates its list.
+ * Dispatched after create/update/delete. Bridge publishes it to the bus as an
+ * application event for stream listeners (the realtime page's event log).
+ * Pages showing customers do not depend on it: their props watch the
+ * Customer model, which publishes its own changes (StreamsChanges).
  */
 class CustomerChanged implements ShouldStream
 {
@@ -26,17 +28,10 @@ class CustomerChanged implements ShouldStream
         return ['customers'];
     }
 
-    /**
-     * The application event for listeners, plus an invalidation so every page
-     * showing customers re-fetches through the authorized request path.
-     */
-    public function toStream(): array
+    public function toStream(): StreamMessage
     {
-        return [
-            StreamMessage::event("customer.{$this->action}", [
-                'customer' => CustomerResource::make($this->customer)->resolve(),
-            ]),
-            StreamMessage::invalidate(['customers', 'customersCount', 'recentCustomers', 'stats']),
-        ];
+        return StreamMessage::event("customer.{$this->action}", [
+            'customer' => CustomerResource::make($this->customer)->resolve(),
+        ]);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Bridge\Stream\Concerns\StreamsChanges;
 use Database\Factories\CustomerFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,7 +13,21 @@ class Customer extends Model
     /** @use HasFactory<CustomerFactory> */
     use HasFactory;
 
+    // Created, updated and deleted customers reload every watched prop built from them.
+    use StreamsChanges;
+
     protected $fillable = ['name', 'email', 'company', 'status', 'locked', 'starred', 'avatar_path', 'notes'];
+
+    /**
+     * Where changes are published: the demo has one shared `customers`
+     * channel. A multi-tenant app would return the tenant's channel here.
+     *
+     * @return list<string>
+     */
+    public function streamOn(): array
+    {
+        return ['customers'];
+    }
 
     protected function casts(): array
     {

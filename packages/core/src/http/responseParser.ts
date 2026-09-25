@@ -14,6 +14,8 @@ export interface HttpResponse {
   /** Final URL after redirects. */
   url: string
   text(): Promise<string>
+  /** The request number sent in `X-Bridge-Client` (PLAN §20.6), when the client has an identity. */
+  seq?: number | undefined
 }
 
 export type ParsedResponse =

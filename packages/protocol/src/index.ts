@@ -35,6 +35,8 @@ export const HEADERS = {
   component: 'X-Bridge-Component',
   location: 'X-Bridge-Location',
   once: 'X-Bridge-Once',
+  /** `<token>.<seq>` of the sending client (spec/headers.md, spec/stream.md §3.2). */
+  client: 'X-Bridge-Client',
   lastEventId: 'Last-Event-ID',
 } as const
 

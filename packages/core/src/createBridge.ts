@@ -4,6 +4,7 @@ import { DEFAULT_CONFIG, type BridgeConfig } from './config.js'
 import { readBuild, readEmbeddedPage } from './dom.js'
 import { Emitter } from './events/Emitter.js'
 import { Form, type FormData_, type FormOptions } from './forms/createForm.js'
+import { ClientIdentity } from './http/clientIdentity.js'
 import { RequestManager } from './http/RequestManager.js'
 import { JsonClient } from './json/JsonClient.js'
 import { JsonForm, type JsonFormOptions } from './json/JsonForm.js'
@@ -56,7 +57,13 @@ export function createBridge(config: BridgeConfig = {}): Bridge {
 
   const events = new Emitter<RouterEvents>()
   const store = new PageStore(initialPage)
-  const http = new RequestManager({ fetch: config.fetch, credentials: config.credentials })
+  const http = new RequestManager({
+    fetch: config.fetch,
+    credentials: config.credentials,
+    identity: new ClientIdentity(),
+  })
+  // Streams that apply control events: pages with watched props need one.
+  const streams = new Set<StreamClient>()
   const history = new History({ window: win ?? undefined })
   const cache = new PageCache({
     ttl: config.cache?.ttl ?? DEFAULT_CONFIG.cache.ttl,
@@ -79,6 +86,9 @@ export function createBridge(config: BridgeConfig = {}): Bridge {
     hardReloadOnError: config.hardReloadOnError ?? DEFAULT_CONFIG.hardReloadOnError,
     allowExternalNavigate: config.allowExternalNavigate ?? DEFAULT_CONFIG.allowExternalNavigate,
     prepare: config.prepare,
+    identity: http.identity,
+    watchSpread: config.watchSpread ?? DEFAULT_CONFIG.watchSpread,
+    hasStream: () => streams.size > 0,
   })
 
   // Keep the build id in sync with what the server reports.
@@ -103,8 +113,21 @@ export function createBridge(config: BridgeConfig = {}): Bridge {
     jsonRequest: (options) => new JsonRequest(json, options),
     jsonForm: (initial, options) =>
       new JsonForm(json, initial, { ...config.forms, ...options }, store),
-    stream: (url, options = {}) =>
-      new StreamClient(url, { fetch: config.fetch, ...options }, { store, router, window: win }),
+    stream: (url, options = {}) => {
+      const client = new StreamClient(
+        url,
+        { fetch: config.fetch, ...options },
+        { store, router, window: win },
+      )
+      if (options.handleControl !== false) {
+        streams.add(client)
+        client.on('state', (state) => {
+          if (state === 'closed') streams.delete(client)
+          else streams.add(client)
+        })
+      }
+      return client
+    },
     bootstrap: async () => {
       if (store.page || !win) return store.page
       const outcome = await router.visit(win.location.href, { replace: true, useCache: false })

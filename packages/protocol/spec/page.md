@@ -19,16 +19,16 @@ A successful page response has status `200` and body:
 }
 ```
 
-| Field       | Type           | Required | Meaning                                                                                                                                                                                                 |
-| ----------- | -------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `protocol`  | integer        | yes      | Protocol version of this document. Equals the `v` of the response media type.                                                                                                                           |
-| `type`      | `"page"`       | yes      | Discriminator.                                                                                                                                                                                          |
-| `component` | string         | yes      | Opaque component name. Clients resolve it however they like; servers MUST NOT assume a file format.                                                                                                     |
-| `url`       | string         | yes      | Path plus query (no origin) of the request as the server routed it. Clients push this to history.                                                                                                       |
-| `props`     | object         | yes      | The prop bag. Always an object, possibly empty. Includes shared props.                                                                                                                                  |
-| `build`     | string \| null | yes      | Current asset build identifier, or `null` when the server has none configured.                                                                                                                          |
-| `deferred`  | object         | no       | Map of group name → array of prop keys that are absent from `props` and SHOULD be requested after render (§4). Omitted or empty when nothing is deferred.                                               |
-| `meta`      | object         | no       | Additive extensions. Clients MUST ignore unknown members. Defined members: `merge`, `prepend`, `deepMerge` and `matchOn` (§3), `encryptHistory` and `clearHistory` (§10), `once` (§11), `scroll` (§12). |
+| Field       | Type           | Required | Meaning                                                                                                                                                                                                                |
+| ----------- | -------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `protocol`  | integer        | yes      | Protocol version of this document. Equals the `v` of the response media type.                                                                                                                                          |
+| `type`      | `"page"`       | yes      | Discriminator.                                                                                                                                                                                                         |
+| `component` | string         | yes      | Opaque component name. Clients resolve it however they like; servers MUST NOT assume a file format.                                                                                                                    |
+| `url`       | string         | yes      | Path plus query (no origin) of the request as the server routed it. Clients push this to history.                                                                                                                      |
+| `props`     | object         | yes      | The prop bag. Always an object, possibly empty. Includes shared props.                                                                                                                                                 |
+| `build`     | string \| null | yes      | Current asset build identifier, or `null` when the server has none configured.                                                                                                                                         |
+| `deferred`  | object         | no       | Map of group name → array of prop keys that are absent from `props` and SHOULD be requested after render (§4). Omitted or empty when nothing is deferred.                                                              |
+| `meta`      | object         | no       | Additive extensions. Clients MUST ignore unknown members. Defined members: `merge`, `prepend`, `deepMerge` and `matchOn` (§3), `encryptHistory` and `clearHistory` (§10), `once` (§11), `scroll` (§12), `watch` (§13). |
 
 Clients MUST ignore unknown top-level members. Servers MUST NOT emit members not defined here or in a later version of this specification.
 
@@ -56,7 +56,7 @@ Rules:
 
 - The server MUST evaluate `X-Bridge-Component`; on mismatch it MUST ignore the selection and return a full page.
 - The client MUST merge a partial response into the current page only when `component` equals the current component; otherwise it MUST treat the response as a full page swap.
-- A partial response's `meta` describes only the props it carries. When merging, the client MUST update the per-prop members (`merge`, `prepend`, `deepMerge`, `matchOn`, `once`, `scroll`) only for those props, including once props listed in the response's `meta.once`, and keep the entries of other props. Other `meta` members are taken from the response, as for a full page.
+- A partial response's `meta` describes only the props it carries. When merging, the client MUST update the per-prop members (`merge`, `prepend`, `deepMerge`, `matchOn`, `once`, `scroll`, `watch`) only for those props, including once props listed in the response's `meta.once`, and keep the entries of other props. Other `meta` members are taken from the response, as for a full page.
 - Merging replaces each returned key wholesale. Keys listed in a merge member (below) MAY instead be combined with the current value when the client opted in for that request, e.g. "load more". Requests that did not opt in, including invalidation reloads, replace the key.
 
 Merge members of `meta`, each listing a key at most once across the three lists:
@@ -99,6 +99,8 @@ A prop has one delivery (plain, lazy, deferred or always) and may add merge (§3
 | lazy + merge     | absent                                     | —                                                     | included; listed in its merge member |
 
 A `meta.once` entry for an absent value tells the client to fill it from its store, so a held deferred-once prop causes no deferred request. A once prop marked fresh by the application is treated as not held.
+
+Any prop, including an always prop, may also be watched (§13). Watching does not change delivery: a `meta.watch` entry accompanies the prop whenever its value is in `props` or held as a once value.
 
 ## 5. Build conflicts
 
@@ -210,3 +212,24 @@ A scroll prop is a paginated list the client extends page by page as the user sc
 | `nextPage`     | integer / string / null | The page after it, or `null` at the end.                                                         |
 
 A client loads the next page by requesting the current URL with `pageName` set to `nextPage`, `X-Bridge-Only` naming the prop, and appending; the previous page likewise with `previousPage`, prepending. The entry describes only the page in the response: the client keeps the outer ends of what it has loaded itself. JSON mode leaves `meta.scroll` out.
+
+## 13. Watched props
+
+A watched prop declares the data it is built from as **watch tags**, so a client can reload it when a stream reports that the data changed ([stream.md](stream.md) §3.1). The page lists the tags per prop in `meta.watch`:
+
+```jsonc
+"meta": {
+  "watch": {
+    "customers": ["customers"],
+    "customer": ["customers.12"],
+  },
+}
+```
+
+A tag is an opaque string without `*`, `,` or whitespace. By convention a tag names a kind of record (`customers`) and `<tag>.<key>` names one record (`customers.12`). Tags grant nothing: a client reloads a prop through an ordinary partial request, which the server authorizes like any other.
+
+Rules:
+
+- A page lists a watched prop in `meta.watch` when its value is in `props` or held as a once value (§11). Lazy and deferred props are listed by the response that carries them.
+- `meta.watch` is a per-prop member: partial responses update it for the props they carry (§3).
+- JSON mode leaves `meta.watch` out.

@@ -125,7 +125,7 @@ const stateColor: Record<string, string> = {
             </div>
         </div>
         <div class="rounded border border-slate-200 bg-white p-3">
-            <div class="text-xs uppercase text-slate-500">Customers (invalidated live)</div>
+            <div class="text-xs uppercase text-slate-500">Customers (watched)</div>
             <div class="mt-1 text-xl font-semibold" data-testid="customers-count">{{ count }}</div>
         </div>
     </section>
@@ -201,6 +201,13 @@ const stateColor: Record<string, string> = {
                     @click="trigger('/realtime/invalidate')"
                 >
                     Invalidate customers
+                </button>
+                <button
+                    class="rounded border border-slate-300 px-3 py-1"
+                    data-testid="touch-customers"
+                    @click="trigger('/realtime/touch')"
+                >
+                    Touch customers.*
                 </button>
                 <button
                     class="rounded border border-rose-300 px-3 py-1 text-rose-700"

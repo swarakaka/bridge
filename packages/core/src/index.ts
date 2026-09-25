@@ -35,6 +35,7 @@ export type {
 } from './json/JsonForm.js'
 export type { JsonHandleOptions, JsonCallOptions } from './json/JsonRequest.js'
 export { hasFiles, objectToFormData, formDataToObject, parseFieldName } from './http/formData.js'
+export { ClientIdentity } from './http/clientIdentity.js'
 export { readFormElement, writeFormElement, fileFieldNames } from './forms/dom.js'
 export {
   PageStore,
@@ -56,6 +57,7 @@ export type {
 } from './pages/PageStore.js'
 export { loadWhenVisible } from './pages/whenVisible.js'
 export { OnceStore, readOnceMeta } from './pages/OnceStore.js'
+export { readWatch, tagMatches, watchingProps } from './pages/watch.js'
 export { InfiniteScroll, readScrollMeta } from './pages/infiniteScroll.js'
 export type {
   InfiniteScrollOptions,
@@ -82,7 +84,12 @@ export {
   SCROLL_REGION_ATTRIBUTE,
 } from './router/Scroll.js'
 export { Router } from './router/Router.js'
-export type { RouterDependencies, ReloadOptions, OptimisticVisits } from './router/Router.js'
+export type {
+  RouterDependencies,
+  ReloadOptions,
+  OptimisticVisits,
+  InvalidateTagsOptions,
+} from './router/Router.js'
 export type { PollHandle, PollOptions } from './router/poll.js'
 export { isSameOrigin, relativeUrl, mergeQuery, toUrl, stripHash } from './router/url.js'
 export type { QueryStringArrayFormat } from './router/url.js'

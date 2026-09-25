@@ -50,6 +50,7 @@ Route::middleware(['auth:sanctum', 'bridge.encrypt-history'])->group(function ()
     Route::post('/realtime/broadcast', [RealtimeController::class, 'broadcast'])->name('realtime.broadcast');
     Route::post('/realtime/prop', [RealtimeController::class, 'prop'])->name('realtime.prop');
     Route::post('/realtime/invalidate', [RealtimeController::class, 'invalidate'])->name('realtime.invalidate');
+    Route::post('/realtime/touch', [RealtimeController::class, 'touch'])->name('realtime.touch');
     Route::post('/realtime/end', [RealtimeController::class, 'end'])->name('realtime.end');
     Route::get('/tokens', [TokenController::class, 'index'])->name('tokens.index');
     Route::post('/tokens', [TokenController::class, 'store'])->name('tokens.store');

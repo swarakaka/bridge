@@ -75,6 +75,7 @@ export default defineConfig({
         items: [
           { text: 'Streams', link: '/realtime/streams' },
           { text: 'Publishing events', link: '/realtime/publishing' },
+          { text: 'Watched props', link: '/realtime/watched-props' },
           { text: 'Channels and authorization', link: '/realtime/channels' },
           { text: 'The stream client', link: '/realtime/client' },
           { text: 'Deploying streams', link: '/realtime/deployment' },

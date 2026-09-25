@@ -65,6 +65,15 @@ export interface BridgePage {
         | undefined;
     };
     /**
+     * Watched props: prop name → the watch tags it is built from (§13).
+     */
+    watch?: {
+      /**
+       * @minItems 1
+       */
+      [k: string]: [string, ...string[]] | undefined;
+    };
+    /**
      * Once props this page considered: prop name → once key and expiry (§11).
      */
     once?: {

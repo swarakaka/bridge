@@ -33,4 +33,5 @@ Every reconnection is a new HTTP request. It is authenticated and authorized aga
 
 - Publish data-carrying events (`prop`, application events) only to per-user or per-tenant channels.
 - Use `invalidate` on shared channels: it carries no data, and the re-fetch is authorized per user.
+- Give models with [watched props](/realtime/watched-props) a `streamOn()` that returns per-tenant channels. Watch tags carry no data, but they do show table names and record keys to every subscriber of the channel.
 - Close a user's streams with `Bridge::to("user.{$id}")->end(reason: 'unauthorized')` when their access changes; their next connection is re-authorized.

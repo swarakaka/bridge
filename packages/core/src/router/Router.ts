@@ -1,10 +1,12 @@
 import type { BridgeError, BridgePage } from '@swarakaka/bridge-protocol'
 import { PageCache } from '../cache/PageCache.js'
 import type { Emitter } from '../events/Emitter.js'
+import type { ClientIdentity } from '../http/clientIdentity.js'
 import type { RequestManager } from '../http/RequestManager.js'
 import { parseResponse, type ParsedResponse } from '../http/responseParser.js'
 import type { OnceStore } from '../pages/OnceStore.js'
 import type { MergeOption, OptimisticSettle, PageStore } from '../pages/PageStore.js'
+import { readWatch, watchingProps } from '../pages/watch.js'
 import type { History, HistoryState, StoredHistoryState } from './History.js'
 import { createPoll, type PollHandle, type PollOptions } from './poll.js'
 import { captureScroll, resetScroll, restoreScroll } from './Scroll.js'
@@ -33,6 +35,19 @@ export interface RouterDependencies {
   allowExternalNavigate: boolean
   /** Called with a page before it is applied, e.g. to load its component. */
   prepare?: ((page: BridgePage) => Promise<void> | void) | undefined
+  /** The identity `http` sends; lets the router recognise its own changes (PLAN §20.6). */
+  identity?: ClientIdentity | undefined
+  /** Upper bound in ms of a random delay before reloading watched props for another client's change. */
+  watchSpread?: number | undefined
+  /** Whether a stream applying control events is open; pages with watched props warn without one. */
+  hasStream?: (() => boolean) | undefined
+}
+
+export interface InvalidateTagsOptions {
+  /** Prop keys to reload as well (the message's `keys`). */
+  keys?: string[] | undefined
+  /** The message's `client` member: `<hash>.<seq>` of the request that made the change. */
+  client?: string | undefined
 }
 
 export interface ReloadOptions {
@@ -82,6 +97,13 @@ export class Router {
   private unlistenPageShow: (() => void) | null = null
   private readonly invalidationHandlers = new Map<string, () => Promise<void> | void>()
   private restoreId = 0
+  /**
+   * The request (`X-Bridge-Client` number) whose response last delivered each
+   * top-level prop of the current page. Props filled from elsewhere (history,
+   * once store, cache, patches) have no entry.
+   */
+  private readonly deliveries = new Map<string, number>()
+  private readonly warnedWatch = new Set<string>()
   private readonly d: RouterDependencies
 
   constructor(deps: RouterDependencies) {
@@ -106,7 +128,10 @@ export class Router {
     this.unlistenHistory = this.d.history.listen((state) => this.onPopState(state))
     this.unlistenScroll = this.trackScroll()
     this.unlistenPageShow = this.trackPageShow()
-    if (page) void this.loadDeferred(page)
+    if (page) {
+      this.warnWithoutStream(page)
+      void this.loadDeferred(page)
+    }
   }
 
   destroy(): void {
@@ -242,6 +267,39 @@ export class Router {
   }
 
   /**
+   * Reloads the props of the current page that watch any of `tags` (stream
+   * `invalidate` messages with `tags`, PLAN §20.6), together with `keys`.
+   * When `client` names this client, the props its own response to that
+   * request (or a later one) already delivered are not reloaded.
+   */
+  async invalidateTags(
+    tags: string[],
+    options: InvalidateTagsOptions = {},
+  ): Promise<VisitOutcome | null> {
+    const keys = options.keys ?? []
+    const own =
+      options.client !== undefined && this.d.identity ? this.d.identity.own(options.client) : null
+
+    if (own !== null) {
+      // The request's own page may still be on its way: decide once it is applied.
+      await this.whenApplied(own)
+    } else if ((this.d.watchSpread ?? 0) > 0) {
+      await new Promise((resolve) => setTimeout(resolve, Math.random() * this.d.watchSpread!))
+    }
+
+    const watching = watchingProps(this.d.store.page, tags).filter(
+      (prop) => !keys.includes(prop) && (own === null || !this.deliveredSince(prop, own)),
+    )
+    const all = [...keys, ...watching]
+    if (all.length === 0) {
+      // Nothing on this page to reload, but cached pages may hold the data.
+      this.d.cache.clear()
+      return null
+    }
+    return this.invalidate(all)
+  }
+
+  /**
    * Takes over invalidation of one prop: `invalidate()` (and stream
    * `invalidate` events) call `handler` instead of reloading it. Infinite
    * scroll uses this to re-fetch every loaded page. Returns an unregister function.
@@ -326,6 +384,8 @@ export class Router {
    * update change once it settles. History stores the new values.
    */
   patchProps(patch: Record<string, unknown>): void {
+    // Not delivered by a page response: freshness against a change is unknown.
+    for (const key of Object.keys(patch)) this.deliveries.delete(key)
     this.d.store.patchProps(patch)
     if (this.d.window && this.d.store.serverPage) this.d.history.updatePage(this.d.store.serverPage)
   }
@@ -525,6 +585,7 @@ export class Router {
     options.onStart?.(visit)
 
     let parsed: ParsedResponse
+    let seq: number | undefined
     try {
       const response = await this.d.http.send({
         method: visit.method,
@@ -544,6 +605,7 @@ export class Router {
           options.onProgress?.(progress)
         },
       })
+      seq = response.seq
       parsed = await parseResponse(response)
     } catch (error) {
       if (visit.cancelled || (error instanceof DOMException && error.name === 'AbortError')) {
@@ -563,7 +625,13 @@ export class Router {
       return { status: 'cancelled' }
     }
 
-    const outcome = await this.handleParsed(parsed, visit, options, cacheable ? cacheKey : null)
+    const outcome = await this.handleParsed(
+      parsed,
+      visit,
+      options,
+      cacheable ? cacheKey : null,
+      seq,
+    )
     this.finish(visit, options)
     return outcome
   }
@@ -573,6 +641,7 @@ export class Router {
     visit: Visit,
     options: VisitOptions,
     cacheKey: string | null,
+    seq?: number,
   ): Promise<VisitOutcome> {
     switch (parsed.kind) {
       case 'conflict':
@@ -590,7 +659,8 @@ export class Router {
         if (visit.method !== 'get') this.d.cache.clear()
         await this.prepare(page)
         if (visit.cancelled) return { status: 'cancelled' }
-        this.applyPage(page, visit)
+        // Once values filled from the store were not delivered by this response.
+        this.applyPage(page, visit, { seq, props: Object.keys(parsed.page.props) })
         this.reloadMissingOnce(missing)
         this.settleOptimistic(visit, 'server')
         this.flushInvalidated(options)
@@ -702,7 +772,11 @@ export class Router {
     if (options.invalidateCacheTags) this.d.cache.flushTags(tagList(options.invalidateCacheTags))
   }
 
-  private applyPage(response: BridgePage, visit: Visit): void {
+  private applyPage(
+    response: BridgePage,
+    visit: Visit,
+    delivered?: { seq: number | undefined; props: string[] },
+  ): void {
     this.applyHistoryMeta(response)
     // preserveUrl: show the new page under the address the user is on.
     const page =
@@ -717,6 +791,7 @@ export class Router {
 
     if (partial) {
       this.d.store.setPage(page, { partial: true, merge: visit.merge })
+      this.recordDelivery(delivered)
       this.d.history.updatePage(this.d.store.serverPage!)
       this.d.events.emit('navigate', { page: this.d.store.page!, visit })
       return
@@ -725,6 +800,9 @@ export class Router {
     if (current && this.d.window) this.d.history.saveScroll(captureScroll(this.d.window.document))
 
     this.d.store.setPage(page, { preserveState: visit.preserveState })
+    this.deliveries.clear()
+    this.recordDelivery(delivered)
+    this.warnWithoutStream(page)
 
     const replace =
       visit.replace ||
@@ -768,6 +846,7 @@ export class Router {
           if (parsed.kind === 'page' && current && current.component === parsed.page.component) {
             this.applyHistoryMeta(parsed.page)
             this.d.store.setPage(this.d.once.complete(parsed.page).page, { partial: true })
+            this.recordDelivery({ seq: response.seq, props: Object.keys(parsed.page.props) })
             this.d.history.updatePage(this.d.store.serverPage!)
           } else if (parsed.kind === 'invalid') {
             console.warn(
@@ -873,6 +952,7 @@ export class Router {
     // A later back/forward (or a visit) superseded this one while its component loaded.
     if (id !== this.restoreId || this.activeVisit) return
     this.d.store.setPage(state.page, { preserveState: false })
+    this.deliveries.clear()
     if (this.d.window) restoreScroll(state.scroll, this.d.window.document)
     this.d.events.emit('navigate', { page: state.page, visit: null })
     // Deferred groups that never arrived before the user left are fetched now.
@@ -900,6 +980,61 @@ export class Router {
       win.removeEventListener('scroll', onScroll, { capture: true })
       if (timer !== null) clearTimeout(timer)
     }
+  }
+
+  private recordDelivery(
+    delivered: { seq: number | undefined; props: string[] } | undefined,
+  ): void {
+    if (delivered?.seq === undefined) return
+    for (const prop of delivered.props) this.deliveries.set(prop, delivered.seq)
+  }
+
+  /**
+   * Whether the value of `prop` came from the response to request `seq`, or
+   * from a request started after `seq` settled (spec/stream.md §3.2).
+   */
+  private deliveredSince(prop: string, seq: number): boolean {
+    const by = this.deliveries.get(prop)
+    if (by === undefined || !this.d.identity) return false
+    return by === seq || this.d.identity.startedAfterSettled(by, seq)
+  }
+
+  /**
+   * Resolves once request `seq` settled and no visit is being applied, so its
+   * page (if any) is in the store. Gives up after 30 s; the caller then
+   * reloads what the request did not deliver.
+   */
+  private whenApplied(seq: number): Promise<void> {
+    const identity = this.d.identity
+    const deadline = Date.now() + 30_000
+    const step = Math.max(this.d.reloadDebounce, 10)
+    return new Promise((resolve) => {
+      const check = (): void => {
+        const pending = identity !== undefined && identity.known(seq) && !identity.settled(seq)
+        const applying = this.activeVisit !== null && !this.activeIsReload
+        if ((!pending && !applying) || Date.now() >= deadline) resolve()
+        else setTimeout(check, step)
+      }
+      check()
+    })
+  }
+
+  /**
+   * A page with watched props only updates while a stream applies control
+   * events. Warn once per component when none is open a few seconds after it shows.
+   */
+  private warnWithoutStream(page: BridgePage): void {
+    const hasStream = this.d.hasStream
+    if (!hasStream || !this.d.window || this.warnedWatch.has(page.component)) return
+    if (Object.keys(readWatch(page)).length === 0) return
+    setTimeout(() => {
+      if (this.d.store.page?.component !== page.component || hasStream()) return
+      if (this.warnedWatch.has(page.component)) return
+      this.warnedWatch.add(page.component)
+      console.warn(
+        `[bridge] ${page.component} has watched props, but no stream is open to report changes: open one with useStream() (handleControl on) that subscribes to the channels its models publish on.`,
+      )
+    }, 3000)
   }
 
   private async prepare(page: BridgePage): Promise<void> {

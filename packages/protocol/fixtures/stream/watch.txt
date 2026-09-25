@@ -1,0 +1,12 @@
+retry: 3000
+event: bridge
+data: {"type":"ready","protocol":1,"replayed":false,"heartbeat":15000,"maxDuration":60000}
+
+id: 1758542400123-0
+event: bridge
+data: {"type":"invalidate","keys":[],"tags":["customers","customers.21"],"client":"ZnlfgKAmTkeQjF2rdZN7Lg.7"}
+
+id: 1758542400124-0
+event: bridge
+data: {"type":"invalidate","keys":[],"tags":["customers","customers.*"]}
+
