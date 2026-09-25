@@ -188,7 +188,7 @@ test.describe('stream protocol', () => {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: body === undefined ? undefined : JSON.stringify(body),
+        body: body === undefined ? null : JSON.stringify(body),
       })
     await post('/realtime/notify', { message: 'resume me', level: 'info' })
     const { url } = (await (await post('/realtime/ticket')).json()) as { url: string }

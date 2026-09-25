@@ -1,5 +1,13 @@
 {
   "extends": "../tsconfig.base.json",
-  "compilerOptions": { "rootDir": ".", "noEmit": true, "types": ["node"] },
+  "compilerOptions": {
+    "rootDir": ".",
+    "noEmit": true,
+    "types": ["node"],
+    // Playwright compiles the specs itself and resolves imports like a bundler;
+    // the base's NodeNext (for the published packages) would demand `.js` extensions.
+    "module": "ESNext",
+    "moduleResolution": "Bundler"
+  },
   "include": ["tests", "fixtures", "playwright.config.ts", "global-setup.ts"]
 }
