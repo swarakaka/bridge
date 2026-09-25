@@ -1,6 +1,6 @@
 {
   "name": "@swarakaka/bridge-vue",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Vue 3 adapter for Bridge: createBridgeApp, usePage, useForm, useStream, BridgeLink",
   "license": "MIT",
   "repository": {

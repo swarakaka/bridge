@@ -1,6 +1,6 @@
 {
   "name": "@swarakaka/bridge-protocol",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Bridge protocol: specification, JSON Schemas, golden fixtures and TypeScript types",
   "license": "MIT",
   "repository": {

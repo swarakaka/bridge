@@ -1,6 +1,6 @@
 {
   "name": "@swarakaka/bridge-vite",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Vite plugin for Bridge: resolves page components from ./Pages without a resolve callback",
   "license": "MIT",
   "repository": {
